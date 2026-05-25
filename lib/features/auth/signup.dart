@@ -1,5 +1,5 @@
-import 'package:swappro/barrel.dart';
 import 'package:flutter/services.dart';
+import 'package:swappro/barrel.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -9,6 +9,11 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
+  static const Color _dark = Color(0xFF111111);
+
+  static const double _figmaW = 430;
+  static const double _figmaH = 932;
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -16,9 +21,7 @@ class _SignupState extends State<Signup> {
   final TextEditingController ghanaCardTenController = TextEditingController();
   final TextEditingController ghanaCardCheckController =
       TextEditingController();
-  final TextEditingController _ghaPrefixController = TextEditingController(
-    text: 'GHA',
-  );
+  final FocusNode _ghanaCardTenFocusNode = FocusNode();
   final FocusNode _ghanaCardCheckFocusNode = FocusNode();
 
   final List<TextEditingController> _pinControllers = List.generate(
@@ -26,6 +29,8 @@ class _SignupState extends State<Signup> {
     (_) => TextEditingController(),
   );
   final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
+
+  bool _ghanaCardFocused = false;
 
   String get _pin => _pinControllers.map((c) => c.text).join();
 
@@ -36,14 +41,17 @@ class _SignupState extends State<Signup> {
     return 'GHA-$ten-$one';
   }
 
-  static TextStyle _ghanaTenStyle() {
-    return GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w400);
+  static TextStyle _ghanaSegmentStyle() {
+    return AppTypography.style(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: _dark,
+    );
   }
 
-  /// Width for the middle Ghana Card segment: grows with typed digits, capped at 10-wide sample.
-  double _ghanaTenFieldWidth(BuildContext context) {
+  double _ghanaTenFieldWidth(BuildContext context, double wScale) {
     final scaler = MediaQuery.textScalerOf(context);
-    final style = _ghanaTenStyle();
+    final style = _ghanaSegmentStyle();
     final digits = ghanaCardTenController.text;
     final probe = digits.isEmpty ? '000' : digits;
     final painter = TextPainter(
@@ -56,27 +64,42 @@ class _SignupState extends State<Signup> {
       textDirection: TextDirection.ltr,
       textScaler: scaler,
     )..layout();
-    return (painter.width + 28).clamp(52.0, maxPainter.width + 36);
+    return (painter.width + 28 * wScale).clamp(52.0 * wScale, maxPainter.width + 36 * wScale);
   }
 
   void _onGhanaTenChanged() => setState(() {});
+
+  void _updateGhanaCardFocus() {
+    final focused =
+        _ghanaCardTenFocusNode.hasFocus || _ghanaCardCheckFocusNode.hasFocus;
+    if (focused != _ghanaCardFocused) {
+      setState(() => _ghanaCardFocused = focused);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     ghanaCardTenController.addListener(_onGhanaTenChanged);
+    _ghanaCardTenFocusNode.addListener(_updateGhanaCardFocus);
+    _ghanaCardCheckFocusNode.addListener(_updateGhanaCardFocus);
+    for (final node in _pinFocusNodes) {
+      node.addListener(() => setState(() {}));
+    }
   }
 
   @override
   void dispose() {
     ghanaCardTenController.removeListener(_onGhanaTenChanged);
+    _ghanaCardTenFocusNode.removeListener(_updateGhanaCardFocus);
+    _ghanaCardCheckFocusNode.removeListener(_updateGhanaCardFocus);
     emailController.dispose();
     usernameController.dispose();
     phoneController.dispose();
     companyController.dispose();
     ghanaCardTenController.dispose();
     ghanaCardCheckController.dispose();
-    _ghaPrefixController.dispose();
+    _ghanaCardTenFocusNode.dispose();
     _ghanaCardCheckFocusNode.dispose();
     for (final c in _pinControllers) {
       c.dispose();
@@ -87,68 +110,179 @@ class _SignupState extends State<Signup> {
     super.dispose();
   }
 
-  Widget _buildPinInput({required bool enabled}) {
-    const gap = SizedBox(width: 16);
-    final children = <Widget>[];
-    for (var index = 0; index < 4; index++) {
-      if (index > 0) {
-        children.add(gap);
-      }
-      children.add(
-        SizedBox(
-          width: 52,
-          child: TextField(
-            controller: _pinControllers[index],
-            focusNode: _pinFocusNodes[index],
-            enabled: enabled,
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(1),
-            ],
-            decoration: const InputDecoration(
-              border: UnderlineInputBorder(),
-              counterText: '',
-            ),
-            onChanged: (val) {
-              if (val.isNotEmpty) {
-                if (index < 3) {
-                  _pinFocusNodes[index + 1].requestFocus();
-                } else {
-                  _pinFocusNodes[index].unfocus();
-                }
-              } else if (val.isEmpty && index > 0) {
-                // Handle backspace: move focus to previous field and clear it
-                _pinControllers[index - 1].clear();
-                _pinFocusNodes[index - 1].requestFocus();
-              }
-            },
-            onTap: () {
-              // If user taps a later box, keep caret at end
-              _pinControllers[index].selection = TextSelection.collapsed(
-                offset: _pinControllers[index].text.length,
-              );
-            },
-            onSubmitted: (_) {
-              if (index < 3) _pinFocusNodes[index + 1].requestFocus();
-            },
-            onEditingComplete: () {
-              // no-op; prevents default "done" behavior moving focus oddly
-            },
-          ),
-        ),
-      );
+  void _submitSignup() {
+    if (_pin.length != 4) {
+      context.showAppSnackBar('Please enter a 4-digit PIN');
+      return;
     }
-    return Center(
-      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    context.read<AuthBloc>().add(
+          SignupEvent(
+            username: usernameController.text.trim(),
+            phone: phoneController.text.trim(),
+            email: emailController.text.trim(),
+            password: _pin,
+            company: companyController.text.trim(),
+            ghanaCard: _ghanaCardValue,
+          ),
+        );
+  }
+
+  Widget _buildGhanaCardField({
+    required double fieldHeight,
+    required double fieldRadius,
+    required bool enabled,
+    required double wScale,
+  }) {
+    return AuthFormFieldShell(
+      height: fieldHeight,
+      radius: fieldRadius,
+      icon: Icons.badge_outlined,
+      focused: _ghanaCardFocused,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 44 * wScale,
+            child: Text(
+              'GHA',
+              textAlign: TextAlign.center,
+              style: _ghanaSegmentStyle(),
+            ),
+          ),
+          Text('-', style: _ghanaSegmentStyle().copyWith(color: Colors.black54)),
+          SizedBox(
+            width: _ghanaTenFieldWidth(context, wScale),
+            child: TextField(
+              controller: ghanaCardTenController,
+              focusNode: _ghanaCardTenFocusNode,
+              enabled: enabled,
+              keyboardType: TextInputType.number,
+              style: _ghanaSegmentStyle(),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              decoration: const InputDecoration(
+                hintText: '0000000000',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (value) {
+                if (value.length == 10) {
+                  _ghanaCardCheckFocusNode.requestFocus();
+                }
+              },
+            ),
+          ),
+          Text('-', style: _ghanaSegmentStyle().copyWith(color: Colors.black54)),
+          SizedBox(
+            width: 28 * wScale,
+            child: TextField(
+              controller: ghanaCardCheckController,
+              focusNode: _ghanaCardCheckFocusNode,
+              enabled: enabled,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: _ghanaSegmentStyle(),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(1),
+              ],
+              decoration: const InputDecoration(
+                hintText: '0',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPinRow({
+    required bool enabled,
+    required double gap,
+  }) {
+    return Row(
+      children: List.generate(4, (index) {
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: index == 0 ? 0 : gap / 2,
+              right: index == 3 ? 0 : gap / 2,
+            ),
+            child: TextField(
+                controller: _pinControllers[index],
+                focusNode: _pinFocusNodes[index],
+                enabled: enabled,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                style: AppTypography.style(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: _dark,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(1),
+                ],
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  counterText: '',
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                ),
+                onChanged: (value) {
+                  if (value.isNotEmpty) {
+                    if (index < 3) {
+                      _pinFocusNodes[index + 1].requestFocus();
+                    } else {
+                      _pinFocusNodes[index].unfocus();
+                    }
+                  } else if (value.isEmpty && index > 0) {
+                    _pinControllers[index - 1].clear();
+                    _pinFocusNodes[index - 1].requestFocus();
+                  }
+                },
+                onTap: () {
+                  _pinControllers[index].selection = TextSelection.collapsed(
+                    offset: _pinControllers[index].text.length,
+                  );
+                },
+                onSubmitted: (_) {
+                  if (index < 3) {
+                    _pinFocusNodes[index + 1].requestFocus();
+                  }
+                },
+              ),
+            ),
+        );
+      }),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final w = size.width;
+    final h = size.height;
+    final wScale = w / _figmaW;
+    final hScale = h / _figmaH;
+
+    final horizontalPad = 33 * wScale;
+    final fieldHeight = 70 * hScale;
+    final fieldRadius = 10 * wScale;
+    final formGap = 12 * hScale;
+    final buttonWidth = 277 * wScale;
+    final buttonHeight = 62 * hScale;
+    final buttonRadius = 10 * wScale;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: MultiBlocListener(
         listeners: [
@@ -169,335 +303,180 @@ class _SignupState extends State<Signup> {
         ],
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final bool isLoading = state is AuthLoading;
+            final isLoading = state is AuthLoading;
+
             return SafeArea(
               child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Center(
-                            child: Text(
-                              'Sign Up',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.black,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w300,
-                              ),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPad,
+                  24 * hScale,
+                  horizontalPad,
+                  32 * hScale,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 35,
+                          width: 35,
+                          decoration: BoxDecoration(
+                            color: _dark,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _dark, width: 1.5),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.white,
+                              size: 17.5,
                             ),
                           ),
-                          Positioned(
-                            left: 0,
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Container(
-                                height: 35,
-                                width: 35,
-                                decoration: BoxDecoration(
-                                  color: CustColors.mainCol,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: CustColors.mainCol,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.arrow_back_ios_new,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 38 * hScale),
+                    Text(
+                      'Sign Up',
+                      style: AppTypography.style(
+                        fontSize: 32 * wScale,
+                        fontWeight: FontWeight.w600,
+                        color: _dark,
+                        height: 40 / 32,
+                      ),
+                    ),
+                    SizedBox(height: 20 * hScale),
+                    Text(
+                      'Create your account to get started',
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: _dark,
+                        height: 20 / 14,
+                      ),
+                    ),
+                    SizedBox(height: 40 * hScale),
+                    AuthFormField(
+                      controller: usernameController,
+                      hint: 'Username',
+                      icon: Icons.person_outline,
+                      height: fieldHeight,
+                      radius: fieldRadius,
+                      enabled: !isLoading,
+                    ),
+                    SizedBox(height: formGap),
+                    AuthFormField(
+                      controller: phoneController,
+                      hint: 'Phone',
+                      icon: Icons.phone_outlined,
+                      height: fieldHeight,
+                      radius: fieldRadius,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: formGap),
+                    AuthFormField(
+                      controller: companyController,
+                      hint: 'Company',
+                      icon: Icons.business_outlined,
+                      height: fieldHeight,
+                      radius: fieldRadius,
+                      enabled: !isLoading,
+                    ),
+                    SizedBox(height: formGap),
+                    _buildGhanaCardField(
+                      fieldHeight: fieldHeight,
+                      fieldRadius: fieldRadius,
+                      enabled: !isLoading,
+                      wScale: wScale,
+                    ),
+                    SizedBox(height: formGap),
+                    AuthFormField(
+                      controller: emailController,
+                      hint: 'Email',
+                      icon: Icons.email_outlined,
+                      height: fieldHeight,
+                      radius: fieldRadius,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    SizedBox(height: formGap),
+                    AuthFormFieldShell(
+                      height: fieldHeight,
+                      radius: fieldRadius,
+                      icon: Icons.lock_outline,
+                      focused: _pinFocusNodes.any((node) => node.hasFocus),
+                      child: _buildPinRow(
+                        enabled: !isLoading,
+                        gap: formGap,
+                      ),
+                    ),
+                    SizedBox(height: 48 * hScale),
+                    Center(
+                      child: SizedBox(
+                        width: buttonWidth,
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : _submitSignup,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _dark,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor:
+                                _dark.withValues(alpha: 0.5),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(buttonRadius),
+                            ),
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                     color: Colors.white,
-                                    size: 50 * 0.35,
+                                  ),
+                                )
+                              : Text(
+                                  'Sign Up',
+                                  style: AppTypography.style(
+                                    fontSize: 16 * wScale,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      const SizedBox(height: 48),
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 360),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                'Username',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              TextField(
-                                controller: usernameController,
-                                decoration: const InputDecoration(
-                                  border: UnderlineInputBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Phone',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              TextField(
-                                controller: phoneController,
-                                decoration: const InputDecoration(
-                                  border: UnderlineInputBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Company',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              TextField(
-                                controller: companyController,
-                                decoration: const InputDecoration(
-                                  border: UnderlineInputBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Ghana Card',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              Center(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    SizedBox(
-                                      width: 56,
-                                      child: TextField(
-                                        controller: _ghaPrefixController,
-                                        readOnly: true,
-                                        enableInteractiveSelection: false,
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                        decoration: const InputDecoration(
-                                          border: UnderlineInputBorder(),
-                                          counterText: '',
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 4,
-                                        right: 4,
-                                        bottom: 12,
-                                      ),
-                                      child: Text(
-                                        '-',
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.black54,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: _ghanaTenFieldWidth(context),
-                                      child: TextField(
-                                        controller: ghanaCardTenController,
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(10),
-                                        ],
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                        decoration: const InputDecoration(
-                                          border: UnderlineInputBorder(),
-                                          counterText: '',
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                        ),
-                                        onChanged: (v) {
-                                          if (v.length == 10) {
-                                            FocusScope.of(context).requestFocus(
-                                              _ghanaCardCheckFocusNode,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 4,
-                                        right: 4,
-                                        bottom: 12,
-                                      ),
-                                      child: Text(
-                                        '-',
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.black54,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 44,
-                                      child: TextField(
-                                        controller: ghanaCardCheckController,
-                                        focusNode: _ghanaCardCheckFocusNode,
-                                        keyboardType: TextInputType.number,
-                                        textAlign: TextAlign.center,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(1),
-                                        ],
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                        decoration: const InputDecoration(
-                                          border: UnderlineInputBorder(),
-                                          counterText: '',
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Email',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              TextField(
-                                controller: emailController,
-                                decoration: const InputDecoration(
-                                  border: UnderlineInputBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'PIN',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              _buildPinInput(enabled: !isLoading),
-                            ],
-                          ),
                         ),
                       ),
-                      const SizedBox(height: 52),
-                      Center(
-                        child: AppButton(
-                          onPressed: isLoading
-                              ? null
-                              : () async {
-                                  if (_pin.length != 4) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please enter a 4-digit PIN',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  context.read<AuthBloc>().add(
-                                    SignupEvent(
-                                      username: usernameController.text.trim(),
-                                      phone: phoneController.text.trim(),
-                                      email: emailController.text.trim(),
-                                      password: _pin,
-                                      company: companyController.text.trim(),
-                                      ghanaCard: _ghanaCardValue,
-                                    ),
-                                  );
-                                },
-                          buttonText: 'Sign Up',
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: Text(
-                          'Have an Account ?',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              PageTransition(
-                                type: PageTransitionType.leftToRightWithFade,
-                                childCurrent: widget,
-                                duration: const Duration(milliseconds: 1000),
-                                reverseDuration: const Duration(
-                                  milliseconds: 1000,
+                    ),
+                    SizedBox(height: 32 * hScale),
+                    GestureDetector(
+                      onTap: isLoading
+                          ? null
+                          : () {
+                              Navigator.of(context).push(
+                                PageTransition(
+                                  type: PageTransitionType.leftToRightWithFade,
+                                  child: const Signin(),
                                 ),
-                                child: const Signin(),
-                              ),
-                            ); // Handle sign up navigation
-                          },
-                          child: Text(
-                            'Log In',
-                            style: GoogleFonts.montserrat(
-                              color: CustColors.mainCol,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                              );
+                            },
+                      child: Text(
+                        'Already have an account? Sign In',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.style(
+                          fontSize: 14 * wScale,
+                          fontWeight: FontWeight.w400,
+                          color: _dark,
+                          height: 22 / 14,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );

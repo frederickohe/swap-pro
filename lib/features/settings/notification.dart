@@ -78,13 +78,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } catch (e) {
       rollback();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update notification settings: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      context.showAppSnackBar('Failed to update notification settings: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -135,7 +129,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         }
                         return Text(
                           username,
-                          style: GoogleFonts.montserrat(
+                          style: AppTypography.style(
                             color: Colors.black,
                             fontSize: 20,
                             fontWeight: FontWeight.w400,
@@ -325,7 +319,7 @@ class _PreferenceSwitchTile extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: GoogleFonts.montserrat(
+                style: AppTypography.style(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: Colors.black87,

@@ -43,7 +43,7 @@ class _WelcomeState extends State<Welcome> {
                               children: [
                                 Text(
                                   'Operate Business',
-                                  style: GoogleFonts.montserrat(
+                                  style: AppTypography.style(
                                     color: Colors.white,
                                     fontSize: 34,
                                     fontWeight: FontWeight.w100,
@@ -54,7 +54,7 @@ class _WelcomeState extends State<Welcome> {
                                   alignment: Alignment.centerLeft,
                                   child: Text(
                                     'With Ai!',
-                                    style: GoogleFonts.montserrat(
+                                    style: AppTypography.style(
                                       color: Colors.white,
                                       fontSize: 92,
                                       fontWeight: FontWeight.bold,
@@ -80,9 +80,11 @@ class _WelcomeState extends State<Welcome> {
                                 label: 'Get Started',
                                 onPressed: () {
                                   print('=== GET STARTED BUTTON PRESSED ===');
-                                  Navigator.of(
-                                    context,
-                                  ).pushReplacement(Home.routeFromWelcome());
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => const AuthWrapper(),
+                                    ),
+                                  );
                                 },
                               ),
                             ),

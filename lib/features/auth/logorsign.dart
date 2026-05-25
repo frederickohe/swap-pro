@@ -35,6 +35,32 @@ class LogorSign extends StatelessWidget {
             ),
           ),
           Positioned(
+            top: 24 * hScale,
+            right: 24 * wScale,
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  PageTransition(
+                    type: PageTransitionType.fade,
+                    duration: const Duration(milliseconds: 400),
+                    child: const AdminSignIn(),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Admin',
+                style: AppTypography.style(
+                  fontSize: 14 * wScale,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
             top: logoTop,
             left: 0,
             right: 0,
@@ -89,24 +115,24 @@ class _BottomPanel extends StatelessWidget {
     final createAccountHeight = 62 * hScale;
     final buttonRadius = 10 * wScale;
 
-    TextStyle titleStyle() => GoogleFonts.montserrat(
-          fontSize: 32 * wScale,
-          fontWeight: FontWeight.w600,
-          color: LogorSign._textBlack,
-          height: 40 / 32,
-        );
+    TextStyle titleStyle() => AppTypography.style(
+      fontSize: 26 * wScale,
+      fontWeight: FontWeight.w600,
+      color: LogorSign._textBlack,
+      height: 40 / 32,
+    );
 
-    TextStyle outlinedButtonStyle() => GoogleFonts.montserrat(
-          fontSize: 16 * wScale,
-          fontWeight: FontWeight.w500,
-          color: LogorSign._textBlack,
-        );
+    TextStyle outlinedButtonStyle() => AppTypography.style(
+      fontSize: 16 * wScale,
+      fontWeight: FontWeight.w500,
+      color: LogorSign._textBlack,
+    );
 
-    TextStyle filledButtonStyle() => GoogleFonts.montserrat(
-          fontSize: 16 * wScale,
-          fontWeight: FontWeight.w500,
-          color: Colors.white,
-        );
+    TextStyle filledButtonStyle() => AppTypography.style(
+      fontSize: 16 * wScale,
+      fontWeight: FontWeight.w500,
+      color: Colors.white,
+    );
 
     return ColoredBox(
       color: _gold.withValues(alpha: 0.7),
@@ -116,10 +142,18 @@ class _BottomPanel extends StatelessWidget {
             top: titleTop,
             left: 0,
             right: 0,
-            child: Text(
-              'Welcome to Swap Pro',
+            child: RichText(
               textAlign: TextAlign.center,
-              style: titleStyle(),
+              text: TextSpan(
+                style: titleStyle(),
+                children: [
+                  const TextSpan(text: 'Ready to '),
+                  TextSpan(
+                    text: 'Swap?',
+                    style: titleStyle().copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
           ),
           Positioned(
@@ -143,7 +177,10 @@ class _BottomPanel extends StatelessWidget {
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: LogorSign._textBlack,
-                    side: const BorderSide(color: LogorSign._textBlack, width: 1),
+                    side: const BorderSide(
+                      color: LogorSign._textBlack,
+                      width: 1,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(buttonRadius),
                     ),

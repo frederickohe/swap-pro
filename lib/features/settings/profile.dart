@@ -1,7 +1,6 @@
 import 'package:swappro/barrel.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 
+/// User account hub — matches Figma "User Account" frame (node 162:829).
 class Profile extends StatefulWidget {
   const Profile({super.key});
 
@@ -10,43 +9,41 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  final _formKey = GlobalKey<FormState>();
+  static const Color _dark = Color(0xFF111111);
+  static const Color _gold = Color(0xFFC3B649);
+  static const Color _backBtnBg = Color(0xFFF5F6F8);
+  static const Color _verifyBg = Color(0xFF73193A);
+  static const Color _divider = Color(0xFFF6F6F6);
 
-  Map<String, dynamic>? _userProfileRaw;
+  static const double _figmaW = 430;
+  static const double _figmaH = 1177;
 
-  // User profile
-  final TextEditingController fullnameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController ghanaCardController = TextEditingController();
-  final TextEditingController nationalityController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
-  final TextEditingController staffIdController = TextEditingController();
-
-  // Business profile
-  final TextEditingController companyController = TextEditingController();
-  final TextEditingController currentBranchController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
-  final TextEditingController locationController = TextEditingController();
-  final TextEditingController facebookUrlController = TextEditingController();
-  final TextEditingController whatsappNumberController =
-      TextEditingController();
-  final TextEditingController linkedinUrlController = TextEditingController();
-  final TextEditingController twitterUrlController = TextEditingController();
-  final TextEditingController instagramUrlController = TextEditingController();
-
-  DateTime? _dateOfBirth;
-  String? _gender;
+  String _displayName = 'User';
+  String _email = '';
+  String _location = '';
   String? _profilePictureUrl;
-
+  bool _isVerified = false;
   bool _loading = true;
-  bool _saving = false;
-  bool _uploadingPhoto = false;
   String? _error;
 
   late final ApiService _apiService = ApiService(
     httpClient: SessionAwareHttpClient(tokenService: TokenService()),
   );
+
+  static const List<_ListingItem> _placeholderListings = [
+    _ListingItem(
+      title: '2 Bedroom Self Contained',
+      subtitle: 'Dress modern',
+      price: '\$212.99',
+      imageAsset: 'assets/img/bot.png',
+    ),
+    _ListingItem(
+      title: 'BMW Forza 2020',
+      subtitle: 'Dress modern',
+      price: '\$212.99',
+      imageAsset: 'assets/img/bot.png',
+    ),
+  ];
 
   @override
   void initState() {
@@ -55,44 +52,27 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> _loadProfile() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final user = await _apiService.getUserProfile();
       if (!mounted) return;
 
-      _userProfileRaw = Map<String, dynamic>.from(user as Map);
+      final name = (user['fullname'] ?? user['name'] ?? 'User').toString();
+      final email = (user['email'] ?? '').toString();
+      final location = (user['location'] ?? user['address'] ?? '').toString();
+      final photo = (user['profile_picture_url'] ?? '').toString();
+      final ghanaCard = (user['ghana_card'] ?? '').toString();
 
-      fullnameController.text = (user['fullname'] ?? user['name'] ?? '')
-          .toString();
-      phoneController.text = (user['phone'] ?? '').toString();
-      emailController.text = (user['email'] ?? '').toString();
-
-      ghanaCardController.text = (user['ghana_card'] ?? '').toString();
-      nationalityController.text = (user['nationality'] ?? '').toString();
-      staffIdController.text = (user['staff_id'] ?? '').toString();
-
-      companyController.text = (user['company'] ?? '').toString();
-      currentBranchController.text = (user['current_branch'] ?? '').toString();
-      addressController.text = (user['address'] ?? '').toString();
-      locationController.text = (user['location'] ?? '').toString();
-
-      facebookUrlController.text = (user['facebook_url'] ?? '').toString();
-      whatsappNumberController.text = (user['whatsapp_number'] ?? '')
-          .toString();
-      linkedinUrlController.text = (user['linkedin_url'] ?? '').toString();
-      twitterUrlController.text = (user['twitter_url'] ?? '').toString();
-      instagramUrlController.text = (user['instagram_url'] ?? '').toString();
-
-      _profilePictureUrl = (user['profile_picture_url'] ?? '').toString();
-      if (_profilePictureUrl?.trim().isEmpty == true) _profilePictureUrl = null;
-
-      final dob = (user['date_of_birth'] ?? '').toString();
-      _dateOfBirth = _tryParseDate(dob);
-      dobController.text = _dateOfBirth == null
-          ? ''
-          : _formatDate(_dateOfBirth!);
-
-      final g = (user['gender'] ?? '').toString().trim();
-      _gender = g.isEmpty ? null : g;
+      setState(() {
+        _displayName = name.trim().isEmpty ? 'User' : name.trim();
+        _email = email;
+        _location = location.trim().isEmpty ? 'Add location' : location.trim();
+        _profilePictureUrl = photo.trim().isEmpty ? null : photo.trim();
+        _isVerified = ghanaCard.trim().isNotEmpty;
+      });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -100,719 +80,180 @@ class _ProfileState extends State<Profile> {
     }
   }
 
-  bool _isPresent(dynamic value) {
-    if (value == null) return false;
-    if (value is String) return value.trim().isNotEmpty;
-    if (value is Iterable) return value.isNotEmpty;
-    if (value is Map) return value.isNotEmpty;
-    return true;
-  }
-
-  ({int completed, int total, int percent, List<String> missingLabels})
-  _profileCompletion() {
-    // If the backend returns a different set of keys, tweak this list only.
-    final fields = <({String label, dynamic value})>[
-      (
-        label: 'Full name',
-        value: _userProfileRaw?['fullname'] ?? _userProfileRaw?['name'],
-      ),
-      (label: 'Phone', value: _userProfileRaw?['phone']),
-      (label: 'Ghana card', value: _userProfileRaw?['ghana_card']),
-      (label: 'Nationality', value: _userProfileRaw?['nationality']),
-      (label: 'Date of birth', value: _userProfileRaw?['date_of_birth']),
-      (label: 'Gender', value: _userProfileRaw?['gender']),
-      (label: 'Staff ID', value: _userProfileRaw?['staff_id']),
-      (label: 'Company', value: _userProfileRaw?['company']),
-      (label: 'Current branch', value: _userProfileRaw?['current_branch']),
-      (label: 'Address', value: _userProfileRaw?['address']),
-      (label: 'Location', value: _userProfileRaw?['location']),
-      (label: 'WhatsApp number', value: _userProfileRaw?['whatsapp_number']),
-      (label: 'Facebook URL', value: _userProfileRaw?['facebook_url']),
-      (label: 'LinkedIn URL', value: _userProfileRaw?['linkedin_url']),
-      (label: 'Twitter/X URL', value: _userProfileRaw?['twitter_url']),
-      (label: 'Instagram URL', value: _userProfileRaw?['instagram_url']),
-      (label: 'Profile photo', value: _userProfileRaw?['profile_picture_url']),
-    ];
-
-    final total = fields.length;
-    var completed = 0;
-    final missing = <String>[];
-    for (final f in fields) {
-      if (_isPresent(f.value)) {
-        completed += 1;
-      } else {
-        missing.add(f.label);
-      }
-    }
-
-    final percent = total == 0 ? 0 : ((completed / total) * 100).round();
-    return (
-      completed: completed,
-      total: total,
-      percent: percent.clamp(0, 100),
-      missingLabels: missing,
+  void _openEdit() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileEdit()),
     );
+    if (mounted) _loadProfile();
   }
 
-  Widget _profileCompletionCard() {
-    final info = _profileCompletion();
-    final pct = info.percent;
-    final progress = info.total == 0 ? 0.0 : info.completed / info.total;
-
-    final missingTop = info.missingLabels.take(3).toList();
-    final missingExtra = info.missingLabels.length - missingTop.length;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.task_alt, size: 18, color: CustColors.mainCol),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Profile completion',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              Text(
-                '$pct%',
-                style: GoogleFonts.montserrat(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: CustColors.mainCol,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: Colors.black.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation(CustColors.mainCol),
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${info.completed} of ${info.total} fields completed',
-            style: GoogleFonts.montserrat(
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              color: Colors.black.withValues(alpha: 0.65),
-            ),
-          ),
-          if (missingTop.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                for (final m in missingTop)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CustColors.mainCol.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      m,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: CustColors.mainCol,
+                Text(
+                  'Log out?',
+                  style: AppTypography.style(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You can log back in at any time.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.style(
+                    fontSize: 13.5,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Cancel'),
                       ),
                     ),
-                  ),
-                if (missingExtra > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '+$missingExtra more',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black.withValues(alpha: 0.65),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          context.read<AuthBloc>().add(LogoutEvent());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Continue'),
                       ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
-          ],
-        ],
-      ),
+          ),
+        );
+      },
     );
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      await _apiService.updateUserProfile(
-        fullname: fullnameController.text.trim(),
-        phone: phoneController.text.trim(),
-        ghanaCard: ghanaCardController.text.trim().isEmpty
-            ? null
-            : ghanaCardController.text.trim(),
-        nationality: nationalityController.text.trim().isEmpty
-            ? null
-            : nationalityController.text.trim(),
-        dateOfBirth: _dateOfBirth,
-        gender: _gender?.trim().isEmpty == true ? null : _gender,
-        staffId: staffIdController.text.trim().isEmpty
-            ? null
-            : staffIdController.text.trim(),
-        company: companyController.text.trim().isEmpty
-            ? null
-            : companyController.text.trim(),
-        currentBranch: currentBranchController.text.trim().isEmpty
-            ? null
-            : currentBranchController.text.trim(),
-        address: addressController.text.trim().isEmpty
-            ? null
-            : addressController.text.trim(),
-        location: locationController.text.trim().isEmpty
-            ? null
-            : locationController.text.trim(),
-        facebookUrl: facebookUrlController.text.trim().isEmpty
-            ? null
-            : facebookUrlController.text.trim(),
-        whatsappNumber: whatsappNumberController.text.trim().isEmpty
-            ? null
-            : whatsappNumberController.text.trim(),
-        linkedinUrl: linkedinUrlController.text.trim().isEmpty
-            ? null
-            : linkedinUrlController.text.trim(),
-        twitterUrl: twitterUrlController.text.trim().isEmpty
-            ? null
-            : twitterUrlController.text.trim(),
-        instagramUrl: instagramUrlController.text.trim().isEmpty
-            ? null
-            : instagramUrlController.text.trim(),
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      await _loadProfile();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _pickAndUploadPhoto() async {
-    if (_uploadingPhoto) return;
-
-    final picker = ImagePicker();
-
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (source == null) return;
-
-    final picked = await picker.pickImage(
-      source: source,
-      imageQuality: 85,
-      maxWidth: 1400,
-    );
-    if (picked == null) return;
-
-    setState(() => _uploadingPhoto = true);
-    try {
-      final url = await _apiService.uploadFile(
-        file: File(picked.path),
-        filename: picked.name,
-      );
-
-      await _apiService.patchMyProfileImage(profilePictureUrl: url);
-      // Keep local cached user in sync (used by AuthBloc on next session check)
-      try {
-        final updated = await _apiService.getUserProfile();
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user', jsonEncode(updated));
-      } catch (_) {}
-      if (!mounted) return;
-
-      setState(() => _profilePictureUrl = url);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile photo updated'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Photo upload failed: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _uploadingPhoto = false);
-    }
-  }
-
-  DateTime? _tryParseDate(String input) {
-    final v = input.trim();
-    if (v.isEmpty) return null;
-    try {
-      // Handles "YYYY-MM-DD" and iso strings
-      return DateTime.parse(v);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
-  Future<void> _pickDateOfBirth() async {
-    final now = DateTime.now();
-    final initial = _dateOfBirth ?? DateTime(now.year - 18, now.month, now.day);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(1900, 1, 1),
-      lastDate: now,
-    );
-    if (picked == null) return;
-    setState(() {
-      _dateOfBirth = picked;
-      dobController.text = _formatDate(picked);
-    });
-  }
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    phoneController.dispose();
-    fullnameController.dispose();
-    ghanaCardController.dispose();
-    nationalityController.dispose();
-    dobController.dispose();
-    staffIdController.dispose();
-
-    companyController.dispose();
-    currentBranchController.dispose();
-    addressController.dispose();
-    locationController.dispose();
-    facebookUrlController.dispose();
-    whatsappNumberController.dispose();
-    linkedinUrlController.dispose();
-    twitterUrlController.dispose();
-    instagramUrlController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _ProfileBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
+    final size = MediaQuery.sizeOf(context);
+    final wScale = size.width / _figmaW;
+    final hScale = size.height / _figmaH;
 
-                /// 🔝 Top Bar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is Unauthenticated) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LogorSign()),
+            (route) => false,
+          );
+        } else if (state is AuthError && state.source == 'logout') {
+          context.showAppSnackBar(state.message);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: _loading
+              ? const Center(child: SwapproLoadingIndicator())
+              : Column(
                   children: [
-                    /// Back Button
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: CustColors.mainCol,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                          size: 18,
+                    _buildTopBar(wScale, hScale),
+                    if (_error != null)
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 26 * wScale),
+                        child: Text(
+                          _error!,
+                          style: AppTypography.style(
+                            color: Colors.red,
+                            fontSize: 12 * wScale,
+                          ),
                         ),
                       ),
-                    ),
-
-                    Text(
-                      'Profile',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w400,
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _loadProfile,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.only(bottom: 24 * hScale),
+                          child: Column(
+                            children: [
+                              SizedBox(height: 50 * hScale),
+                              _buildAvatar(wScale),
+                              SizedBox(height: 25 * hScale),
+                              _buildProfileInfo(wScale, hScale),
+                              SizedBox(height: 12 * hScale),
+                              _buildLocationRow(wScale),
+                              SizedBox(height: 24 * hScale),
+                              if (!_isVerified) _buildVerifyBadge(wScale),
+                              if (!_isVerified) SizedBox(height: 24 * hScale),
+                              _buildAccountOptions(wScale, hScale),
+                              SizedBox(height: 32 * hScale),
+                              _buildListingsSection(wScale, hScale),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: _circleIcon(Icons.share_outlined),
                     ),
                   ],
                 ),
-                const SizedBox(height: 40),
-                if (_loading)
-                  const Expanded(
-                    child: Center(child: SwapproLoadingIndicator()),
-                  )
-                else
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (_error != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  _error!,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.red,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: [
-                                    _profileHeaderCard(context),
-                                    const SizedBox(height: 12),
-                                    _profileCompletionCard(),
-                                    const SizedBox(height: 14),
-                                    _sectionCard(
-                                      title: 'User Profile',
-                                      subtitle:
-                                          'Personal information and account details',
-                                      child: Column(
-                                        children: [
-                                          _input(
-                                            label: 'Full name',
-                                            controller: fullnameController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                            validator: (v) {
-                                              if ((v ?? '').trim().isEmpty) {
-                                                return 'Full name is required';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Email',
-                                            controller: emailController,
-                                            readOnly: true,
-                                            helperText:
-                                                'Email can’t be changed here',
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Phone',
-                                            controller: phoneController,
-                                            keyboardType: TextInputType.phone,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Ghana card',
-                                            controller: ghanaCardController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Nationality',
-                                            controller: nationalityController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Date of birth',
-                                            controller: dobController,
-                                            readOnly: true,
-                                            onTap: _pickDateOfBirth,
-                                            suffixIcon: Icons.calendar_today,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _genderDropdown(),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Staff ID',
-                                            controller: staffIdController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    _sectionCard(
-                                      title: 'Business Profile',
-                                      subtitle:
-                                          'Company details and social profiles',
-                                      child: Column(
-                                        children: [
-                                          _input(
-                                            label: 'Company',
-                                            controller: companyController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Current branch',
-                                            controller: currentBranchController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Address',
-                                            controller: addressController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Location',
-                                            controller: locationController,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'WhatsApp number',
-                                            controller:
-                                                whatsappNumberController,
-                                            keyboardType: TextInputType.phone,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Facebook URL',
-                                            controller: facebookUrlController,
-                                            keyboardType: TextInputType.url,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'LinkedIn URL',
-                                            controller: linkedinUrlController,
-                                            keyboardType: TextInputType.url,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Twitter/X URL',
-                                            controller: twitterUrlController,
-                                            keyboardType: TextInputType.url,
-                                            textInputAction:
-                                                TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _input(
-                                            label: 'Instagram URL',
-                                            controller: instagramUrlController,
-                                            keyboardType: TextInputType.url,
-                                            textInputAction:
-                                                TextInputAction.done,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Center(
-                              child: AppButton(
-                                onPressed: _saving
-                                    ? () {}
-                                    : () => _saveProfile(),
-                                buttonText: _saving
-                                    ? 'Saving...'
-                                    : 'Save Changes',
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 26),
-              ],
-            ),
-          ),
         ),
       ),
     );
   }
 
-  Widget _profileHeaderCard(BuildContext context) {
-    final title = fullnameController.text.trim().isEmpty
-        ? 'Your profile'
-        : fullnameController.text.trim();
-    final subtitle = emailController.text.trim().isEmpty
-        ? 'Update your details'
-        : emailController.text.trim();
-
-    final imgUrl = _profilePictureUrl;
-
+  Widget _buildTopBar(double wScale, double hScale) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
+      padding: EdgeInsets.fromLTRB(15 * wScale, 10 * hScale, 15 * wScale, 0),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 58,
-                  backgroundColor: CustColors.mainCol.withOpacity(0.12),
-                  backgroundImage: (imgUrl != null)
-                      ? NetworkImage(imgUrl)
-                      : null,
-                  child: (imgUrl == null)
-                      ? const Icon(
-                          Icons.person,
-                          color: CustColors.mainCol,
-                          size: 44,
-                        )
-                      : null,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 50 * wScale,
+                height: 50 * wScale,
+                decoration: const BoxDecoration(
+                  color: _backBtnBg,
+                  shape: BoxShape.circle,
                 ),
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: Material(
-                    color: CustColors.mainCol,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: _uploadingPhoto
-                            ? const SwapproLoadingIndicator(size: 18)
-                            : const Icon(
-                                Icons.camera_alt_outlined,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                      ),
-                    ),
-                  ),
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 18 * wScale,
+                  color: _gold,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: Colors.black.withOpacity(0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _uploadingPhoto ? null : _pickAndUploadPhoto,
-            child: Text(
-              _uploadingPhoto ? 'Uploading...' : 'Change profile photo',
-              style: GoogleFonts.montserrat(
-                color: CustColors.mainCol,
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
               ),
+            ),
+          ),
+          Text(
+            'Your Account',
+            style: AppTypography.style(
+              fontSize: 20 * wScale,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
             ),
           ),
         ],
@@ -820,169 +261,402 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  Widget _sectionCard({
-    required String title,
-    required String subtitle,
-    required Widget child,
-  }) {
+  Widget _buildAvatar(double wScale) {
+    final size = 96 * wScale;
+    return Transform.rotate(
+      angle: 0.23,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: _profilePictureUrl != null
+              ? Image.network(
+                  _profilePictureUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, e, s) => _avatarPlaceholder(size),
+                )
+              : _avatarPlaceholder(size),
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarPlaceholder(double size) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: CustColors.mainCol.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+      color: _backBtnBg,
+      child: Icon(Icons.person, size: size * 0.45, color: _gold),
+    );
+  }
+
+  Widget _buildProfileInfo(double wScale, double hScale) {
+    return Column(
+      children: [
+        Text(
+          _displayName,
+          textAlign: TextAlign.center,
+          style: AppTypography.style(
+            fontSize: 28 * wScale,
+            fontWeight: FontWeight.w500,
+            color: _dark,
+            height: 42 / 28,
+          ),
+        ),
+        SizedBox(height: 4 * hScale),
+        Text(
+          _email.isEmpty ? '—' : _email,
+          textAlign: TextAlign.center,
+          style: AppTypography.style(
+            fontSize: 16 * wScale,
+            fontWeight: FontWeight.w400,
+            color: _dark,
+            height: 24 / 16,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationRow(double wScale) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.location_on_outlined, size: 20 * wScale, color: _dark),
+        SizedBox(width: 4 * wScale),
+        Text(
+          _location,
+          style: AppTypography.style(
+            fontSize: 14 * wScale,
+            fontWeight: FontWeight.w400,
+            color: _dark,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerifyBadge(double wScale) {
+    return GestureDetector(
+      onTap: _openEdit,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 16 * wScale,
+          vertical: 5 * wScale,
+        ),
+        decoration: BoxDecoration(
+          color: _verifyBg,
+          borderRadius: BorderRadius.circular(8 * wScale),
+        ),
+        child: Text(
+          'Verify',
+          style: AppTypography.style(
+            fontSize: 12 * wScale,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccountOptions(double wScale, double hScale) {
+    final items = <_AccountMenuItem>[
+      _AccountMenuItem(
+        label: 'Edit Details',
+        icon: Icons.edit_outlined,
+        onTap: _openEdit,
+      ),
+      _AccountMenuItem(
+        label: 'Change Password',
+        icon: Icons.lock_outline,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RecoverAccount()),
+        ),
+      ),
+      _AccountMenuItem(
+        label: '2 Factor Authentication',
+        icon: Icons.security_outlined,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const Security()),
+        ),
+      ),
+      _AccountMenuItem(
+        label: 'Help & Support',
+        icon: Icons.help_outline,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HelpPage()),
+        ),
+      ),
+      _AccountMenuItem(
+        label: 'Delete Account',
+        icon: Icons.delete_outline,
+        onTap: () => context.showAppSnackBar('Delete account coming soon'),
+      ),
+      _AccountMenuItem(
+        label: 'Log Out',
+        icon: Icons.logout,
+        onTap: () => _handleLogout(context),
+      ),
+    ];
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 26 * wScale),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10 * wScale),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              _AccountOptionTile(item: items[i], wScale: wScale),
+              if (i < items.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: _divider,
+                  indent: 16 * wScale,
+                  endIndent: 16 * wScale,
                 ),
-                child: const Icon(
-                  Icons.badge_outlined,
-                  color: CustColors.mainCol,
-                  size: 18,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListingsSection(double wScale, double hScale) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 21 * wScale),
+      child: Column(
+        children: [
+          Text(
+            'Your Listings',
+            style: AppTypography.style(
+              fontSize: 20 * wScale,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(height: 24 * hScale),
+          for (var i = 0; i < _placeholderListings.length; i++) ...[
+            if (i > 0) ...[
+              SizedBox(height: 18 * hScale),
+              Divider(color: _divider, height: 1, thickness: 1),
+              SizedBox(height: 18 * hScale),
+            ],
+            _ListingCard(item: _placeholderListings[i], wScale: wScale),
+          ],
+          SizedBox(height: 28 * hScale),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ListingsPage()),
+              );
+            },
+            child: Text(
+              'See All',
+              style: AppTypography.style(
+                fontSize: 20 * wScale,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountMenuItem {
+  const _AccountMenuItem({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+class _AccountOptionTile extends StatelessWidget {
+  const _AccountOptionTile({
+    required this.item,
+    required this.wScale,
+  });
+
+  final _AccountMenuItem item;
+  final double wScale;
+
+  static const Color _gold = Color(0xFFC3B649);
+  static const Color _menuText = Color(0xFF1C1C28);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: item.onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 0,
+          vertical: 14 * wScale,
+        ),
+        child: Row(
+          children: [
+            Icon(item.icon, size: 20 * wScale, color: _gold),
+            SizedBox(width: 12 * wScale),
+            Expanded(
+              child: Text(
+                item.label,
+                style: AppTypography.style(
+                  fontSize: 16 * wScale,
+                  fontWeight: FontWeight.w400,
+                  color: _menuText,
                 ),
               ),
-              const SizedBox(width: 12),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 24 * wScale,
+              color: _menuText,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ListingItem {
+  const _ListingItem({
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    required this.imageAsset,
+  });
+
+  final String title;
+  final String subtitle;
+  final String price;
+  final String imageAsset;
+}
+
+class _ListingCard extends StatelessWidget {
+  const _ListingCard({required this.item, required this.wScale});
+
+  final _ListingItem item;
+  final double wScale;
+
+  static const Color _subtitleGray = Color(0xFF787676);
+  static const Color _priceDark = Color(0xFF292526);
+  static const Color _dark = Color(0xFF111111);
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = 70 * wScale;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14 * wScale),
+          child: Image.asset(
+            item.imageAsset,
+            width: thumb,
+            height: thumb,
+            fit: BoxFit.cover,
+            errorBuilder: (_, e, s) => Container(
+              width: thumb,
+              height: thumb,
+              color: const Color(0xFFF5F5F8),
+              child: Icon(Icons.image_outlined, color: _dark.withValues(alpha: 0.3)),
+            ),
+          ),
+        ),
+        SizedBox(width: 15 * wScale),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      item.title,
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w500,
+                        color: _dark,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 4 * wScale),
                     Text(
-                      subtitle,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 11,
-                        color: Colors.black.withOpacity(0.6),
+                      item.subtitle,
+                      style: AppTypography.style(
+                        fontSize: 11 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: _subtitleGray,
+                      ),
+                    ),
+                    SizedBox(height: 16 * wScale),
+                    Text(
+                      item.price,
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w500,
+                        color: _priceDark,
                       ),
                     ),
                   ],
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Icon(
+                    Icons.more_horiz,
+                    size: 24 * wScale,
+                    color: _priceDark,
+                  ),
+                  SizedBox(height: 20 * wScale),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8 * wScale,
+                      vertical: 5 * wScale,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _dark,
+                      borderRadius: BorderRadius.circular(10 * wScale),
+                    ),
+                    child: Text(
+                      'View',
+                      style: AppTypography.style(
+                        fontSize: 12 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _genderDropdown() {
-    final items = const [
-      DropdownMenuItem(value: 'Male', child: Text('Male')),
-      DropdownMenuItem(value: 'Female', child: Text('Female')),
-      DropdownMenuItem(value: 'Other', child: Text('Other')),
-      DropdownMenuItem(
-        value: 'Prefer not to say',
-        child: Text('Prefer not to say'),
-      ),
-    ];
-
-    return DropdownButtonFormField<String>(
-      value: _gender,
-      items: items,
-      onChanged: (v) => setState(() => _gender = v),
-      decoration: _underlineDecoration(label: 'Gender'),
-    );
-  }
-
-  Widget _input({
-    required String label,
-    required TextEditingController controller,
-    TextInputType keyboardType = TextInputType.text,
-    TextInputAction textInputAction = TextInputAction.next,
-    bool readOnly = false,
-    String? helperText,
-    IconData? suffixIcon,
-    VoidCallback? onTap,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      textInputAction: textInputAction,
-      readOnly: readOnly,
-      onTap: onTap,
-      validator: validator,
-      decoration: _underlineDecoration(
-        label: label,
-        helperText: helperText,
-        suffixIcon: suffixIcon,
-        readOnly: readOnly,
-      ),
-    );
-  }
-
-  InputDecoration _underlineDecoration({
-    required String label,
-    String? helperText,
-    IconData? suffixIcon,
-    bool readOnly = false,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      helperText: helperText,
-      border: const UnderlineInputBorder(),
-      enabledBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.25)),
-      ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: CustColors.mainCol, width: 1.6),
-      ),
-      disabledBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
-      ),
-      suffixIcon: suffixIcon == null ? null : Icon(suffixIcon, size: 18),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
-    );
-  }
-
-  Widget _circleIcon(dynamic icon) {
-    return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.85),
-        border: Border.all(color: Colors.black.withOpacity(0.08)),
-      ),
-      child: icon is IconData
-          ? Icon(icon, color: Colors.black87, size: 18)
-          : Iconify(icon, color: Colors.black87, size: 8),
-    );
-  }
-}
-
-class _ProfileBackground extends StatelessWidget {
-  final Widget child;
-  const _ProfileBackground({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color.fromARGB(255, 244, 244, 244),
-            Color.fromARGB(255, 240, 240, 240),
-            Color.fromARGB(255, 236, 236, 236),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
         ),
-      ),
-      child: child,
+      ],
     );
   }
 }

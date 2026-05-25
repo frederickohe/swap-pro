@@ -13,18 +13,26 @@ class _SignupOtpState extends State<SignupOtp> {
   final TextEditingController codeController = TextEditingController();
 
   @override
+  void dispose() {
+    codeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final m = AuthScreenLayout.metrics(context);
+
     return MultiBlocListener(
       listeners: [
         BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is SignupOtpVerified) {
               context.read<SuccessBloc>().add(
-                ShowSuccessEvent(
-                  message: 'Account verified successfully!',
-                  nextScreen: 'welcome',
-                ),
-              );
+                    ShowSuccessEvent(
+                      message: 'Account verified successfully!',
+                      nextScreen: 'welcome',
+                    ),
+                  );
               Navigator.of(context).pushReplacement(
                 PageTransition(
                   type: PageTransitionType.rightToLeftWithFade,
@@ -35,146 +43,115 @@ class _SignupOtpState extends State<SignupOtp> {
               );
             }
             if (state is SignupOtpResent) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+              context.showAppSnackBar(state.message);
             }
             if (state is AuthError &&
                 (state.source == 'signup_otp' ||
                     state.source == 'signup_otp_resend')) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+              context.showAppSnackBar(state.message);
             }
           },
         ),
       ],
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
+        resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Center(
-                    child: Text(
-                      'Verify OTP',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w300,
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            final isLoading = state is AuthLoading;
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  m.horizontalPad,
+                  24 * m.hScale,
+                  m.horizontalPad,
+                  32 * m.hScale,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AuthBackButton(
+                        onTap: isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        height: 35,
-                        width: 35,
-                        decoration: BoxDecoration(
-                          color: CustColors.mainCol,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: CustColors.mainCol,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 50 * 0.35,
-                          ),
+                    SizedBox(height: 38 * m.hScale),
+                    AuthSplitTitle(
+                      boldPart: 'Verify Phone',
+                      fontSize: 32 * m.wScale,
+                    ),
+                    SizedBox(height: 20 * m.hScale),
+                    Text(
+                      'Enter the OTP sent to ${widget.phone}',
+                      style: AppTypography.style(
+                        fontSize: 14 * m.wScale,
+                        fontWeight: FontWeight.w400,
+                        color: AuthScreenLayout.dark,
+                        height: 20 / 14,
+                      ),
+                    ),
+                    SizedBox(height: 40 * m.hScale),
+                    AuthFormField(
+                      controller: codeController,
+                      hint: 'OTP code',
+                      icon: Icons.sms_outlined,
+                      height: m.fieldHeight,
+                      radius: m.fieldRadius,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: m.formGap),
+                    GestureDetector(
+                      onTap: isLoading
+                          ? null
+                          : () {
+                              context.read<AuthBloc>().add(
+                                    ResendSignupOtpEvent(phone: widget.phone),
+                                  );
+                            },
+                      child: Text(
+                        'Did not receive code? Resend',
+                        style: AppTypography.style(
+                          fontSize: 14 * m.wScale,
+                          fontWeight: FontWeight.w400,
+                          color: AuthScreenLayout.dark,
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.07),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.07),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                child: Text(
-                  'Enter the OTP sent to ${widget.phone}',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                child: TextField(
-                  controller: codeController,
-                  decoration: const InputDecoration(
-                    border: UnderlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(height: 15),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                child: GestureDetector(
-                  onTap: () {
-                    context.read<AuthBloc>().add(
-                      ResendSignupOtpEvent(phone: widget.phone),
-                    );
-                  },
-                  child: Text(
-                    'Did not receive code? Resend',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w300,
+                    SizedBox(height: 48 * m.hScale),
+                    Center(
+                      child: AuthPrimaryButton(
+                        label: 'Verify',
+                        isLoading: isLoading,
+                        width: m.buttonWidth,
+                        height: m.buttonHeight,
+                        radius: m.buttonRadius,
+                        fontSize: 16 * m.wScale,
+                        onPressed: () {
+                          if (codeController.text.trim().isEmpty) {
+                            context.showAppSnackBar(
+                              'Please enter the verification code',
+                            );
+                            return;
+                          }
+                          context.read<AuthBloc>().add(
+                                VerifySignupOtpEvent(
+                                  phone: widget.phone,
+                                  otp: codeController.text.trim(),
+                                ),
+                              );
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-              Center(
-                child: BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
-                    final isLoading = state is AuthLoading;
-                    return AppButton(
-                      onPressed: () {
-                        if (isLoading) return;
-
-                        if (codeController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Please enter the verification code',
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-
-                        context.read<AuthBloc>().add(
-                          VerifySignupOtpEvent(
-                            phone: widget.phone,
-                            otp: codeController.text.trim(),
-                          ),
-                        );
-                      },
-                      buttonText: isLoading ? 'Verifying...' : 'Verify',
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

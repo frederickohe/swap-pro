@@ -19,7 +19,7 @@ class AppButton extends StatelessWidget {
       onPressed: onPressed,
       child: Text(
         buttonText,
-        style: GoogleFonts.montserrat(
+        style: AppTypography.style(
           color: Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.w400,

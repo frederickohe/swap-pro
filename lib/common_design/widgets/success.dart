@@ -50,7 +50,7 @@ class _SuccessState extends State<Success> {
                       Text(
                         displayMessage,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
+                        style: AppTypography.style(
                           color: Colors.black,
                           fontSize: 15,
                           fontWeight: FontWeight.normal,

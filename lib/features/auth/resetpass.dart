@@ -1,11 +1,12 @@
-import 'package:swappro/barrel.dart';
 import 'package:flutter/services.dart';
+import 'package:swappro/barrel.dart';
 
 class ResetPassword extends StatefulWidget {
   final String email;
   final String code;
 
   const ResetPassword({super.key, required this.email, required this.code});
+
   @override
   State<ResetPassword> createState() => _ResetPasswordState();
 }
@@ -15,22 +16,28 @@ class _ResetPasswordState extends State<ResetPassword> {
     4,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _newPinFocusNodes = List.generate(
-    4,
-    (_) => FocusNode(),
-  );
+  final List<FocusNode> _newPinFocusNodes = List.generate(4, (_) => FocusNode());
 
   final List<TextEditingController> _confirmPinControllers = List.generate(
     4,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _confirmPinFocusNodes = List.generate(
-    4,
-    (_) => FocusNode(),
-  );
+  final List<FocusNode> _confirmPinFocusNodes =
+      List.generate(4, (_) => FocusNode());
 
   String get _newPin => _newPinControllers.map((c) => c.text).join();
   String get _confirmPin => _confirmPinControllers.map((c) => c.text).join();
+
+  @override
+  void initState() {
+    super.initState();
+    for (final node in _newPinFocusNodes) {
+      node.addListener(() => setState(() {}));
+    }
+    for (final node in _confirmPinFocusNodes) {
+      node.addListener(() => setState(() {}));
+    }
+  }
 
   @override
   void dispose() {
@@ -49,47 +56,65 @@ class _ResetPasswordState extends State<ResetPassword> {
     super.dispose();
   }
 
-  Widget _buildPinInput({
+  Widget _buildPinRow({
     required List<TextEditingController> controllers,
     required List<FocusNode> focusNodes,
+    required bool enabled,
+    required double gap,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(4, (index) {
-        return SizedBox(
-          width: 52,
-          child: TextField(
-            controller: controllers[index],
-            focusNode: focusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(1),
-            ],
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              counterText: '',
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: index == 0 ? 0 : gap / 2,
+              right: index == 3 ? 0 : gap / 2,
             ),
-            onChanged: (val) {
-              if (val.isNotEmpty) {
+            child: TextField(
+              controller: controllers[index],
+              focusNode: focusNodes[index],
+              enabled: enabled,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              style: AppTypography.style(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: AuthScreenLayout.dark,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(1),
+              ],
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              onChanged: (value) {
+                if (value.isNotEmpty) {
+                  if (index < 3) {
+                    focusNodes[index + 1].requestFocus();
+                  } else {
+                    focusNodes[index].unfocus();
+                  }
+                } else if (value.isEmpty && index > 0) {
+                  controllers[index - 1].clear();
+                  focusNodes[index - 1].requestFocus();
+                }
+              },
+              onTap: () {
+                controllers[index].selection = TextSelection.collapsed(
+                  offset: controllers[index].text.length,
+                );
+              },
+              onSubmitted: (_) {
                 if (index < 3) {
                   focusNodes[index + 1].requestFocus();
-                } else {
-                  focusNodes[index].unfocus();
                 }
-              }
-            },
-            onTap: () {
-              controllers[index].selection = TextSelection.collapsed(
-                offset: controllers[index].text.length,
-              );
-            },
-            onSubmitted: (_) {
-              if (index < 3) focusNodes[index + 1].requestFocus();
-            },
-            onEditingComplete: () {},
+              },
+            ),
           ),
         );
       }),
@@ -98,195 +123,131 @@ class _ResetPasswordState extends State<ResetPassword> {
 
   @override
   Widget build(BuildContext context) {
+    final m = AuthScreenLayout.metrics(context);
+
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
-      body: BlocBuilder<AuthBloc, AuthState>(
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError && state.source == 'reset_password') {
+            context.showAppSnackBar(state.message);
+          }
+        },
         builder: (context, state) {
-          return Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Centered text
-                    Center(
-                      child: Text(
-                        'Reset Password',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                    ),
+          final isLoading = state is AuthLoading;
 
-                    // Back button positioned on the left
-                    Positioned(
-                      left: 0,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Container(
-                          height: 35,
-                          width: 35,
-                          decoration: BoxDecoration(
-                            color: CustColors.mainCol,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: CustColors.mainCol,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 50 * 0.35,
-                            ),
-                          ),
-                        ),
-                      ),
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                m.horizontalPad,
+                24 * m.hScale,
+                m.horizontalPad,
+                32 * m.hScale,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: AuthBackButton(
+                      onTap: isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
                     ),
-                  ],
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                Center(
-                  child: SizedBox(
-                    width: 100,
-                    height: 100,
-                    child: Image.asset('assets/img/bot.png'),
                   ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                Padding(
-                  padding: EdgeInsets.only(left: 20.0, right: 20.0),
-                  child: Text(
+                  SizedBox(height: 38 * m.hScale),
+                  AuthSplitTitle(
+                    boldPart: 'New Password',
+                    fontSize: 32 * m.wScale,
+                  ),
+                  SizedBox(height: 20 * m.hScale),
+                  Text(
+                    'Create a new 4-digit PIN for your account',
+                    style: AppTypography.style(
+                      fontSize: 14 * m.wScale,
+                      fontWeight: FontWeight.w400,
+                      color: AuthScreenLayout.dark,
+                      height: 20 / 14,
+                    ),
+                  ),
+                  SizedBox(height: 40 * m.hScale),
+                  Text(
                     'New PIN',
-                    style: GoogleFonts.montserrat(
-                      color: const Color.fromARGB(255, 12, 12, 12),
-                      fontSize: 13,
+                    style: AppTypography.style(
+                      fontSize: 14 * m.wScale,
                       fontWeight: FontWeight.w400,
+                      color: AuthScreenLayout.dark,
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                  child: _buildPinInput(
-                    controllers: _newPinControllers,
-                    focusNodes: _newPinFocusNodes,
+                  SizedBox(height: m.formGap),
+                  AuthFormFieldShell(
+                    height: m.fieldHeight,
+                    radius: m.fieldRadius,
+                    icon: Icons.lock_outline,
+                    focused: _newPinFocusNodes.any((node) => node.hasFocus),
+                    child: _buildPinRow(
+                      controllers: _newPinControllers,
+                      focusNodes: _newPinFocusNodes,
+                      enabled: !isLoading,
+                      gap: m.formGap,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: EdgeInsets.only(left: 20.0, right: 20.0),
-                  child: Text(
+                  SizedBox(height: m.formGap * 2),
+                  Text(
                     'Confirm PIN',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 13,
+                    style: AppTypography.style(
+                      fontSize: 14 * m.wScale,
                       fontWeight: FontWeight.w400,
+                      color: AuthScreenLayout.dark,
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                  child: _buildPinInput(
-                    controllers: _confirmPinControllers,
-                    focusNodes: _confirmPinFocusNodes,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Text(
-                      'Enter a 4-digit PIN',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                      ),
+                  SizedBox(height: m.formGap),
+                  AuthFormFieldShell(
+                    height: m.fieldHeight,
+                    radius: m.fieldRadius,
+                    icon: Icons.lock_outline,
+                    focused:
+                        _confirmPinFocusNodes.any((node) => node.hasFocus),
+                    child: _buildPinRow(
+                      controllers: _confirmPinControllers,
+                      focusNodes: _confirmPinFocusNodes,
+                      enabled: !isLoading,
+                      gap: m.formGap,
                     ),
                   ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                Center(
-                  child: AppButton(
-                    onPressed: () {
-                      if (_newPin.length != 4 || _confirmPin.length != 4) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Please enter and confirm your 4-digit PIN',
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (_newPin != _confirmPin) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('PINs do not match'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      context.read<AuthBloc>().add(
-                        ResetPasswordEvent(
-                          email: widget.email,
-                          code: widget.code,
-                          newPassword: _newPin,
-                        ),
-                      );
-                    },
-                    buttonText: 'ResetPassword',
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-                Center(
-                  child: Text(
-                    'Dont have an Account ?',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
+                  SizedBox(height: 48 * m.hScale),
+                  Center(
+                    child: AuthPrimaryButton(
+                      label: 'Reset Password',
+                      isLoading: isLoading,
+                      width: m.buttonWidth,
+                      height: m.buttonHeight,
+                      radius: m.buttonRadius,
+                      fontSize: 16 * m.wScale,
+                      onPressed: () {
+                        if (_newPin.length != 4 || _confirmPin.length != 4) {
+                          context.showAppSnackBar(
+                            'Please enter and confirm your 4-digit PIN',
+                          );
+                          return;
+                        }
+                        if (_newPin != _confirmPin) {
+                          context.showAppSnackBar('PINs do not match');
+                          return;
+                        }
+                        context.read<AuthBloc>().add(
+                              ResetPasswordEvent(
+                                email: widget.email,
+                                code: widget.code,
+                                newPassword: _newPin,
+                              ),
+                            );
+                      },
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        PageTransition(
-                          type: PageTransitionType.rightToLeftWithFade,
-                          childCurrent: const Signup(),
-                          duration: const Duration(milliseconds: 1000),
-                          reverseDuration: const Duration(milliseconds: 600),
-                          child: const Signup(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Sign Up ',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

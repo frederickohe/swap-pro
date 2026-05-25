@@ -71,7 +71,7 @@ class HelpPage extends StatelessWidget {
                         }
                         return Text(
                           username,
-                          style: GoogleFonts.montserrat(
+                          style: AppTypography.style(
                             color: Colors.black,
                             fontSize: 20,
                             fontWeight: FontWeight.w400,

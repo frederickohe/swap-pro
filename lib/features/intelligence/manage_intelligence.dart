@@ -132,26 +132,14 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
       if (!mounted) return;
       await _loadRagPresence();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            successCount == 1
-                ? 'Document uploaded and indexed.'
-                : '$successCount documents uploaded and indexed.',
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
+      context.showAppSnackBar(
+        successCount == 1
+            ? 'Document uploaded and indexed.'
+            : '$successCount documents uploaded and indexed.',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _uploadErrorMessage(e),
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
-      );
+      context.showAppSnackBar(_uploadErrorMessage(e));
     }
   }
 
@@ -172,24 +160,10 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
       if (!mounted) return;
       await _loadRagPresence();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Website content scraped and indexed.',
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
-      );
+      context.showAppSnackBar('Website content scraped and indexed.');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _uploadErrorMessage(e),
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
-      );
+      context.showAppSnackBar(_uploadErrorMessage(e));
     }
   }
 
@@ -233,21 +207,12 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
     final uri = Uri.tryParse(url);
     if (uri == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid URL', style: GoogleFonts.montserrat())),
-      );
+      context.showAppSnackBar('Invalid URL');
       return;
     }
     if (!await canLaunchUrl(uri)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open website',
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
-      );
+      context.showAppSnackBar('Could not open website');
       return;
     }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -276,7 +241,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
               Expanded(
                 child: Text(
                   'No websites indexed yet. Use Index Website to add a URL — you can paste https://, http://, or www. addresses.',
-                  style: GoogleFonts.montserrat(
+                  style: AppTypography.style(
                     color: Colors.white.withValues(alpha: 0.78),
                     fontSize: 12,
                     height: 1.45,
@@ -327,7 +292,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                         _ragDocSourceUrl(doc) ?? '',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.montserrat(
+                        style: AppTypography.style(
                           color: Colors.white.withValues(alpha: 0.92),
                           fontSize: 13,
                           height: 1.35,
@@ -363,7 +328,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
             },
             child: Text(
               'View all ${sites.length} websites',
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: const Color(0xFFA855F7),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -403,7 +368,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                           Text(
                             'Welcome to Business Chat Intelligence',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               color: Colors.white,
                               fontSize: 19,
                               fontWeight: FontWeight.w500,
@@ -414,7 +379,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                           Text(
                             'Upload business information documents to train your AI assistant on your company\'s information. The AI can instantly answer customer questions, provide support, and deliver accurate responses based on your files — helping businesses automate communication and improve customer experience.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 14,
                               fontWeight: FontWeight.w300,
@@ -455,7 +420,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                                   Expanded(
                                     child: Text(
                                       'Could not verify your documents. Pull to refresh after opening the screen again, or check your connection.\n${_shortPresenceError(_presenceError!)}',
-                                      style: GoogleFonts.montserrat(
+                                      style: AppTypography.style(
                                         color: Colors.white.withValues(
                                           alpha: 0.88,
                                         ),
@@ -513,7 +478,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                                   Expanded(
                                     child: Text(
                                       'You have not uploaded any business data',
-                                      style: GoogleFonts.montserrat(
+                                      style: AppTypography.style(
                                         color: Colors.white.withValues(
                                           alpha: 0.85,
                                         ),
@@ -532,7 +497,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 'Websites',
-                                style: GoogleFonts.montserrat(
+                                style: AppTypography.style(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -639,7 +604,7 @@ class _WebsiteUrlDialogState extends State<_WebsiteUrlDialog> {
           children: [
             Text(
               'Index website',
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -648,7 +613,7 @@ class _WebsiteUrlDialogState extends State<_WebsiteUrlDialog> {
             const SizedBox(height: 8),
             Text(
               'We will scrape the public page and add its text to your business knowledge base.',
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: Colors.white.withValues(alpha: 0.75),
                 fontSize: 12,
                 height: 1.45,
@@ -659,10 +624,10 @@ class _WebsiteUrlDialogState extends State<_WebsiteUrlDialog> {
               controller: _controller,
               autofocus: true,
               keyboardType: TextInputType.url,
-              style: GoogleFonts.montserrat(color: Colors.white, fontSize: 14),
+              style: AppTypography.style(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'https://example.com or www.example.com',
-                hintStyle: GoogleFonts.montserrat(
+                hintStyle: AppTypography.style(
                   color: Colors.white.withValues(alpha: 0.4),
                   fontSize: 13,
                 ),
@@ -696,7 +661,7 @@ class _WebsiteUrlDialogState extends State<_WebsiteUrlDialog> {
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
                     'Cancel',
-                    style: GoogleFonts.montserrat(
+                    style: AppTypography.style(
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
@@ -709,7 +674,7 @@ class _WebsiteUrlDialogState extends State<_WebsiteUrlDialog> {
                   ),
                   child: Text(
                     'Index',
-                    style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                    style: AppTypography.style(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -832,7 +797,7 @@ class _RagIndexProgressDialogState extends State<_RagIndexProgressDialog> {
             Text(
               _statusHeadline(),
               textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -845,7 +810,7 @@ class _RagIndexProgressDialogState extends State<_RagIndexProgressDialog> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.montserrat(
+                style: AppTypography.style(
                   color: Colors.white.withValues(alpha: 0.55),
                   fontSize: 11,
                 ),
@@ -865,7 +830,7 @@ class _RagIndexProgressDialogState extends State<_RagIndexProgressDialog> {
             Text(
               '$_progress% · $_message',
               textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 12,
                 height: 1.4,
@@ -905,7 +870,7 @@ class _IntelligenceCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               title,
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -1008,7 +973,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
           ),
           title: Text(
             _ragDocIsWebsite(doc) ? 'Indexed content' : 'File preview',
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 18),
+            style: AppTypography.style(color: Colors.white, fontSize: 18),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -1024,7 +989,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                 if (snapshot.hasError) {
                   return Text(
                     snapshot.error.toString().replaceFirst('Exception: ', ''),
-                    style: GoogleFonts.outfit(
+                    style: AppTypography.style(
                       color: Colors.white.withValues(alpha: 0.75),
                       fontSize: 13,
                     ),
@@ -1034,7 +999,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                 if (text.trim().isEmpty) {
                   return Text(
                     'No preview available.',
-                    style: GoogleFonts.outfit(
+                    style: AppTypography.style(
                       color: Colors.white.withValues(alpha: 0.75),
                       fontSize: 13,
                     ),
@@ -1045,7 +1010,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                   child: SingleChildScrollView(
                     child: SelectableText(
                       text,
-                      style: GoogleFonts.outfit(
+                      style: AppTypography.style(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 13,
                         height: 1.45,
@@ -1061,7 +1026,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(
                 'Close',
-                style: GoogleFonts.outfit(color: const Color(0xFFA855F7)),
+                style: AppTypography.style(color: const Color(0xFFA855F7)),
               ),
             ),
           ],
@@ -1083,9 +1048,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message, style: GoogleFonts.outfit())),
-    );
+    context.showAppSnackBar(message);
   }
 
   @override
@@ -1135,18 +1098,11 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
           ..removeAt(index);
         _expandedIndex = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Deleted "$name"', style: GoogleFonts.outfit())),
-      );
+      context.showAppSnackBar('Deleted "$name"');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.outfit(),
-          ),
-        ),
+      context.showAppSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
       );
     }
   }
@@ -1189,7 +1145,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                   child: Text(
                                     _loadError!,
                                     textAlign: TextAlign.center,
-                                    style: GoogleFonts.outfit(
+                                    style: AppTypography.style(
                                       color: Colors.white.withValues(
                                         alpha: 0.75,
                                       ),
@@ -1202,7 +1158,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                   onPressed: _loadDocuments,
                                   child: Text(
                                     'Retry',
-                                    style: GoogleFonts.outfit(
+                                    style: AppTypography.style(
                                       color: const Color(0xFFA855F7),
                                       fontSize: 16,
                                     ),
@@ -1215,7 +1171,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                         ? Center(
                             child: Text(
                               'No documents or websites indexed yet',
-                              style: GoogleFonts.outfit(
+                              style: AppTypography.style(
                                 color: Colors.white.withValues(alpha: 0.6),
                                 fontSize: 16,
                               ),
@@ -1285,7 +1241,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                             ? 'Website'
                                                             : 'Document',
                                                         style:
-                                                            GoogleFonts.outfit(
+                                                            AppTypography.style(
                                                               color: Colors
                                                                   .white
                                                                   .withValues(
@@ -1300,7 +1256,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                 const SizedBox(height: 10),
                                                 Text(
                                                   title,
-                                                  style: GoogleFonts.outfit(
+                                                  style: AppTypography.style(
                                                     color: Colors.white,
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.w400,
@@ -1310,7 +1266,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                   const SizedBox(height: 12),
                                                   Text(
                                                     subtitle,
-                                                    style: GoogleFonts.outfit(
+                                                    style: AppTypography.style(
                                                       color: Colors.white
                                                           .withValues(
                                                             alpha: 0.65,
@@ -1337,7 +1293,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                         child: Text(
                                                           'Open website',
                                                           style:
-                                                              GoogleFonts.outfit(
+                                                              AppTypography.style(
                                                                 color:
                                                                     const Color(
                                                                       0xFFA855F7,
@@ -1359,7 +1315,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                       isWebsite
                                                           ? 'View indexed content'
                                                           : 'View file',
-                                                      style: GoogleFonts.outfit(
+                                                      style: AppTypography.style(
                                                         color: Colors.white
                                                             .withValues(
                                                               alpha: 0.85,
@@ -1378,7 +1334,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                       child: Text(
                                                         'Open in browser',
                                                         style:
-                                                            GoogleFonts.outfit(
+                                                            AppTypography.style(
                                                               color: Colors
                                                                   .white
                                                                   .withValues(
@@ -1398,7 +1354,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                       isWebsite
                                                           ? 'Remove website'
                                                           : 'Delete file',
-                                                      style: GoogleFonts.outfit(
+                                                      style: AppTypography.style(
                                                         color: Colors.white
                                                             .withValues(
                                                               alpha: 0.75,
@@ -1436,7 +1392,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                         style:
-                                                            GoogleFonts.outfit(
+                                                            AppTypography.style(
                                                               color:
                                                                   Colors.white,
                                                               fontSize: 18,
@@ -1455,7 +1411,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: GoogleFonts.outfit(
+                                                    style: AppTypography.style(
                                                       color: Colors.white
                                                           .withValues(
                                                             alpha: 0.45,

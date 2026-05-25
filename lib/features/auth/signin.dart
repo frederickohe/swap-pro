@@ -70,15 +70,7 @@ class _SigninState extends State<Signin> {
               (route) => false,
             );
           } else if (state is AuthError && state.source == 'login') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.message,
-                  style: GoogleFonts.montserrat(color: Colors.white),
-                ),
-                backgroundColor: Colors.red,
-              ),
-            );
+            context.showAppSnackBar(state.message);
           }
         },
         builder: (context, state) {
@@ -92,25 +84,46 @@ class _SigninState extends State<Signin> {
                 child: Stack(
                   children: [
                     Positioned(
+                      top: 24 * hScale,
+                      left: horizontalPad,
+                      child: GestureDetector(
+                        onTap: isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 35,
+                          width: 35,
+                          decoration: BoxDecoration(
+                            color: _dark,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _dark, width: 1.5),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.white,
+                              size: 17.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
                       top: titleTop,
                       left: horizontalPad,
                       right: horizontalPad,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Sign In',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 32 * wScale,
-                              fontWeight: FontWeight.w600,
-                              color: _dark,
-                              height: 40 / 32,
-                            ),
+                          AuthSplitTitle(
+                            boldPart: 'Sign In',
+                            fontSize: 32 * wScale,
+                            color: _dark,
                           ),
                           SizedBox(height: 20 * hScale),
                           Text(
                             'Enter your email and password',
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               fontSize: 14 * wScale,
                               fontWeight: FontWeight.w400,
                               color: _dark,
@@ -128,7 +141,7 @@ class _SigninState extends State<Signin> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _LoginField(
+                            AuthFormField(
                               controller: _emailController,
                               hint: 'Email',
                               icon: Icons.email_outlined,
@@ -136,10 +149,9 @@ class _SigninState extends State<Signin> {
                               radius: fieldRadius,
                               enabled: !isLoading,
                               keyboardType: TextInputType.emailAddress,
-                              obscureText: false,
                             ),
                             SizedBox(height: formGap),
-                            _LoginField(
+                            AuthFormField(
                               controller: _passwordController,
                               hint: 'Password',
                               icon: Icons.lock_outline,
@@ -147,7 +159,6 @@ class _SigninState extends State<Signin> {
                               radius: fieldRadius,
                               enabled: !isLoading,
                               obscureText: _obscurePassword,
-                              showBorder: false,
                             ),
                             SizedBox(height: formGap),
                             Row(
@@ -167,7 +178,7 @@ class _SigninState extends State<Signin> {
                                         },
                                   child: Text(
                                     'Forgot password?',
-                                    style: GoogleFonts.montserrat(
+                                    style: AppTypography.style(
                                       fontSize: 14 * wScale,
                                       fontWeight: FontWeight.w400,
                                       color: _dark,
@@ -183,7 +194,7 @@ class _SigninState extends State<Signin> {
                                           ),
                                   child: Text(
                                     'Show password',
-                                    style: GoogleFonts.montserrat(
+                                    style: AppTypography.style(
                                       fontSize: 14 * wScale,
                                       fontWeight: FontWeight.w400,
                                       color: _dark,
@@ -228,7 +239,7 @@ class _SigninState extends State<Signin> {
                                   )
                                 : Text(
                                     'Sign In',
-                                    style: GoogleFonts.montserrat(
+                                    style: AppTypography.style(
                                       fontSize: 16 * wScale,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -256,7 +267,7 @@ class _SigninState extends State<Signin> {
                         child: Text(
                           "Don't have an account? Register",
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.montserrat(
+                          style: AppTypography.style(
                             fontSize: 14 * wScale,
                             fontWeight: FontWeight.w400,
                             color: _dark,
@@ -271,80 +282,6 @@ class _SigninState extends State<Signin> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _LoginField extends StatelessWidget {
-  const _LoginField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    required this.height,
-    required this.radius,
-    required this.enabled,
-    this.keyboardType,
-    this.obscureText = false,
-    this.showBorder = true,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final double height;
-  final double radius;
-  final bool enabled;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final bool showBorder;
-
-  static const Color _dark = Color(0xFF111111);
-  static const Color _gold = Color(0xFFC3B649);
-  static const Color _fieldFill = Color(0xFFF5F5F8);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: _fieldFill,
-        borderRadius: BorderRadius.circular(radius),
-        border: showBorder
-            ? Border.all(color: _dark, width: 0.8)
-            : null,
-      ),
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: _gold),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              keyboardType: keyboardType,
-              obscureText: obscureText,
-              style: GoogleFonts.montserrat(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: _dark,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: _dark,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

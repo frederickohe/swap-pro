@@ -17,7 +17,7 @@ class SessionAwareHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     // Get current access token and add to headers
     final accessToken = await tokenService.getAccessToken();
-    if (accessToken != null) {
+    if (accessToken != null && accessToken.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $accessToken';
     }
 
@@ -31,7 +31,7 @@ class SessionAwareHttpClient extends http.BaseClient {
         if (await _refreshToken(refreshToken)) {
           // Token was refreshed successfully, retry the original request
           final newAccessToken = await tokenService.getAccessToken();
-          if (newAccessToken != null) {
+          if (newAccessToken != null && newAccessToken.isNotEmpty) {
             request.headers['Authorization'] = 'Bearer $newAccessToken';
             // Clone the request to resend it
             final clonedRequest = _cloneRequest(request);

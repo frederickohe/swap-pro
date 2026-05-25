@@ -1,0 +1,622 @@
+import 'package:swappro/barrel.dart';
+
+/// Listed properties hub — Figma "Listings" frame (node 162:622).
+/// Shows the signed-in user's listings with search and quick actions.
+class ListingsPage extends StatefulWidget {
+  const ListingsPage({super.key});
+
+  @override
+  State<ListingsPage> createState() => _ListingsPageState();
+}
+
+class _ListingsPageState extends State<ListingsPage> {
+  static const Color _ink = Color(0xFF111111);
+  static const Color _subtitle = Color(0xFF787676);
+  static const Color _price = Color(0xFF292526);
+  static const Color _gold = Color(0xFFC3B649);
+  static const Color _backBtnBg = Color(0xFFF5F6F8);
+  static const Color _searchBorder = Color(0xFFECECF3);
+  static const Color _menuBorder = Color(0xFFDFDFDF);
+  static const Color _divider = Color(0xFFF6F6F6);
+
+  static const double _figmaW = 428;
+
+  static const List<_ListingRow> _demoListings = [
+    _ListingRow(
+      title: 'BMW Forza 2020',
+      subtitle: 'Dress modern',
+      price: '\$520,000.99',
+    ),
+    _ListingRow(
+      title: '3 Bedroom Apartment',
+      subtitle: 'Apartment',
+      price: '\$230,000',
+    ),
+    _ListingRow(
+      title: 'Hanjing C Ship',
+      subtitle: 'Apartment',
+      price: '\$150 M',
+    ),
+    _ListingRow(
+      title: 'Single Room Self Contained',
+      subtitle: 'Apartment',
+      price: '\$110,000',
+    ),
+  ];
+
+  final TextEditingController _searchController = TextEditingController();
+  late final ApiService _apiService = ApiService(
+    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
+  );
+
+  List<_ListingRow> _allListings = [];
+  bool _loading = true;
+  String? _error;
+  String? _profilePictureUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() => setState(() {}));
+    _loadListings();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadListings() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final user = await _apiService.getUserProfile();
+      final photo =
+          (user['profile_picture_url'] ?? user['avatar_url'] ?? '').toString();
+      final products = await _apiService.listProducts();
+      if (!mounted) return;
+
+      final rows = products.map(_ListingRow.fromProduct).where((r) {
+        return r.title.trim().isNotEmpty;
+      }).toList();
+
+      setState(() {
+        _profilePictureUrl = photo.trim().isEmpty ? null : photo.trim();
+        _allListings = rows.isEmpty ? List.of(_demoListings) : rows;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _allListings = List.of(_demoListings);
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<_ListingRow> get _visibleListings {
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.isEmpty) return _allListings;
+    return _allListings
+        .where(
+          (item) =>
+              item.title.toLowerCase().contains(q) ||
+              item.subtitle.toLowerCase().contains(q) ||
+              item.price.toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wScale = MediaQuery.sizeOf(context).width / _figmaW;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTopBar(wScale),
+                if (_error != null)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20 * wScale),
+                    child: Text(
+                      _error!,
+                      style: AppTypography.style(
+                        color: Colors.red.shade700,
+                        fontSize: 12 * wScale,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20 * wScale, 24 * wScale, 20 * wScale, 0),
+                  child: _buildSearchHeader(wScale),
+                ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: SwapproLoadingIndicator())
+                      : RefreshIndicator(
+                          onRefresh: _loadListings,
+                          child: _buildList(wScale),
+                        ),
+                ),
+              ],
+            ),
+            Positioned(
+              right: 38 * wScale,
+              bottom: 24,
+              child: _buildFabColumn(wScale),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(double wScale) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(15 * wScale, 8 * wScale, 15 * wScale, 0),
+      child: SizedBox(
+        height: 65 * wScale,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 50 * wScale,
+                  height: 50 * wScale,
+                  decoration: const BoxDecoration(
+                    color: _backBtnBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18 * wScale,
+                    color: _gold,
+                  ),
+                ),
+              ),
+            ),
+            Text(
+              'Listed Properties',
+              style: AppTypography.style(
+                fontSize: 20 * wScale,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildProfileAvatar(wScale),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(double wScale) {
+    final size = 65 * wScale;
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: _profilePictureUrl != null
+            ? Image.network(
+                _profilePictureUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, e, s) => _avatarPlaceholder(size),
+              )
+            : _avatarPlaceholder(size),
+      ),
+    );
+  }
+
+  Widget _avatarPlaceholder(double size) {
+    return Container(
+      color: _backBtnBg,
+      child: Icon(Icons.person, size: size * 0.45, color: _gold),
+    );
+  }
+
+  Widget _buildSearchHeader(double wScale) {
+    return Row(
+      children: [
+        Expanded(child: _buildSearchField(wScale)),
+        SizedBox(width: 30 * wScale),
+        _buildMenuButton(wScale),
+      ],
+    );
+  }
+
+  Widget _buildSearchField(double wScale) {
+    return Container(
+      height: 50 * wScale,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25 * wScale),
+        border: Border.all(color: _searchBorder),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 16 * wScale),
+      alignment: Alignment.center,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: AppTypography.style(
+                fontSize: 14 * wScale,
+                fontWeight: FontWeight.w400,
+                color: _ink,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search ...',
+                hintStyle: AppTypography.style(
+                  fontSize: 14 * wScale,
+                  color: _ink,
+                ),
+              ),
+            ),
+          ),
+          Icon(Icons.search, size: 18 * wScale, color: _ink),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(double wScale) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => context.showAppSnackBar('Menu coming soon'),
+        child: Container(
+          width: 40 * wScale,
+          height: 40 * wScale,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: _menuBorder),
+          ),
+          child: Icon(Icons.menu, size: 22 * wScale, color: _price),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(double wScale) {
+    final items = _visibleListings;
+    if (items.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(20 * wScale, 32 * wScale, 20 * wScale, 120),
+        children: [
+          Text(
+            'No listings match your search.',
+            textAlign: TextAlign.center,
+            style: AppTypography.style(
+              fontSize: 14 * wScale,
+              color: _subtitle,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(20 * wScale, 32 * wScale, 20 * wScale, 160),
+      itemCount: items.length,
+      separatorBuilder: (_, i) => Padding(
+        padding: EdgeInsets.symmetric(vertical: 27 * wScale),
+        child: Divider(color: _divider, height: 1, thickness: 1),
+      ),
+      itemBuilder: (context, index) {
+        return _ListingListTile(
+          item: items[index],
+          wScale: wScale,
+          onView: () => context.showAppSnackBar('View ${items[index].title}'),
+          onMore: () => _showListingActions(items[index]),
+        );
+      },
+    );
+  }
+
+  void _showListingActions(_ListingRow item) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Edit listing'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.showAppSnackBar('Edit coming soon');
+                },
+              ),
+              ListTile(
+                title: const Text('Remove listing'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.showAppSnackBar('Remove coming soon');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFabColumn(double wScale) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _FabCircle(
+          size: 70 * wScale,
+          height: 60 * wScale,
+          icon: Icons.tune,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
+            );
+          },
+        ),
+        SizedBox(height: 15 * wScale),
+        _FabCircle(
+          size: 70 * wScale,
+          height: 60 * wScale,
+          icon: Icons.add_circle_outline,
+          onTap: () => context.showAppSnackBar('Add listing coming soon'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ListingRow {
+  const _ListingRow({
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    this.imageUrl,
+    this.productId,
+  });
+
+  final String title;
+  final String subtitle;
+  final String price;
+  final String? imageUrl;
+  final String? productId;
+
+  factory _ListingRow.fromProduct(Map<String, dynamic> product) {
+    final name = (product['name'] ?? product['title'] ?? '').toString().trim();
+    final category =
+        (product['category'] ?? product['condition'] ?? '').toString().trim();
+    final rawPrice = product['price'];
+    final priceStr = _formatPrice(rawPrice);
+
+    String? imageUrl;
+    final photos = product['photos'];
+    if (photos is List && photos.isNotEmpty) {
+      final first = photos.first?.toString().trim() ?? '';
+      if (first.isNotEmpty) imageUrl = first;
+    }
+    if (imageUrl == null) {
+      final fallback =
+          (product['image_url'] ?? product['thumbnail'] ?? '').toString().trim();
+      if (fallback.isNotEmpty) imageUrl = fallback;
+    }
+
+    return _ListingRow(
+      title: name.isEmpty ? 'Untitled listing' : name,
+      subtitle: category.isEmpty ? 'Listing' : category,
+      price: priceStr,
+      imageUrl: imageUrl,
+      productId: (product['id'] ?? product['_id'])?.toString(),
+    );
+  }
+
+  static String _formatPrice(dynamic value) {
+    if (value == null) return '';
+    if (value is num) {
+      final whole = value == value.roundToDouble();
+      final text = whole
+          ? value.round().toString()
+          : value.toStringAsFixed(2);
+      return '\$$text';
+    }
+    final s = value.toString().trim();
+    if (s.isEmpty) return '';
+    return s.startsWith('\$') ? s : '\$$s';
+  }
+}
+
+class _ListingListTile extends StatelessWidget {
+  const _ListingListTile({
+    required this.item,
+    required this.wScale,
+    required this.onView,
+    required this.onMore,
+  });
+
+  final _ListingRow item;
+  final double wScale;
+  final VoidCallback onView;
+  final VoidCallback onMore;
+
+  static const Color _inkTitle = Color(0xFF121111);
+  static const Color _subtitle = Color(0xFF787676);
+  static const Color _price = Color(0xFF292526);
+  static const Color _dark = Color(0xFF111111);
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = 70 * wScale;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(5 * wScale),
+          child: _buildThumb(thumb),
+        ),
+        SizedBox(width: 15 * wScale),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w500,
+                        color: _inkTitle,
+                      ),
+                    ),
+                    SizedBox(height: 4 * wScale),
+                    Text(
+                      item.subtitle,
+                      style: AppTypography.style(
+                        fontSize: 11 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: _subtitle,
+                      ),
+                    ),
+                    SizedBox(height: 16 * wScale),
+                    Text(
+                      item.price,
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w500,
+                        color: _price,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: onMore,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 8 * wScale),
+                      child: Icon(
+                        Icons.more_horiz,
+                        size: 24 * wScale,
+                        color: _price,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20 * wScale),
+                  GestureDetector(
+                    onTap: onView,
+                    child: Container(
+                      width: 45 * wScale,
+                      height: 27 * wScale,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _dark,
+                        borderRadius: BorderRadius.circular(10 * wScale),
+                      ),
+                      child: Text(
+                        'View',
+                        style: AppTypography.style(
+                          fontSize: 12 * wScale,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThumb(double thumb) {
+    if (item.imageUrl != null) {
+      return Image.network(
+        item.imageUrl!,
+        width: thumb,
+        height: thumb,
+        fit: BoxFit.cover,
+        errorBuilder: (_, e, s) => _placeholder(thumb),
+      );
+    }
+    return _placeholder(thumb);
+  }
+
+  Widget _placeholder(double thumb) {
+    return Container(
+      width: thumb,
+      height: thumb,
+      color: const Color(0xFFF5F5F8),
+      child: Icon(
+        Icons.image_outlined,
+        color: _dark.withValues(alpha: 0.3),
+      ),
+    );
+  }
+}
+
+class _FabCircle extends StatelessWidget {
+  const _FabCircle({
+    required this.size,
+    required this.height,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final double size;
+  final double height;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  static const Color _dark = Color(0xFF111111);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _dark,
+      borderRadius: BorderRadius.circular(45),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(45),
+        onTap: onTap,
+        child: SizedBox(
+          width: size,
+          height: height,
+          child: Icon(icon, color: Colors.white, size: 28),
+        ),
+      ),
+    );
+  }
+}

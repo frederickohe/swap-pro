@@ -58,6 +58,8 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int _navIndex = 0;
   Future<int>? _unreadCountFuture;
+  final TextEditingController _searchController = TextEditingController();
+  final Set<String> _likedPropertyIds = {};
 
   static const _categories = [
     _CategoryItem('Phone', Icons.smartphone_outlined),
@@ -74,7 +76,7 @@ class _HomeState extends State<Home> {
     _CategoryItem('Utensils', Icons.restaurant_outlined),
   ];
 
-  static const _wishlistItems = [
+  final List<String> _wishlistItems = [
     'Car spare parts',
     'Turbo Washing Machine',
     'Brush',
@@ -84,6 +86,7 @@ class _HomeState extends State<Home> {
 
   static const _featuredProducts = [
     _ProductCardData(
+      id: 'home-2-bedroom-self-c',
       title: '2 Bedroom Self C',
       location: 'Lapaz',
       price: '\$212.99',
@@ -93,6 +96,7 @@ class _HomeState extends State<Home> {
       imageHeight: 217,
     ),
     _ProductCardData(
+      id: 'home-bmw-forza-2020',
       title: 'BMW Forza 2020',
       location: 'North Kaneshie',
       price: '₵662.99',
@@ -104,9 +108,27 @@ class _HomeState extends State<Home> {
   ];
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _unreadCountFuture ??= context.read<ApiService>().getUnreadNotificationCount();
+  }
+
+  void _openSearchResults() {
+    final query = _searchController.text.trim();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchPropertiesPage(
+          query: query.isEmpty ? null : query,
+        ),
+      ),
+    );
   }
 
   Future<void> _refreshNotifications() async {
@@ -120,7 +142,7 @@ class _HomeState extends State<Home> {
     FontWeight weight = FontWeight.w400,
     Color color = _kInk,
   }) {
-    return GoogleFonts.montserrat(
+    return AppTypography.style(
       fontSize: size,
       fontWeight: weight,
       color: color,
@@ -230,12 +252,31 @@ class _HomeState extends State<Home> {
           const Icon(Icons.location_on_outlined, size: 18, color: _kInk),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'Search ...',
+            child: TextField(
+              controller: _searchController,
               style: _textStyle(size: 14, color: _kInk.withValues(alpha: 0.9)),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _openSearchResults(),
+              decoration: InputDecoration(
+                hintText: 'Search ...',
+                hintStyle: _textStyle(
+                  size: 14,
+                  color: _kInk.withValues(alpha: 0.5),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
           ),
-          const Icon(Icons.search, size: 18, color: _kInk),
+          GestureDetector(
+            onTap: _openSearchResults,
+            behavior: HitTestBehavior.opaque,
+            child: const Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: Icon(Icons.search, size: 18, color: _kInk),
+            ),
+          ),
         ],
       ),
     );
@@ -272,7 +313,15 @@ class _HomeState extends State<Home> {
         ),
         const Spacer(),
         GestureDetector(
-          onTap: () {},
+          onTap: () async {
+            final wish = await Navigator.push<String>(
+              context,
+              MaterialPageRoute(builder: (_) => const AddWishPage()),
+            );
+            if (wish != null && wish.isNotEmpty && mounted) {
+              setState(() => _wishlistItems.add(wish));
+            }
+          },
           child: Text(
             'Add New +',
             style: _textStyle(size: 16, weight: FontWeight.w500),
@@ -292,13 +341,49 @@ class _HomeState extends State<Home> {
     );
   }
 
+  void _openPropertyDetail(_ProductCardData product) {
+    Navigator.push(
+      context,
+      PageTransition(
+        type: PageTransitionType.rightToLeftWithFade,
+        duration: const Duration(milliseconds: 350),
+        reverseDuration: const Duration(milliseconds: 300),
+        child: PropertyDetailPage(
+          data: PropertyDetailData.demo(
+            title: product.title,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            location: product.location,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleLike(String id) {
+    setState(() {
+      if (_likedPropertyIds.contains(id)) {
+        _likedPropertyIds.remove(id);
+      } else {
+        _likedPropertyIds.add(id);
+      }
+    });
+  }
+
   Widget _buildProductRow() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < _featuredProducts.length; i++) ...[
           if (i > 0) const SizedBox(width: 12),
-          Expanded(child: _ProductCard(data: _featuredProducts[i])),
+          Expanded(
+            child: _ProductCard(
+              data: _featuredProducts[i],
+              isLiked: _likedPropertyIds.contains(_featuredProducts[i].id),
+              onImageTap: () => _openPropertyDetail(_featuredProducts[i]),
+              onLikeTap: () => _toggleLike(_featuredProducts[i].id),
+            ),
+          ),
         ],
       ],
     );
@@ -310,12 +395,22 @@ class _HomeState extends State<Home> {
       children: [
         _FabCircle(
           icon: Icons.tune,
-          onTap: () {},
+          onTap: () async {
+            await Navigator.push<SearchFiltersResult>(
+              context,
+              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
+            );
+          },
         ),
         const SizedBox(height: 15),
         _FabCircle(
           icon: Icons.add_circle_outline,
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddBelongingPage()),
+            );
+          },
         ),
       ],
     );
@@ -343,12 +438,38 @@ class _HomeState extends State<Home> {
             _NavItem(
               icon: Icons.format_list_bulleted,
               selected: _navIndex == 1,
-              onTap: () => setState(() => _navIndex = 1),
+              onTap: () {
+                setState(() => _navIndex = 1);
+                Navigator.push(
+                  context,
+                  PageTransition(
+                    type: PageTransitionType.rightToLeftWithFade,
+                    duration: const Duration(milliseconds: 350),
+                    reverseDuration: const Duration(milliseconds: 300),
+                    child: const DashListingsPage(),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() => _navIndex = 0);
+                });
+              },
             ),
             _NavItem(
               icon: Icons.swap_horiz,
               selected: _navIndex == 2,
-              onTap: () => setState(() => _navIndex = 2),
+              onTap: () {
+                setState(() => _navIndex = 2);
+                Navigator.push(
+                  context,
+                  PageTransition(
+                    type: PageTransitionType.rightToLeftWithFade,
+                    duration: const Duration(milliseconds: 350),
+                    reverseDuration: const Duration(milliseconds: 300),
+                    child: const SwapBayPage(initialTab: SwapBayTab.sent),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() => _navIndex = 0);
+                });
+              },
             ),
             _NavItem(
               icon: Icons.person_outline,
@@ -376,6 +497,7 @@ class _CategoryItem {
 }
 
 class _ProductCardData {
+  final String id;
   final String title;
   final String location;
   final String price;
@@ -384,6 +506,7 @@ class _ProductCardData {
   final double imageHeight;
 
   const _ProductCardData({
+    required this.id,
     required this.title,
     required this.location,
     required this.price,
@@ -463,7 +586,7 @@ class _CategoryTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.montserrat(
+            style: AppTypography.style(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: _kInk,
@@ -496,7 +619,7 @@ class _WishlistChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.montserrat(
+          style: AppTypography.style(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: _kInk,
@@ -509,8 +632,16 @@ class _WishlistChip extends StatelessWidget {
 
 class _ProductCard extends StatelessWidget {
   final _ProductCardData data;
+  final bool isLiked;
+  final VoidCallback onImageTap;
+  final VoidCallback onLikeTap;
 
-  const _ProductCard({required this.data});
+  const _ProductCard({
+    required this.data,
+    required this.isLiked,
+    required this.onImageTap,
+    required this.onLikeTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -525,28 +656,38 @@ class _ProductCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  data.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFFE8E8E8),
-                    child: const Icon(Icons.image_outlined, color: _kInkSoft),
+                GestureDetector(
+                  onTap: onImageTap,
+                  child: Image.network(
+                    data.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: const Color(0xFFE8E8E8),
+                      child: const Icon(
+                        Icons.image_outlined,
+                        color: _kInkSoft,
+                      ),
+                    ),
                   ),
                 ),
                 Positioned(
                   top: 14,
                   right: 14,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(
-                      color: _kHeartBg,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 14,
-                      color: Colors.white,
+                  child: GestureDetector(
+                    onTap: onLikeTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: isLiked ? _kBadge : _kHeartBg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -559,7 +700,7 @@ class _ProductCard extends StatelessWidget {
           data.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.montserrat(
+          style: AppTypography.style(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF121111),
@@ -568,7 +709,7 @@ class _ProductCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           data.location,
-          style: GoogleFonts.montserrat(
+          style: AppTypography.style(
             fontSize: 12,
             color: _kInkSoft,
           ),
@@ -578,7 +719,7 @@ class _ProductCard extends StatelessWidget {
           children: [
             Text(
               data.price,
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: _kHeartBg,
@@ -589,7 +730,7 @@ class _ProductCard extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               data.rating.toStringAsFixed(1),
-              style: GoogleFonts.montserrat(
+              style: AppTypography.style(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: _kHeartBg,

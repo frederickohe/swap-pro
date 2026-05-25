@@ -376,6 +376,8 @@ class ApiService {
     String fieldName = 'file',
     String? storageFolder,
   }) async {
+    await httpClient.tokenService.requireAccessToken();
+
     var uri = Uri.parse('$baseUrl/storage/upload');
     final folder = storageFolder?.trim();
     if (folder != null && folder.isNotEmpty) {
@@ -402,7 +404,13 @@ class ApiService {
       return url;
     }
 
-    throw Exception('Upload failed: ${response.statusCode} ${response.body}');
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Upload failed (${response.statusCode})',
+    );
   }
 
   /// Same as [uploadFile] but from bytes (e.g. web `FilePicker` with `withData: true`).
@@ -412,6 +420,8 @@ class ApiService {
     String fieldName = 'file',
     String? storageFolder,
   }) async {
+    await httpClient.tokenService.requireAccessToken();
+
     var uri = Uri.parse('$baseUrl/storage/upload');
     final folder = storageFolder?.trim();
     if (folder != null && folder.isNotEmpty) {
@@ -434,7 +444,13 @@ class ApiService {
       return url;
     }
 
-    throw Exception('Upload failed: ${response.statusCode} ${response.body}');
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Upload failed (${response.statusCode})',
+    );
   }
 
   /// List available files in storage (typically AI training docs).

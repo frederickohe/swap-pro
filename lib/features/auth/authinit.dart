@@ -20,21 +20,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
       listener: (context, state) {
         // Handle session expiration
         if (state is SessionExpired) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
+          context.showAppSnackBar(state.message);
           Navigator.of(
             context,
           ).pushNamedAndRemoveUntil('/signin', (route) => false);
         }
         // Handle token refresh failure
         else if (state is TokenRefreshFailed) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Session error: ${state.message}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          context.showAppSnackBar('Session error: ${state.message}');
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -53,9 +46,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           } else if (state is AuthError) {
             print('✗ Auth Error: ${state.message}');
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+              context.showAppSnackBar(state.message);
             });
             // Render relevant page based on error source
             if (state.source == 'signup') {

@@ -21,7 +21,7 @@ class swapproWordmark extends StatelessWidget {
     return RichText(
       textAlign: textAlign,
       text: TextSpan(
-        style: GoogleFonts.montserrat(
+        style: AppTypography.style(
           fontSize: fontSize,
           fontWeight: fontWeight,
           color: baseColor,

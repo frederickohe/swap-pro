@@ -47,7 +47,7 @@ class UserAvatar extends StatelessWidget {
         final initialsColor = onLightBackground
             ? CustColors.mainCol
             : Colors.white;
-        final textStyle = GoogleFonts.montserrat(
+        final textStyle = AppTypography.style(
           color: initialsColor,
           fontWeight: FontWeight.w600,
           fontSize: fontSize,

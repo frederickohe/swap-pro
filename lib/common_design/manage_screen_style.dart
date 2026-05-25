@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:swappro/common_design/app_typography.dart';
 
 /// Visual baseline for hub screens opened from Home (matches inbox / messaging hubs).
 class ManageScreenStyle {
@@ -26,7 +26,7 @@ class ManageScreenStyle {
     ),
   );
 
-  static TextStyle headerTitleStyle() => GoogleFonts.inter(
+  static TextStyle headerTitleStyle() => AppTypography.style(
     color: Colors.white,
     fontSize: 22,
     fontWeight: FontWeight.w300,

@@ -176,7 +176,7 @@ class _EmbeddedPlatformWebViewState extends State<EmbeddedPlatformWebView> {
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: GoogleFonts.montserrat(
+          style: AppTypography.style(
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -186,7 +186,7 @@ class _EmbeddedPlatformWebViewState extends State<EmbeddedPlatformWebView> {
             onPressed: _openAuthorizationPage,
             child: Text(
               'Continue',
-              style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+              style: AppTypography.style(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -207,7 +207,7 @@ class _EmbeddedPlatformWebViewState extends State<EmbeddedPlatformWebView> {
                   padding: const EdgeInsets.all(12),
                   child: Text(
                     _error!,
-                    style: GoogleFonts.montserrat(
+                    style: AppTypography.style(
                       color: Colors.red.shade900,
                       fontSize: 12,
                     ),
@@ -227,14 +227,11 @@ Future<void> openEmbeddedPlatformSession(
   required String title,
   required Future<PlatformEmbedSession> Function() fetchSession,
 }) async {
-  final messenger = ScaffoldMessenger.of(context);
   try {
     final session = await fetchSession();
     if (!context.mounted) return;
     if (session.authorizationUrl.trim().isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Server did not return a link URL.')),
-      );
+      context.showAppSnackBar('Server did not return a link URL.');
       return;
     }
     await Navigator.of(context).push<void>(
@@ -244,8 +241,6 @@ Future<void> openEmbeddedPlatformSession(
     );
   } catch (e) {
     if (!context.mounted) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-    );
+    context.showAppSnackBar(e.toString().replaceFirst('Exception: ', ''));
   }
 }

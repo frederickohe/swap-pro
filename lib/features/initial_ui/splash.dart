@@ -32,7 +32,7 @@ class SplashPge extends StatelessWidget {
             final logoRadius = 20 * wScale;
             final imageTextGap = 10 * hScale;
             final titleSubtitleGap = 19 * hScale;
-            final titleFontSize = 48 * wScale;
+            final titleFontSize = 38 * wScale;
             final subtitleFontSize = 16 * wScale;
             final homeIndicatorWidth = 134 * wScale;
             final homeIndicatorHeight = 5 * hScale;
@@ -42,18 +42,14 @@ class SplashPge extends StatelessWidget {
               children: [
                 Expanded(
                   child: Align(
-                    alignment: Alignment(
-                      0,
-                      ((253 + 222) / _figmaH) * 2 - 1,
-                    ),
+                    alignment: Alignment(0, ((253 + 222) / _figmaH) * 2 - 1),
                     child: SizedBox(
                       width: blockWidth,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(logoRadius),
+                            borderRadius: BorderRadius.circular(logoRadius),
                             child: Image.asset(
                               'assets/icons/logo.png',
                               width: logoWidth,
@@ -65,9 +61,8 @@ class SplashPge extends StatelessWidget {
                           Text(
                             'Swap Pro',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
+                            style: GoogleFonts.righteous(
                               fontSize: titleFontSize,
-                              fontWeight: FontWeight.w700,
                               color: _textColor,
                               height: 62 / 48,
                             ),
@@ -76,7 +71,7 @@ class SplashPge extends StatelessWidget {
                           Text(
                             'Swap with and for anything',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               fontSize: subtitleFontSize,
                               fontWeight: FontWeight.w400,
                               color: _textColor,

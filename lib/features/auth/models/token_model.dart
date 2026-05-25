@@ -14,11 +14,20 @@ class TokenModel {
   });
 
   factory TokenModel.fromJson(Map<String, dynamic> json) {
+    final root = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
+    final accessToken = (root['access_token'] ?? '').toString();
+    if (accessToken.isEmpty) {
+      throw const FormatException('Missing access_token in auth response');
+    }
     return TokenModel(
-      accessToken: json['access_token'] ?? '',
-      refreshToken: json['refresh_token'] ?? '',
-      tokenType: json['token_type'] ?? 'bearer',
-      expiresIn: json['expires_in'] ?? 1800,
+      accessToken: accessToken,
+      refreshToken: (root['refresh_token'] ?? '').toString(),
+      tokenType: (root['token_type'] ?? 'bearer').toString(),
+      expiresIn: root['expires_in'] is int
+          ? root['expires_in'] as int
+          : int.tryParse('${root['expires_in']}') ?? 1800,
     );
   }
 

@@ -15,6 +15,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final TokenService tokenService;
   final SuccessBloc successBloc;
 
+  /// Kept briefly after signup so OTP verification can refresh the auth session.
+  String? _pendingSignupEmail;
+  String? _pendingSignupPassword;
+
   AuthBloc({TokenService? tokenService, SuccessBloc? successBloc})
     : tokenService = tokenService ?? TokenService(),
       successBloc = successBloc ?? SuccessBloc(),
@@ -120,6 +124,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (response.statusCode == 200) {
+        _pendingSignupEmail = event.email;
+        _pendingSignupPassword = event.password;
+
         // Auto-login after signup so a token is available for OTP verification.
         final loginResponse = await http.post(
           Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signin'),
@@ -168,6 +175,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        await _refreshSignupSession();
         emit(
           SignupOtpVerified(
             phone: event.phone,
@@ -388,6 +396,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(AuthError(message: e.toString(), source: 'verify_code'));
+    }
+  }
+
+  Future<void> _refreshSignupSession() async {
+    final email = _pendingSignupEmail;
+    final password = _pendingSignupPassword;
+    if (email == null || password == null) return;
+
+    try {
+      final loginResponse = await http.post(
+        Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signin'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
+      );
+
+      if (loginResponse.statusCode == 200) {
+        final tokenModel = TokenModel.fromJson(json.decode(loginResponse.body));
+        await tokenService.saveToken(tokenModel);
+
+        final userResponse = await http.get(
+          Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
+          headers: await _getAuthHeaders(),
+        );
+        if (userResponse.statusCode == 200) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user', json.encode(json.decode(userResponse.body)));
+        }
+      }
+    } catch (_) {
+      // OTP succeeded; user can sign in manually if session refresh fails.
+    } finally {
+      _pendingSignupEmail = null;
+      _pendingSignupPassword = null;
     }
   }
 

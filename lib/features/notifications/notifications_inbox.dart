@@ -38,14 +38,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
       await _refresh();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not mark notification as read',
-            style: GoogleFonts.montserrat(fontWeight: FontWeight.w300),
-          ),
-        ),
-      );
+      context.showAppSnackBar('Could not mark notification as read');
     } finally {
       if (mounted) {
         setState(() => _markingIds.remove(notification.id));
@@ -88,7 +81,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                         return Center(
                           child: Text(
                             'Failed to load notifications',
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               color: Colors.white,
                               fontWeight: FontWeight.w300,
                             ),
@@ -101,7 +94,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                         return Center(
                           child: Text(
                             'No notifications yet',
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               color: Colors.white,
                               fontWeight: FontWeight.w300,
                             ),
@@ -159,7 +152,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                                           n.displayText.isNotEmpty
                                               ? n.displayText
                                               : n.title,
-                                          style: GoogleFonts.montserrat(
+                                          style: AppTypography.style(
                                             color: Colors.white,
                                             fontSize: 12,
                                             fontWeight: FontWeight.w400,
@@ -169,7 +162,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                                           const SizedBox(height: 6),
                                           Text(
                                             subtitle,
-                                            style: GoogleFonts.montserrat(
+                                            style: AppTypography.style(
                                               color: Colors.white70,
                                               fontSize: 11,
                                               fontWeight: FontWeight.w300,
@@ -200,7 +193,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                                           )
                                         : Text(
                                             'Mark read',
-                                            style: GoogleFonts.montserrat(
+                                            style: AppTypography.style(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w400,
                                             ),

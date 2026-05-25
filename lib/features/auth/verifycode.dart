@@ -13,181 +13,130 @@ class _VerifyCodeState extends State<VerifyCode> {
   final TextEditingController codeController = TextEditingController();
 
   @override
+  void dispose() {
+    codeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final m = AuthScreenLayout.metrics(context);
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is ResetCodeVerified) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  ResetPassword(email: state.email, code: codeController.text),
+              builder: (context) => ResetPassword(
+                email: state.email,
+                code: codeController.text.trim(),
+              ),
             ),
           );
+        } else if (state is AuthError && state.source == 'verify_code') {
+          context.showAppSnackBar(state.message);
         }
       },
       child: Scaffold(
-        // ... your existing scaffold code
-        resizeToAvoidBottomInset: false,
+        resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Centered text
-                  Center(
-                    child: Text(
-                      'Verify Code',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            final isLoading = state is AuthLoading;
 
-                  // Back button positioned on the left
-                  Positioned(
-                    left: 0,
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Container(
-                        height: 35,
-                        width: 35,
-                        decoration: BoxDecoration(
-                          color: CustColors.mainCol,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: CustColors.mainCol,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 50 * 0.35,
-                          ),
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  m.horizontalPad,
+                  24 * m.hScale,
+                  m.horizontalPad,
+                  32 * m.hScale,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AuthBackButton(
+                        onTap: isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                    SizedBox(height: 38 * m.hScale),
+                    AuthSplitTitle(
+                      boldPart: 'Verify Code',
+                      fontSize: 32 * m.wScale,
+                    ),
+                    SizedBox(height: 20 * m.hScale),
+                    Text(
+                      'Enter the verification code sent to your email',
+                      style: AppTypography.style(
+                        fontSize: 14 * m.wScale,
+                        fontWeight: FontWeight.w400,
+                        color: AuthScreenLayout.dark,
+                        height: 20 / 14,
+                      ),
+                    ),
+                    SizedBox(height: 40 * m.hScale),
+                    AuthFormField(
+                      controller: codeController,
+                      hint: 'Verification code',
+                      icon: Icons.pin_outlined,
+                      height: m.fieldHeight,
+                      radius: m.fieldRadius,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: m.formGap),
+                    GestureDetector(
+                      onTap: isLoading
+                          ? null
+                          : () {
+                              context.read<AuthBloc>().add(
+                                    SendResetCodeEvent(email: widget.email),
+                                  );
+                            },
+                      child: Text(
+                        'Did not receive code? Resend',
+                        style: AppTypography.style(
+                          fontSize: 14 * m.wScale,
+                          fontWeight: FontWeight.w400,
+                          color: AuthScreenLayout.dark,
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-              Center(
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Image.asset('assets/img/bot.png'),
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-              Padding(
-                padding: EdgeInsets.only(left: 20.0, right: 20.0),
-                child: Text(
-                  'Enter Code',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                child: TextField(
-                  controller: codeController,
-                  decoration: const InputDecoration(
-                    hintText: '',
-                    border: UnderlineInputBorder(),
-                  ),
-                  obscureText: true,
-                ),
-              ),
-              const SizedBox(height: 15),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Text(
-                    'Did Not Receeve Code? Resend Code',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-              Center(
-                child: AppButton(
-                  onPressed: () {
-                    if (codeController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Please enter the verification code'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-
-                    context.read<AuthBloc>().add(
-                      VerifyResetCodeEvent(
-                        email: widget.email,
-                        code: codeController.text,
+                    SizedBox(height: 48 * m.hScale),
+                    Center(
+                      child: AuthPrimaryButton(
+                        label: 'Verify',
+                        isLoading: isLoading,
+                        width: m.buttonWidth,
+                        height: m.buttonHeight,
+                        radius: m.buttonRadius,
+                        fontSize: 16 * m.wScale,
+                        onPressed: () {
+                          if (codeController.text.trim().isEmpty) {
+                            context.showAppSnackBar(
+                              'Please enter the verification code',
+                            );
+                            return;
+                          }
+                          context.read<AuthBloc>().add(
+                                VerifyResetCodeEvent(
+                                  email: widget.email,
+                                  code: codeController.text.trim(),
+                                ),
+                              );
+                        },
                       ),
-                    );
-                  },
-                  buttonText: 'VerifyCode',
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-              Center(
-                child: Text(
-                  'Dont have an Account ?',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      PageTransition(
-                        type: PageTransitionType.rightToLeftWithFade,
-                        childCurrent: const Signup(),
-                        duration: const Duration(milliseconds: 1000),
-                        reverseDuration: const Duration(milliseconds: 600),
-                        child: const Signup(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'Verify',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

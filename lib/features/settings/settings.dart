@@ -22,15 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
         }
         // Handle logout errors
         else if (state is AuthError && state.source == 'logout') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                state.message,
-                style: GoogleFonts.montserrat(color: Colors.white),
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
+          context.showAppSnackBar(state.message);
         }
       },
       child: Scaffold(
@@ -76,7 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           }
                           return Text(
                             username,
-                            style: GoogleFonts.montserrat(
+                            style: AppTypography.style(
                               color: Colors.black,
                               fontSize: 20,
                               fontWeight: FontWeight.w400,
@@ -129,7 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             children: [
                               Text(
                                 isLoading ? 'Logging out...' : "Logout",
-                                style: GoogleFonts.montserrat(
+                                style: AppTypography.style(
                                   color: isLoading ? Colors.grey : Colors.red,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
@@ -225,7 +217,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(
                   'Log out?',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.montserrat(
+                  style: AppTypography.style(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -235,7 +227,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(
                   'You can log back in at any time.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.montserrat(
+                  style: AppTypography.style(
                     fontSize: 13.5,
                     height: 1.35,
                     fontWeight: FontWeight.w400,
@@ -263,7 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         child: Text(
                           'Cancel',
-                          style: GoogleFonts.montserrat(
+                          style: AppTypography.style(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -289,7 +281,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         child: Text(
                           'Continue',
-                          style: GoogleFonts.montserrat(
+                          style: AppTypography.style(
                             fontWeight: FontWeight.w700,
                           ),
                         ),

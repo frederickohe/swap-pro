@@ -43,10 +43,24 @@ class TokenService {
   Future<String?> getAccessToken() async {
     try {
       final token = await getToken();
-      return token?.accessToken;
+      final value = token?.accessToken;
+      if (value == null || value.isEmpty) return null;
+      return value;
     } catch (e) {
       return null;
     }
+  }
+
+  /// Returns a non-empty access token or throws when the user must sign in again.
+  Future<String> requireAccessToken() async {
+    final accessToken = await getAccessToken();
+    if (accessToken == null) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    if (!await isTokenValid()) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    return accessToken;
   }
 
   /// Get refresh token string
