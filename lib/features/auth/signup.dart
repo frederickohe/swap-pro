@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
+import 'package:swappro/utils/phone_utils.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -119,7 +120,7 @@ class _SignupState extends State<Signup> {
     context.read<AuthBloc>().add(
           SignupEvent(
             username: usernameController.text.trim(),
-            phone: phoneController.text.trim(),
+            phone: normalizePhone(phoneController.text.trim()),
             email: emailController.text.trim(),
             password: _pin,
             company: companyController.text.trim(),
@@ -234,7 +235,9 @@ class _SignupState extends State<Signup> {
                     type: PageTransitionType.rightToLeftWithFade,
                     duration: const Duration(milliseconds: 1000),
                     reverseDuration: const Duration(milliseconds: 600),
-                    child: SignupOtp(phone: phoneController.text.trim()),
+                    child: SignupOtp(
+                      phone: normalizePhone(phoneController.text.trim()),
+                    ),
                   ),
                 );
               }

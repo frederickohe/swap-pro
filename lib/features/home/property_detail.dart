@@ -59,11 +59,7 @@ class PropertyDetailPage extends StatelessWidget {
                     const SizedBox(height: 38),
                     Text(
                       data.description,
-                      style: _text(
-                        size: 16,
-                        color: Colors.black,
-                        height: 1.35,
-                      ),
+                      style: _text(size: 16, color: Colors.black, height: 1.35),
                     ),
                     const SizedBox(height: 38),
                     _buildOwnerRow(),
@@ -100,11 +96,7 @@ class PropertyDetailPage extends StatelessWidget {
             color: _backBg,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.arrow_back_ios_new,
-            size: 18,
-            color: _gold,
-          ),
+          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: _gold),
         ),
       ),
     );
@@ -117,10 +109,7 @@ class PropertyDetailPage extends StatelessWidget {
         type: PageTransitionType.fade,
         duration: const Duration(milliseconds: 300),
         reverseDuration: const Duration(milliseconds: 250),
-        child: PropertySwapImagePage(
-          data: data,
-          initialIndex: initialIndex,
-        ),
+        child: PropertySwapImagePage(data: data, initialIndex: initialIndex),
       ),
     );
   }
@@ -160,10 +149,7 @@ class PropertyDetailPage extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          'Owner :',
-          style: _text(size: 18, weight: FontWeight.w500),
-        ),
+        Text('Owner :', style: _text(size: 18, weight: FontWeight.w500)),
         const SizedBox(width: 19),
         Expanded(
           child: Row(
@@ -199,10 +185,7 @@ class PropertyDetailPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'User Wishlist',
-          style: _text(size: 18, weight: FontWeight.w600),
-        ),
+        Text('User Wishlist', style: _text(size: 18, weight: FontWeight.w600)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -287,7 +270,7 @@ class PropertyDetailPage extends StatelessWidget {
   }
 
   Widget _buildSwapButton(BuildContext context) {
-    return GestureDetector(
+    return _SwapThisButton(
       onTap: () {
         Navigator.push(
           context,
@@ -299,31 +282,103 @@ class PropertyDetailPage extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        height: 69,
-        decoration: BoxDecoration(
-          color: _ink,
-          borderRadius: BorderRadius.circular(50),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
-            Text(
-              'Swap This',
-              style: _text(
-                size: 18,
-                weight: FontWeight.w600,
-                color: Colors.white,
+    );
+  }
+}
+
+class _SwapThisButton extends StatefulWidget {
+  const _SwapThisButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_SwapThisButton> createState() => _SwapThisButtonState();
+}
+
+class _SwapThisButtonState extends State<_SwapThisButton>
+    with SingleTickerProviderStateMixin {
+  static const double _height = 69;
+  static const Color _ink = PropertyDetailPage._ink;
+  static const Duration _shakeInterval = Duration(seconds: 3);
+
+  late final AnimationController _shake;
+  late final Animation<double> _shakeOffset;
+  Timer? _shakeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 480),
+    );
+    _shakeOffset = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -7), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -7, end: 7), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 7, end: -5), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -5, end: 5), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 5, end: -2), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -2, end: 0), weight: 1),
+    ]).animate(_shake);
+
+    _shakeTimer = Timer.periodic(_shakeInterval, (_) => _runShake());
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) _runShake();
+    });
+  }
+
+  void _runShake() {
+    if (!mounted || _shake.isAnimating) return;
+    _shake.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _shakeTimer?.cancel();
+    _shake.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _shakeOffset,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(_shakeOffset.value, 0),
+            child: child,
+          );
+        },
+        child: Container(
+          height: _height,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: _ink,
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Swap This',
+                style: AppTypography.style(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const Spacer(),
-            const Icon(
-              Icons.keyboard_backspace,
-              color: Colors.white,
-              size: 28,
-              textDirection: TextDirection.rtl,
-            ),
-          ],
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.keyboard_backspace,
+                color: Colors.white,
+                size: 28,
+                textDirection: TextDirection.rtl,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -360,16 +415,34 @@ class PropertyDetailData {
   /// Build detail payload from `GET /api/v1/listings/{id}` (or search item).
   factory PropertyDetailData.fromListing(
     Map<String, dynamic> json, {
-    String ownerName = 'Seller',
+    String? ownerName,
     String? ownerAvatarUrl,
   }) {
+    final resolvedOwnerName = () {
+      if (ownerName != null && ownerName.trim().isNotEmpty) {
+        return ownerName.trim();
+      }
+      final fromApi = (json['owner_fullname'] ?? '').toString().trim();
+      if (fromApi.isNotEmpty) return fromApi;
+      return 'Seller';
+    }();
+    final resolvedOwnerAvatar = () {
+      if (ownerAvatarUrl != null && ownerAvatarUrl.trim().isNotEmpty) {
+        return ownerAvatarUrl.trim();
+      }
+      final fromApi = (json['owner_profile_picture_url'] ?? '')
+          .toString()
+          .trim();
+      return fromApi.isNotEmpty ? fromApi : null;
+    }();
     final wishlistRaw = json['wishlist'];
     final wishlistItems = <String>[];
     if (wishlistRaw is List) {
       for (final item in wishlistRaw) {
         if (item is Map) {
-          final label =
-              (item['description'] ?? item['category'] ?? '').toString().trim();
+          final label = (item['description'] ?? item['category'] ?? '')
+              .toString()
+              .trim();
           if (label.isNotEmpty) wishlistItems.add(label);
         } else {
           final label = item.toString().trim();
@@ -378,16 +451,7 @@ class PropertyDetailData {
       }
     }
 
-    final imageUrls = <String>[];
-    final primary = (json['primary_image_url'] ?? '').toString().trim();
-    if (primary.isNotEmpty) imageUrls.add(primary);
-    final extras = json['image_urls'];
-    if (extras is List) {
-      for (final url in extras) {
-        final s = url.toString().trim();
-        if (s.isNotEmpty && !imageUrls.contains(s)) imageUrls.add(s);
-      }
-    }
+    final imageUrls = listingGalleryImageUrls(json);
     if (imageUrls.isEmpty) {
       imageUrls.add(
         'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
@@ -415,8 +479,8 @@ class PropertyDetailData {
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
       imageUrls: imageUrls,
-      ownerName: ownerName,
-      ownerAvatarUrl: ownerAvatarUrl,
+      ownerName: resolvedOwnerName,
+      ownerAvatarUrl: resolvedOwnerAvatar,
       wishlistItems: wishlistItems,
       price: price,
       date: date,
@@ -436,8 +500,7 @@ class PropertyDetailData {
     final category = location ?? 'Building';
     return PropertyDetailData(
       title: title,
-      description:
-          'Nice $title for a cool swap deal.',
+      description: 'Nice $title for a cool swap deal.',
       imageUrls: [
         imageUrl,
         'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80',

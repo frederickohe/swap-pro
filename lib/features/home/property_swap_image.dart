@@ -54,20 +54,17 @@ class _PropertySwapImagePageState extends State<PropertySwapImagePage> {
             left: 14,
             child: _buildBackButton(context),
           ),
-          if (urls.length > 1)
-            Positioned(
-              right: 18,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: _buildThumbnailStrip(urls),
-              ),
-            ),
           Positioned(
             left: 19,
             bottom: bottomInset + 24,
             child: _buildOwnerChip(),
           ),
+          if (urls.length > 1)
+            Positioned(
+              right: 18,
+              bottom: bottomInset + 24,
+              child: _buildThumbnailStrip(urls),
+            ),
         ],
       ),
     );

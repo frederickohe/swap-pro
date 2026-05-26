@@ -21,33 +21,7 @@ class _ListingsPageState extends State<ListingsPage> {
 
   static const double _figmaW = 428;
 
-  static const List<_ListingRow> _demoListings = [
-    _ListingRow(
-      title: 'BMW Forza 2020',
-      subtitle: 'Dress modern',
-      price: '\$520,000.99',
-    ),
-    _ListingRow(
-      title: '3 Bedroom Apartment',
-      subtitle: 'Apartment',
-      price: '\$230,000',
-    ),
-    _ListingRow(
-      title: 'Hanjing C Ship',
-      subtitle: 'Apartment',
-      price: '\$150 M',
-    ),
-    _ListingRow(
-      title: 'Single Room Self Contained',
-      subtitle: 'Apartment',
-      price: '\$110,000',
-    ),
-  ];
-
   final TextEditingController _searchController = TextEditingController();
-  late final ApiService _apiService = ApiService(
-    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
-  );
 
   List<_ListingRow> _allListings = [];
   bool _loading = true;
@@ -73,28 +47,71 @@ class _ListingsPageState extends State<ListingsPage> {
       _error = null;
     });
     try {
-      final user = await _apiService.getUserProfile();
+      final api = context.read<ApiService>();
+      final user = await api.getUserProfile();
       final photo =
           (user['profile_picture_url'] ?? user['avatar_url'] ?? '').toString();
-      final products = await _apiService.listProducts();
+      final listings = await api.getMyListings();
       if (!mounted) return;
 
-      final rows = products.map(_ListingRow.fromProduct).where((r) {
+      final rows = listings.map(_ListingRow.fromListing).where((r) {
         return r.title.trim().isNotEmpty;
       }).toList();
 
       setState(() {
         _profilePictureUrl = photo.trim().isEmpty ? null : photo.trim();
-        _allListings = rows.isEmpty ? List.of(_demoListings) : rows;
+        _allListings = rows;
       });
     } catch (e) {
       if (!mounted) return;
+      final message = e.toString();
+      if (message.contains('Session expired') ||
+          message.toLowerCase().contains('invalid token')) {
+        context.showAppSnackBar('Session expired. Please sign in again.');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const Signin()),
+          (route) => route.isFirst,
+        );
+        return;
+      }
       setState(() {
-        _error = e.toString();
-        _allListings = List.of(_demoListings);
+        _error = message;
+        _allListings = [];
       });
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openListingDetail(_ListingRow item) async {
+    if (item.listingJson != null) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailPage(
+            data: PropertyDetailData.fromListing(item.listingJson!),
+          ),
+        ),
+      );
+      return;
+    }
+    final id = item.listingId;
+    if (id == null || id.isEmpty) return;
+    try {
+      final listing = await context.read<ApiService>().getListing(id);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailPage(
+            data: PropertyDetailData.fromListing(listing),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      context.showAppSnackBar(e.toString());
     }
   }
 
@@ -303,7 +320,9 @@ class _ListingsPageState extends State<ListingsPage> {
         padding: EdgeInsets.fromLTRB(20 * wScale, 32 * wScale, 20 * wScale, 120),
         children: [
           Text(
-            'No listings match your search.',
+            _allListings.isEmpty
+                ? 'You have no listings yet.\nTap + to add your first item.'
+                : 'No listings match your search.',
             textAlign: TextAlign.center,
             style: AppTypography.style(
               fontSize: 14 * wScale,
@@ -326,7 +345,7 @@ class _ListingsPageState extends State<ListingsPage> {
         return _ListingListTile(
           item: items[index],
           wScale: wScale,
-          onView: () => context.showAppSnackBar('View ${items[index].title}'),
+          onView: () => _openListingDetail(items[index]),
           onMore: () => _showListingActions(items[index]),
         );
       },
@@ -386,7 +405,14 @@ class _ListingsPageState extends State<ListingsPage> {
           size: 70 * wScale,
           height: 60 * wScale,
           icon: Icons.add_circle_outline,
-          onTap: () => context.showAppSnackBar('Add listing coming soon'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddBelongingPage()),
+            ).then((_) {
+              if (mounted) _loadListings();
+            });
+          },
         ),
       ],
     );
@@ -399,55 +425,51 @@ class _ListingRow {
     required this.subtitle,
     required this.price,
     this.imageUrl,
-    this.productId,
+    this.listingId,
+    this.listingJson,
   });
 
   final String title;
   final String subtitle;
   final String price;
   final String? imageUrl;
-  final String? productId;
+  final String? listingId;
+  final Map<String, dynamic>? listingJson;
 
-  factory _ListingRow.fromProduct(Map<String, dynamic> product) {
-    final name = (product['name'] ?? product['title'] ?? '').toString().trim();
-    final category =
-        (product['category'] ?? product['condition'] ?? '').toString().trim();
-    final rawPrice = product['price'];
-    final priceStr = _formatPrice(rawPrice);
+  factory _ListingRow.fromListing(Map<String, dynamic> listing) {
+    final title = (listing['title'] ?? '').toString().trim();
+    final category = (listing['category'] ?? '').toString().trim();
+    final condition = (listing['condition'] ?? '').toString().trim();
+    final status = (listing['status'] ?? '').toString().trim();
+    var subtitle = category.isNotEmpty
+        ? category
+        : (condition.isNotEmpty ? condition : 'Listing');
+    if (status.isNotEmpty && status != 'ACTIVE') {
+      subtitle = '$subtitle · $status';
+    }
 
-    String? imageUrl;
-    final photos = product['photos'];
-    if (photos is List && photos.isNotEmpty) {
-      final first = photos.first?.toString().trim() ?? '';
-      if (first.isNotEmpty) imageUrl = first;
-    }
-    if (imageUrl == null) {
-      final fallback =
-          (product['image_url'] ?? product['thumbnail'] ?? '').toString().trim();
-      if (fallback.isNotEmpty) imageUrl = fallback;
-    }
+    final priceStr = _formatPrice(listing['estimated_value']);
+
+    final imageUrl = listingDisplayImageUrl(listing);
 
     return _ListingRow(
-      title: name.isEmpty ? 'Untitled listing' : name,
-      subtitle: category.isEmpty ? 'Listing' : category,
+      title: title.isEmpty ? 'Untitled listing' : title,
+      subtitle: subtitle,
       price: priceStr,
       imageUrl: imageUrl,
-      productId: (product['id'] ?? product['_id'])?.toString(),
+      listingId: listing['id']?.toString(),
+      listingJson: listing,
     );
   }
 
   static String _formatPrice(dynamic value) {
-    if (value == null) return '';
+    if (value == null) return '—';
     if (value is num) {
-      final whole = value == value.roundToDouble();
-      final text = whole
-          ? value.round().toString()
-          : value.toStringAsFixed(2);
-      return '\$$text';
+      return 'GH₵ ${value.toStringAsFixed(2)}';
     }
     final s = value.toString().trim();
-    if (s.isEmpty) return '';
-    return s.startsWith('\$') ? s : '\$$s';
+    if (s.isEmpty) return '—';
+    return s.startsWith('GH') ? s : 'GH₵ $s';
   }
 }
 
@@ -468,16 +490,19 @@ class _ListingListTile extends StatelessWidget {
   static const Color _subtitle = Color(0xFF787676);
   static const Color _price = Color(0xFF292526);
   static const Color _dark = Color(0xFF111111);
+  static const double _thumbW = 255;
+  static const double _thumbH = 217;
 
   @override
   Widget build(BuildContext context) {
-    final thumb = 70 * wScale;
+    final thumbW = _thumbW * wScale;
+    final thumbH = _thumbH * wScale;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(5 * wScale),
-          child: _buildThumb(thumb),
+          child: _buildThumb(thumbW, thumbH),
         ),
         SizedBox(width: 15 * wScale),
         Expanded(
@@ -562,23 +587,23 @@ class _ListingListTile extends StatelessWidget {
     );
   }
 
-  Widget _buildThumb(double thumb) {
+  Widget _buildThumb(double thumbW, double thumbH) {
     if (item.imageUrl != null) {
       return Image.network(
         item.imageUrl!,
-        width: thumb,
-        height: thumb,
+        width: thumbW,
+        height: thumbH,
         fit: BoxFit.cover,
-        errorBuilder: (_, e, s) => _placeholder(thumb),
+        errorBuilder: (_, e, s) => _placeholder(thumbW, thumbH),
       );
     }
-    return _placeholder(thumb);
+    return _placeholder(thumbW, thumbH);
   }
 
-  Widget _placeholder(double thumb) {
+  Widget _placeholder(double thumbW, double thumbH) {
     return Container(
-      width: thumb,
-      height: thumb,
+      width: thumbW,
+      height: thumbH,
       color: const Color(0xFFF5F5F8),
       child: Icon(
         Icons.image_outlined,

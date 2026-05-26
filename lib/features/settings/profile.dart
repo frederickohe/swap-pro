@@ -26,24 +26,7 @@ class _ProfileState extends State<Profile> {
   bool _loading = true;
   String? _error;
 
-  late final ApiService _apiService = ApiService(
-    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
-  );
-
-  static const List<_ListingItem> _placeholderListings = [
-    _ListingItem(
-      title: '2 Bedroom Self Contained',
-      subtitle: 'Dress modern',
-      price: '\$212.99',
-      imageAsset: 'assets/img/bot.png',
-    ),
-    _ListingItem(
-      title: 'BMW Forza 2020',
-      subtitle: 'Dress modern',
-      price: '\$212.99',
-      imageAsset: 'assets/img/bot.png',
-    ),
-  ];
+  List<_ListingItem> _previewListings = [];
 
   @override
   void initState() {
@@ -57,7 +40,9 @@ class _ProfileState extends State<Profile> {
       _error = null;
     });
     try {
-      final user = await _apiService.getUserProfile();
+      final api = context.read<ApiService>();
+      final user = await api.getUserProfile();
+      final listings = await api.getMyListings();
       if (!mounted) return;
 
       final name = (user['fullname'] ?? user['name'] ?? 'User').toString();
@@ -66,17 +51,51 @@ class _ProfileState extends State<Profile> {
       final photo = (user['profile_picture_url'] ?? '').toString();
       final ghanaCard = (user['ghana_card'] ?? '').toString();
 
+      final preview = listings.take(2).map(_ListingItem.fromListing).toList();
+
       setState(() {
         _displayName = name.trim().isEmpty ? 'User' : name.trim();
         _email = email;
         _location = location.trim().isEmpty ? 'Add location' : location.trim();
         _profilePictureUrl = photo.trim().isEmpty ? null : photo.trim();
         _isVerified = ghanaCard.trim().isNotEmpty;
+        _previewListings = preview;
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openListingDetail(_ListingItem item) async {
+    if (item.listingJson != null) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailPage(
+            data: PropertyDetailData.fromListing(item.listingJson!),
+          ),
+        ),
+      );
+      return;
+    }
+    final id = item.listingId;
+    if (id == null || id.isEmpty) return;
+    try {
+      final listing = await context.read<ApiService>().getListing(id);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              PropertyDetailPage(data: PropertyDetailData.fromListing(listing)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      context.showAppSnackBar(e.toString());
     }
   }
 
@@ -203,13 +222,9 @@ class _ProfileState extends State<Profile> {
                               _buildAvatar(wScale),
                               SizedBox(height: 25 * hScale),
                               _buildProfileInfo(wScale, hScale),
-                              SizedBox(height: 12 * hScale),
-                              _buildLocationRow(wScale),
-                              SizedBox(height: 24 * hScale),
-                              if (!_isVerified) _buildVerifyBadge(wScale),
-                              if (!_isVerified) SizedBox(height: 24 * hScale),
-                              _buildAccountOptions(wScale, hScale),
                               SizedBox(height: 32 * hScale),
+                              _buildAccountOptions(wScale, hScale),
+                              SizedBox(height: 22 * hScale),
                               _buildListingsSection(wScale, hScale),
                             ],
                           ),
@@ -388,7 +403,7 @@ class _ProfileState extends State<Profile> {
         icon: Icons.security_outlined,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const Security()),
+          MaterialPageRoute(builder: (_) => const TwoFactorAuthPage()),
         ),
       ),
       _AccountMenuItem(
@@ -451,21 +466,36 @@ class _ProfileState extends State<Profile> {
             ),
           ),
           SizedBox(height: 24 * hScale),
-          for (var i = 0; i < _placeholderListings.length; i++) ...[
-            if (i > 0) ...[
-              SizedBox(height: 18 * hScale),
-              Divider(color: _divider, height: 1, thickness: 1),
-              SizedBox(height: 18 * hScale),
+          if (_previewListings.isEmpty)
+            Text(
+              'No listings yet.',
+              style: AppTypography.style(
+                fontSize: 14 * wScale,
+                color: const Color(0xFF787676),
+              ),
+            )
+          else
+            for (var i = 0; i < _previewListings.length; i++) ...[
+              if (i > 0) ...[
+                SizedBox(height: 18 * hScale),
+                Divider(color: _divider, height: 1, thickness: 1),
+                SizedBox(height: 18 * hScale),
+              ],
+              _ListingCard(
+                item: _previewListings[i],
+                wScale: wScale,
+                onView: () => _openListingDetail(_previewListings[i]),
+              ),
             ],
-            _ListingCard(item: _placeholderListings[i], wScale: wScale),
-          ],
           SizedBox(height: 28 * hScale),
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ListingsPage()),
-              );
+              ).then((_) {
+                if (mounted) _loadProfile();
+              });
             },
             child: Text(
               'See All',
@@ -495,10 +525,7 @@ class _AccountMenuItem {
 }
 
 class _AccountOptionTile extends StatelessWidget {
-  const _AccountOptionTile({
-    required this.item,
-    required this.wScale,
-  });
+  const _AccountOptionTile({required this.item, required this.wScale});
 
   final _AccountMenuItem item;
   final double wScale;
@@ -511,10 +538,7 @@ class _AccountOptionTile extends StatelessWidget {
     return InkWell(
       onTap: item.onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 0,
-          vertical: 14 * wScale,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 0, vertical: 14 * wScale),
         child: Row(
           children: [
             Icon(item.icon, size: 20 * wScale, color: _gold),
@@ -529,11 +553,7 @@ class _AccountOptionTile extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 24 * wScale,
-              color: _menuText,
-            ),
+            Icon(Icons.chevron_right, size: 24 * wScale, color: _menuText),
           ],
         ),
       ),
@@ -546,20 +566,55 @@ class _ListingItem {
     required this.title,
     required this.subtitle,
     required this.price,
-    required this.imageAsset,
+    this.imageUrl,
+    this.listingId,
+    this.listingJson,
   });
 
   final String title;
   final String subtitle;
   final String price;
-  final String imageAsset;
+  final String? imageUrl;
+  final String? listingId;
+  final Map<String, dynamic>? listingJson;
+
+  factory _ListingItem.fromListing(Map<String, dynamic> json) {
+    final title = (json['title'] ?? '').toString().trim();
+    final category = (json['category'] ?? '').toString().trim();
+    final condition = (json['condition'] ?? '').toString().trim();
+    final subtitle = category.isNotEmpty
+        ? category
+        : (condition.isNotEmpty ? condition : 'Listing');
+
+    final value = json['estimated_value'];
+    final price = value is num
+        ? 'GH₵ ${value.toStringAsFixed(2)}'
+        : (value?.toString().trim().isNotEmpty == true ? 'GH₵ $value' : '—');
+
+    return _ListingItem(
+      title: title.isEmpty ? 'Untitled listing' : title,
+      subtitle: subtitle,
+      price: price,
+      imageUrl: listingDisplayImageUrl(json),
+      listingId: json['id']?.toString(),
+      listingJson: json,
+    );
+  }
 }
 
 class _ListingCard extends StatelessWidget {
-  const _ListingCard({required this.item, required this.wScale});
+  const _ListingCard({
+    required this.item,
+    required this.wScale,
+    required this.onView,
+  });
 
   final _ListingItem item;
   final double wScale;
+  final VoidCallback onView;
+
+  static const double _thumbW = 255;
+  static const double _thumbH = 217;
 
   static const Color _subtitleGray = Color(0xFF787676);
   static const Color _priceDark = Color(0xFF292526);
@@ -567,24 +622,14 @@ class _ListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumb = 70 * wScale;
+    final thumbW = _thumbW * wScale;
+    final thumbH = _thumbH * wScale;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(14 * wScale),
-          child: Image.asset(
-            item.imageAsset,
-            width: thumb,
-            height: thumb,
-            fit: BoxFit.cover,
-            errorBuilder: (_, e, s) => Container(
-              width: thumb,
-              height: thumb,
-              color: const Color(0xFFF5F5F8),
-              child: Icon(Icons.image_outlined, color: _dark.withValues(alpha: 0.3)),
-            ),
-          ),
+          child: _buildThumb(thumbW, thumbH),
         ),
         SizedBox(width: 15 * wScale),
         Expanded(
@@ -627,27 +672,26 @@ class _ListingCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(
-                    Icons.more_horiz,
-                    size: 24 * wScale,
-                    color: _priceDark,
-                  ),
+                  Icon(Icons.more_horiz, size: 24 * wScale, color: _priceDark),
                   SizedBox(height: 20 * wScale),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8 * wScale,
-                      vertical: 5 * wScale,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _dark,
-                      borderRadius: BorderRadius.circular(10 * wScale),
-                    ),
-                    child: Text(
-                      'View',
-                      style: AppTypography.style(
-                        fontSize: 12 * wScale,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
+                  GestureDetector(
+                    onTap: onView,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8 * wScale,
+                        vertical: 5 * wScale,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _dark,
+                        borderRadius: BorderRadius.circular(10 * wScale),
+                      ),
+                      child: Text(
+                        'View',
+                        style: AppTypography.style(
+                          fontSize: 12 * wScale,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -657,6 +701,28 @@ class _ListingCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildThumb(double thumbW, double thumbH) {
+    if (item.imageUrl != null) {
+      return Image.network(
+        item.imageUrl!,
+        width: thumbW,
+        height: thumbH,
+        fit: BoxFit.cover,
+        errorBuilder: (_, e, s) => _placeholder(thumbW, thumbH),
+      );
+    }
+    return _placeholder(thumbW, thumbH);
+  }
+
+  Widget _placeholder(double thumbW, double thumbH) {
+    return Container(
+      width: thumbW,
+      height: thumbH,
+      color: const Color(0xFFF5F5F8),
+      child: Icon(Icons.image_outlined, color: _dark.withValues(alpha: 0.3)),
     );
   }
 }

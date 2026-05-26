@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
 
 class SignupOtp extends StatefulWidget {
@@ -97,12 +98,16 @@ class _SignupOtpState extends State<SignupOtp> {
                     SizedBox(height: 40 * m.hScale),
                     AuthFormField(
                       controller: codeController,
-                      hint: 'OTP code',
+                      hint: '5-digit code',
                       icon: Icons.sms_outlined,
                       height: m.fieldHeight,
                       radius: m.fieldRadius,
                       enabled: !isLoading,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(5),
+                      ],
                     ),
                     SizedBox(height: m.formGap),
                     GestureDetector(
@@ -132,16 +137,17 @@ class _SignupOtpState extends State<SignupOtp> {
                         radius: m.buttonRadius,
                         fontSize: 16 * m.wScale,
                         onPressed: () {
-                          if (codeController.text.trim().isEmpty) {
+                          final code = codeController.text.trim();
+                          if (code.length != 5) {
                             context.showAppSnackBar(
-                              'Please enter the verification code',
+                              'Enter the 5-digit code from your SMS',
                             );
                             return;
                           }
                           context.read<AuthBloc>().add(
                                 VerifySignupOtpEvent(
                                   phone: widget.phone,
-                                  otp: codeController.text.trim(),
+                                  otp: code,
                                 ),
                               );
                         },

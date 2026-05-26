@@ -166,16 +166,20 @@ class _ProfileEditState extends State<ProfileEdit> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        color: SettingsScreenStyle.backButtonBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SettingsScreenStyle.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.task_alt, size: 18, color: CustColors.mainCol),
+              const Icon(
+                Icons.task_alt,
+                size: 18,
+                color: SettingsScreenStyle.gold,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -192,7 +196,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                 style: AppTypography.style(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: CustColors.mainCol,
+                  color: SettingsScreenStyle.gold,
                 ),
               ),
             ],
@@ -203,8 +207,8 @@ class _ProfileEditState extends State<ProfileEdit> {
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
               minHeight: 8,
-              backgroundColor: Colors.black.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation(CustColors.mainCol),
+              backgroundColor: SettingsScreenStyle.cardBorder,
+              valueColor: const AlwaysStoppedAnimation(SettingsScreenStyle.gold),
             ),
           ),
           const SizedBox(height: 10),
@@ -229,7 +233,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: CustColors.mainCol.withValues(alpha: 0.10),
+                      color: SettingsScreenStyle.gold.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -237,7 +241,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                       style: AppTypography.style(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: CustColors.mainCol,
+                        color: SettingsScreenStyle.ink,
                       ),
                     ),
                   ),
@@ -450,57 +454,20 @@ class _ProfileEditState extends State<ProfileEdit> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _ProfileBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-
-                /// 🔝 Top Bar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    /// Back Button
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: CustColors.mainCol,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-
-                    Text(
-                      'Edit Details',
-                      style: AppTypography.style(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-                const SizedBox(height: 40),
-                if (_loading)
-                  const Expanded(
-                    child: Center(child: SwapproLoadingIndicator()),
-                  )
-                else
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Form(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SettingsScreenHeader(title: 'Edit Details'),
+            if (_loading)
+              const Expanded(
+                child: Center(child: SwapproLoadingIndicator()),
+              )
+            else
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -691,10 +658,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 26),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -719,14 +683,14 @@ class _ProfileEditState extends State<ProfileEdit> {
               children: [
                 CircleAvatar(
                   radius: 58,
-                  backgroundColor: CustColors.mainCol.withOpacity(0.12),
+                  backgroundColor: SettingsScreenStyle.backButtonBg,
                   backgroundImage: (imgUrl != null)
                       ? NetworkImage(imgUrl)
                       : null,
                   child: (imgUrl == null)
                       ? const Icon(
                           Icons.person,
-                          color: CustColors.mainCol,
+                          color: SettingsScreenStyle.gold,
                           size: 44,
                         )
                       : null,
@@ -735,7 +699,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                   right: 2,
                   bottom: 2,
                   child: Material(
-                    color: CustColors.mainCol,
+                    color: SettingsScreenStyle.ink,
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -761,7 +725,7 @@ class _ProfileEditState extends State<ProfileEdit> {
             title,
             textAlign: TextAlign.center,
             style: AppTypography.style(
-              color: Colors.black,
+              color: SettingsScreenStyle.ink,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
@@ -771,7 +735,7 @@ class _ProfileEditState extends State<ProfileEdit> {
             subtitle,
             textAlign: TextAlign.center,
             style: AppTypography.style(
-              color: Colors.black.withOpacity(0.6),
+              color: SettingsScreenStyle.subtleText,
               fontSize: 12,
               fontWeight: FontWeight.w300,
             ),
@@ -782,9 +746,9 @@ class _ProfileEditState extends State<ProfileEdit> {
             child: Text(
               _uploadingPhoto ? 'Uploading...' : 'Change profile photo',
               style: AppTypography.style(
-                color: CustColors.mainCol,
+                color: SettingsScreenStyle.gold,
                 fontSize: 13,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -800,7 +764,11 @@ class _ProfileEditState extends State<ProfileEdit> {
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: SettingsScreenStyle.backButtonBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SettingsScreenStyle.cardBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -810,12 +778,12 @@ class _ProfileEditState extends State<ProfileEdit> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: CustColors.mainCol.withOpacity(0.12),
+                  color: SettingsScreenStyle.gold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.badge_outlined,
-                  color: CustColors.mainCol,
+                  color: SettingsScreenStyle.gold,
                   size: 18,
                 ),
               ),
@@ -836,7 +804,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                       subtitle,
                       style: AppTypography.style(
                         fontSize: 11,
-                        color: Colors.black.withOpacity(0.6),
+                        color: SettingsScreenStyle.subtleText,
                       ),
                     ),
                   ],
@@ -911,7 +879,7 @@ class _ProfileEditState extends State<ProfileEdit> {
         borderSide: BorderSide(color: Colors.black.withOpacity(0.25)),
       ),
       focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: CustColors.mainCol, width: 1.6),
+        borderSide: BorderSide(color: SettingsScreenStyle.gold, width: 1.6),
       ),
       disabledBorder: UnderlineInputBorder(
         borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
@@ -921,41 +889,4 @@ class _ProfileEditState extends State<ProfileEdit> {
     );
   }
 
-  Widget _circleIcon(dynamic icon) {
-    return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.85),
-        border: Border.all(color: Colors.black.withOpacity(0.08)),
-      ),
-      child: icon is IconData
-          ? Icon(icon, color: Colors.black87, size: 18)
-          : Iconify(icon, color: Colors.black87, size: 8),
-    );
-  }
-}
-
-class _ProfileBackground extends StatelessWidget {
-  final Widget child;
-  const _ProfileBackground({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color.fromARGB(255, 244, 244, 244),
-            Color.fromARGB(255, 240, 240, 240),
-            Color.fromARGB(255, 236, 236, 236),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: child,
-    );
-  }
 }

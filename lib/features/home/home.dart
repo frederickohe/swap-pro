@@ -59,7 +59,6 @@ class _HomeState extends State<Home> {
   Future<int>? _unreadCountFuture;
   Future<List<_ProductCardData>>? _featuredListingsFuture;
   final TextEditingController _searchController = TextEditingController();
-  final Set<String> _likedPropertyIds = {};
 
   static const _categories = [
     _CategoryItem('Phone', Icons.smartphone_outlined),
@@ -333,16 +332,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  void _toggleLike(String id) {
-    setState(() {
-      if (_likedPropertyIds.contains(id)) {
-        _likedPropertyIds.remove(id);
-      } else {
-        _likedPropertyIds.add(id);
-      }
-    });
-  }
-
   Widget _buildProductRow(List<_ProductCardData> products) {
     final visible = products.take(2).toList(growable: false);
     return Row(
@@ -353,9 +342,7 @@ class _HomeState extends State<Home> {
           Expanded(
             child: _ProductCard(
               data: visible[i],
-              isLiked: _likedPropertyIds.contains(visible[i].id),
               onImageTap: () => _openPropertyDetail(visible[i]),
-              onLikeTap: () => _toggleLike(visible[i].id),
             ),
           ),
         ],
@@ -493,7 +480,7 @@ class _ProductCardData {
         ? 'GH₵ ${value.toStringAsFixed(2)}'
         : (value?.toString().trim().isNotEmpty == true ? 'GH₵ $value' : '—');
 
-    final imageUrl = (json['primary_image_url'] ?? '').toString().trim();
+    final displayUrl = listingDisplayImageUrl(json);
     final fallback =
         'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80';
 
@@ -503,7 +490,7 @@ class _ProductCardData {
       location: location,
       price: price,
       rating: 5.0,
-      imageUrl: imageUrl.isEmpty ? fallback : imageUrl,
+      imageUrl: displayUrl ?? fallback,
       imageHeight: imageHeight,
       listingJson: json,
     );
@@ -733,15 +720,11 @@ class _CategoryTile extends StatelessWidget {
 
 class _ProductCard extends StatelessWidget {
   final _ProductCardData data;
-  final bool isLiked;
   final VoidCallback onImageTap;
-  final VoidCallback onLikeTap;
 
   const _ProductCard({
     required this.data,
-    required this.isLiked,
     required this.onImageTap,
-    required this.onLikeTap,
   });
 
   @override
@@ -754,42 +737,16 @@ class _ProductCard extends StatelessWidget {
           child: SizedBox(
             height: data.imageHeight,
             width: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                GestureDetector(
-                  onTap: onImageTap,
-                  child: Image.network(
-                    data.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFFE8E8E8),
-                      child: const Icon(Icons.image_outlined, color: _kInkSoft),
-                    ),
-                  ),
+            child: GestureDetector(
+              onTap: onImageTap,
+              child: Image.network(
+                data.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE8E8E8),
+                  child: const Icon(Icons.image_outlined, color: _kInkSoft),
                 ),
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: GestureDetector(
-                    onTap: onLikeTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: isLiked ? _kBadge : _kHeartBg,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

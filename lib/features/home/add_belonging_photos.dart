@@ -104,7 +104,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
     setState(() => _submitting = true);
     try {
       final api = context.read<ApiService>();
-      final primaryUrl = await api.uploadFile(
+      final specLabelUrl = await api.uploadFile(
         file: widget.specLabelImage,
         storageFolder: ApiService.listingsStorageFolder,
       );
@@ -119,13 +119,19 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
         );
       }
 
+      final primaryUrl = galleryUrls.first;
+      final imageUrls = <String>[
+        ...galleryUrls.skip(1),
+        specLabelUrl,
+      ];
+
       await api.createBelongingListing(
         title: widget.title,
         description: widget.description,
         category: widget.itemCategory,
         condition: widget.condition,
         primaryImageUrl: primaryUrl,
-        imageUrls: galleryUrls,
+        imageUrls: imageUrls,
         estimatedValue: widget.estimatedValue,
         serialNumber: widget.serialNumber,
         buildVersion: widget.buildVersion,
@@ -199,7 +205,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
                     ),
                     SizedBox(height: 12 * wScale),
                     Text(
-                      'Add up to $_maxPhotos gallery images (spec label is the main photo).',
+                      'Add up to $_maxPhotos photos of your item (first photo is the listing cover).',
                       style: AppTypography.style(
                         fontSize: 13 * wScale,
                         fontWeight: FontWeight.w400,

@@ -91,14 +91,18 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
                 alignment: Alignment.centerLeft,
                 child: IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: _ink),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 20,
+                    color: _ink,
+                  ),
                 ),
               ),
             ),
             Text(
               'Search Properties',
               textAlign: TextAlign.center,
-              style: _textStyle(size: 22, weight: FontWeight.w600),
+              style: _textStyle(size: 22, weight: FontWeight.w400),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -159,14 +163,15 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
       children: [
         Row(
           children: [
-            Text(
-              'Price',
-              style: _textStyle(size: 18, weight: FontWeight.w600),
-            ),
+            Text('Price', style: _textStyle(size: 18, weight: FontWeight.w600)),
             const Spacer(),
             Text(
               '${_formatPrice(_priceRange.start)} - ${_formatPrice(_priceRange.end)}',
-              style: _textStyle(size: 16, weight: FontWeight.w500, color: _gold),
+              style: _textStyle(
+                size: 16,
+                weight: FontWeight.w500,
+                color: _gold,
+              ),
             ),
           ],
         ),
@@ -209,10 +214,7 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Location',
-          style: _textStyle(size: 18, weight: FontWeight.w600),
-        ),
+        Text('Location', style: _textStyle(size: 18, weight: FontWeight.w600)),
         const SizedBox(height: 33),
         Container(
           height: 50,

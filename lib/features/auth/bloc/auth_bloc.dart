@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:swappro/config/app_config.dart';
 import 'package:swappro/common_bloc/success_bloc.dart';
+import 'package:swappro/utils/phone_utils.dart';
 import '../models/token_model.dart';
 import '../services/token_service.dart';
 
@@ -35,6 +36,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckSessionEvent>(_onCheckSession);
     on<VerifySignupOtpEvent>(_onVerifySignupOtp);
     on<ResendSignupOtpEvent>(_onResendSignupOtp);
+  }
+
+  String _messageFromResponse(http.Response response, String fallback) {
+    try {
+      final decoded = json.decode(response.body);
+      if (decoded is! Map) return fallback;
+      final detail = decoded['detail'];
+      if (detail is String && detail.isNotEmpty) return detail;
+      if (detail is List && detail.isNotEmpty) {
+        final first = detail.first;
+        if (first is Map && first['msg'] != null) {
+          return first['msg'].toString();
+        }
+      }
+      final message = decoded['message'];
+      if (message != null && message.toString().isNotEmpty) {
+        return message.toString();
+      }
+    } catch (_) {}
+    return fallback;
   }
 
   // Helper method to get headers with auth token
@@ -115,7 +136,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         body: json.encode({
           // Backend DTO expects `fullname` (we collect it as username in UI).
           'fullname': event.username,
-          'phone': event.phone,
+          'phone': normalizePhone(event.phone),
           'email': event.email,
           'password': event.password,
           'company': event.company,
@@ -166,36 +187,66 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    final phone = normalizePhone(event.phone);
+    final otp = event.otp.trim();
+
+    if (phone.isEmpty) {
+      emit(const AuthError(
+        message: 'Phone number is missing. Go back and sign up again.',
+        source: 'signup_otp',
+      ));
+      return;
+    }
+    if (otp.length != 5) {
+      emit(const AuthError(
+        message: 'Enter the 5-digit code from your SMS.',
+        source: 'signup_otp',
+      ));
+      return;
+    }
+
     try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.backendUrl}/api/v1/auth/verify-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'phone': event.phone, 'otp': event.otp}),
-      );
+      final uri = Uri.parse('${AppConfig.backendUrl}/api/v1/auth/verify-otp');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'phone': phone, 'otp': otp}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        if (data is Map && data['success'] == false) {
+          emit(AuthError(
+            message: data['message']?.toString() ?? 'OTP verification failed',
+            source: 'signup_otp',
+          ));
+          return;
+        }
         await _refreshSignupSession();
         emit(
           SignupOtpVerified(
-            phone: event.phone,
+            phone: phone,
             message: (data is Map && data['message'] != null)
                 ? data['message'].toString()
                 : 'OTP verified successfully',
           ),
         );
       } else {
-        String errorMsg = 'OTP verification failed';
-        try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
-          }
-        } catch (_) {}
-        emit(AuthError(message: errorMsg, source: 'signup_otp'));
+        emit(AuthError(
+          message: _messageFromResponse(
+            response,
+            'OTP verification failed (${response.statusCode})',
+          ),
+          source: 'signup_otp',
+        ));
       }
     } catch (e) {
-      emit(AuthError(message: e.toString(), source: 'signup_otp'));
+      emit(AuthError(
+        message: 'Could not reach the server. Check your connection and try again.',
+        source: 'signup_otp',
+      ));
     }
   }
 
@@ -204,11 +255,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    final phone = normalizePhone(event.phone);
+    if (phone.isEmpty) {
+      emit(const AuthError(
+        message: 'Phone number is missing.',
+        source: 'signup_otp_resend',
+      ));
+      return;
+    }
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/send'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'phone': event.phone}),
+        body: json.encode({'phone': phone}),
       );
 
       if (response.statusCode == 200) {

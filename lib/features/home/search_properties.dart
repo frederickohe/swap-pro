@@ -17,65 +17,20 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   static const Color _backBg = Color(0xFFF5F4F8);
   static const Color _gold = Color(0xFFC3B649);
 
-  static const _leftColumn = [
-    _SearchProduct(
-      title: '2 Bedroom Self C',
-      location: 'Lapaz',
-      price: '\$212.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
-      imageHeight: 217,
-    ),
-    _SearchProduct(
-      title: 'Aquarius G Yatch',
-      location: 'Achimota',
-      price: '\$194.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80',
-      imageHeight: 217,
-    ),
-    _SearchProduct(
-      title: '2 Bedroom Self C',
-      location: 'Building',
-      price: '\$212.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=80',
-      imageHeight: 217,
-    ),
-  ];
-
-  static const _rightColumn = [
-    _SearchProduct(
-      title: 'BMW Forza 2020',
-      location: 'North Kaneshie',
-      price: '₵662.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-      imageHeight: 251,
-    ),
-    _SearchProduct(
-      title: 'Audi Zatron',
-      location: 'Kasoa',
-      price: '\$122.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&q=80',
-      imageHeight: 251,
-    ),
-  ];
-
   late final TextEditingController _searchController;
   late String _activeQuery;
+
+  SearchFiltersResult? _filters;
+  List<_SearchProduct> _products = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _activeQuery = widget.query?.trim() ?? '';
     _searchController = TextEditingController(text: _activeQuery);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchResults());
   }
 
   @override
@@ -84,16 +39,97 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
     super.dispose();
   }
 
+  Future<void> _fetchResults() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final api = context.read<ApiService>();
+      double? minValue;
+      double? maxValue;
+      if (_filters != null) {
+        if (_filters!.minPrice > 0) minValue = _filters!.minPrice;
+        if (_filters!.maxPrice > 0) maxValue = _filters!.maxPrice;
+      }
+
+      final result = await api.searchListings(
+        keyword: _activeQuery.isEmpty ? null : _activeQuery,
+        minValue: minValue,
+        maxValue: maxValue,
+        page: 1,
+        size: 40,
+      );
+      if (!mounted) return;
+
+      final items = result['items'];
+      final cards = <_SearchProduct>[];
+      if (items is List) {
+        for (var i = 0; i < items.length; i++) {
+          final raw = items[i];
+          if (raw is! Map) continue;
+          cards.add(
+            _SearchProduct.fromListing(
+              Map<String, dynamic>.from(raw),
+              imageHeight: i.isOdd ? 251 : 217,
+            ),
+          );
+        }
+      }
+
+      setState(() => _products = cards);
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString();
+      if (message.contains('Session expired') ||
+          message.toLowerCase().contains('invalid token')) {
+        context.showAppSnackBar('Session expired. Please sign in again.');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const Signin()),
+          (route) => route.isFirst,
+        );
+        return;
+      }
+      setState(() {
+        _error = message;
+        _products = [];
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   void _applySearch() {
     FocusScope.of(context).unfocus();
     setState(() => _activeQuery = _searchController.text.trim());
+    _fetchResults();
   }
 
-  bool _matchesQuery(_SearchProduct product) {
-    if (_activeQuery.isEmpty) return true;
-    final q = _activeQuery.toLowerCase();
-    return product.title.toLowerCase().contains(q) ||
-        product.location.toLowerCase().contains(q);
+  Future<void> _openFilters() async {
+    final result = await Navigator.push<SearchFiltersResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
+    );
+    if (result != null && mounted) {
+      setState(() => _filters = result);
+      _fetchResults();
+    }
+  }
+
+  List<_SearchProduct> get _leftColumn {
+    final left = <_SearchProduct>[];
+    for (var i = 0; i < _products.length; i += 2) {
+      left.add(_products[i]);
+    }
+    return left;
+  }
+
+  List<_SearchProduct> get _rightColumn {
+    final right = <_SearchProduct>[];
+    for (var i = 1; i < _products.length; i += 2) {
+      right.add(_products[i]);
+    }
+    return right;
   }
 
   TextStyle _textStyle({
@@ -111,10 +147,8 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredLeft =
-        _leftColumn.where(_matchesQuery).toList(growable: false);
-    final filteredRight =
-        _rightColumn.where(_matchesQuery).toList(growable: false);
+    final filteredLeft = _leftColumn;
+    final filteredRight = _rightColumn;
     final hasResults = filteredLeft.isNotEmpty || filteredRight.isNotEmpty;
 
     return Scaffold(
@@ -131,13 +165,27 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
               padding: const EdgeInsets.fromLTRB(21, 20, 21, 0),
               child: _buildSearchHeader(context),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 29, 20, 24),
-                child: hasResults
-                    ? _buildMasonryGrid(filteredLeft, filteredRight)
-                    : _buildEmptyState(),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(21, 8, 21, 0),
+                child: Text(
+                  _error!,
+                  style: _textStyle(size: 12, color: Colors.red.shade700),
+                ),
               ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: SwapproLoadingIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _fetchResults,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 29, 20, 24),
+                        child: hasResults
+                            ? _buildMasonryGrid(filteredLeft, filteredRight)
+                            : _buildEmptyState(),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -172,7 +220,11 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
           ),
           Text(
             'Search Properties',
-            style: _textStyle(size: 22, weight: FontWeight.w600, color: Colors.black),
+            style: _textStyle(
+              size: 22,
+              weight: FontWeight.w400,
+              color: Colors.black,
+            ),
           ),
         ],
       ),
@@ -191,41 +243,53 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
               border: Border.all(color: _searchBorder),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              style: _textStyle(size: 14, weight: FontWeight.w500),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _applySearch(),
-              decoration: InputDecoration(
-                hintText: 'Search ...',
-                hintStyle: _textStyle(
-                  size: 14,
-                  weight: FontWeight.w500,
-                  color: _ink.withValues(alpha: 0.5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: _textStyle(size: 14, weight: FontWeight.w500),
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _applySearch(),
+                    decoration: InputDecoration(
+                      hintText: 'Search ...',
+                      hintStyle: _textStyle(
+                        size: 14,
+                        weight: FontWeight.w500,
+                        color: _ink.withValues(alpha: 0.5),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      isCollapsed: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
                 ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+                GestureDetector(
+                  onTap: _applySearch,
+                  behavior: HitTestBehavior.opaque,
+                  child: const Icon(Icons.search, size: 20, color: _ink),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(width: 30),
         GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
-            );
-          },
+          onTap: _openFilters,
           child: Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: _menuBorder),
+              border: Border.all(
+                color: _filters != null ? _gold : _menuBorder,
+                width: _filters != null ? 2 : 1,
+              ),
             ),
-            child: const Icon(Icons.menu, size: 22, color: _ink),
+            alignment: Alignment.center,
+            child: const Icon(Icons.tune, size: 22, color: _ink),
           ),
         ),
       ],
@@ -233,11 +297,12 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   }
 
   Widget _buildEmptyState() {
+    final queryLabel = _activeQuery.isEmpty ? 'listings' : '"$_activeQuery"';
     return Padding(
       padding: const EdgeInsets.only(top: 48),
       child: Center(
         child: Text(
-          'No results for "$_activeQuery"',
+          'No results for $queryLabel',
           textAlign: TextAlign.center,
           style: _textStyle(size: 16, color: _ink.withValues(alpha: 0.6)),
         ),
@@ -279,22 +344,60 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   }
 }
 
+const _kListingImageFallback =
+    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80';
+
 class _SearchProduct {
+  final String id;
   final String title;
   final String location;
   final String price;
   final double rating;
   final String imageUrl;
   final double imageHeight;
+  final Map<String, dynamic>? listingJson;
 
   const _SearchProduct({
+    required this.id,
     required this.title,
     required this.location,
     required this.price,
     required this.rating,
     required this.imageUrl,
     required this.imageHeight,
+    this.listingJson,
   });
+
+  factory _SearchProduct.fromListing(
+    Map<String, dynamic> json, {
+    required double imageHeight,
+  }) {
+    final id = (json['id'] ?? '').toString();
+    final title = (json['title'] ?? '').toString();
+    final category = (json['category'] ?? '').toString().trim();
+    final condition = (json['condition'] ?? '').toString().trim();
+    final location = category.isNotEmpty
+        ? category
+        : (condition.isNotEmpty ? condition : 'Listing');
+
+    final value = json['estimated_value'];
+    final price = value is num
+        ? 'GH₵ ${value.toStringAsFixed(2)}'
+        : (value?.toString().trim().isNotEmpty == true ? 'GH₵ $value' : '—');
+
+    final displayUrl = listingDisplayImageUrl(json);
+
+    return _SearchProduct(
+      id: id.isEmpty ? title : id,
+      title: title.isEmpty ? 'Untitled listing' : title,
+      location: location,
+      price: price,
+      rating: 5.0,
+      imageUrl: displayUrl ?? _kListingImageFallback,
+      imageHeight: imageHeight,
+      listingJson: json,
+    );
+  }
 }
 
 class _SearchProductCard extends StatelessWidget {
@@ -302,20 +405,33 @@ class _SearchProductCard extends StatelessWidget {
 
   const _SearchProductCard({required this.data});
 
-  void _openDetail(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PropertyDetailPage(
-          data: PropertyDetailData.demo(
-            title: data.title,
-            price: data.price,
-            imageUrl: data.imageUrl,
-            location: data.location,
+  Future<void> _openDetail(BuildContext context) async {
+    if (data.listingJson != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailPage(
+            data: PropertyDetailData.fromListing(data.listingJson!),
           ),
         ),
-      ),
-    );
+      );
+      return;
+    }
+    if (data.id.isEmpty) return;
+    try {
+      final listing = await context.read<ApiService>().getListing(data.id);
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              PropertyDetailPage(data: PropertyDetailData.fromListing(listing)),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      context.showAppSnackBar(e.toString());
+    }
   }
 
   static const Color _inkSoft = Color(0xFF787676);
@@ -329,93 +445,65 @@ class _SearchProductCard extends StatelessWidget {
       onTap: () => _openDetail(context),
       behavior: HitTestBehavior.opaque,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: SizedBox(
-            height: data.imageHeight,
-            width: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  data.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFFE8E8E8),
-                    child: const Icon(
-                      Icons.image_outlined,
-                      color: _inkSoft,
-                    ),
-                  ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              height: data.imageHeight,
+              width: double.infinity,
+              child: Image.network(
+                data.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE8E8E8),
+                  child: const Icon(Icons.image_outlined, color: _inkSoft),
                 ),
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(
-                      color: _heartBg,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          data.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.style(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: _titleInk,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          data.location,
-          style: AppTypography.style(
-            fontSize: 12,
-            color: _inkSoft,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Text(
-              data.price,
-              style: AppTypography.style(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _heartBg,
               ),
             ),
-            const Spacer(),
-            const Icon(Icons.star, size: 18, color: _star),
-            const SizedBox(width: 4),
-            Text(
-              data.rating.toStringAsFixed(1),
-              style: AppTypography.style(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: _heartBg,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.style(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _titleInk,
             ),
-          ],
-        ),
-      ],
-    ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.location,
+            style: AppTypography.style(fontSize: 12, color: _inkSoft),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                data.price,
+                style: AppTypography.style(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _heartBg,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.star, size: 18, color: _star),
+              const SizedBox(width: 4),
+              Text(
+                data.rating.toStringAsFixed(1),
+                style: AppTypography.style(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _heartBg,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
