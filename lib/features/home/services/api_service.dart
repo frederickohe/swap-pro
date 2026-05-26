@@ -8,14 +8,11 @@ class ApiService {
   final SessionAwareHttpClient httpClient;
   final String baseUrl;
 
-  /// Same folder the backend uses for RAG uploads (`chatbot-files`).
-  static const String chatbotStorageFolder = 'chatbot-files';
+  /// User profile avatars (`StorageFolder.profile_images`).
+  static const String profileImagesStorageFolder = 'profile-images';
 
-  /// Catalogue files for product management (`StorageFolder.records_files`).
-  static const String productCatalogStorageFolder = 'records-files';
-
-  /// Product listing images (`StorageFolder.product_images` on the API).
-  static const String productImageStorageFolder = 'product-images';
+  /// Belonging / listing photos (`StorageFolder.listings`).
+  static const String listingsStorageFolder = 'listings';
 
   ApiService({required this.httpClient, String? baseUrl})
     : baseUrl = baseUrl?.isNotEmpty == true
@@ -455,10 +452,10 @@ class ApiService {
 
   /// List available files in storage (typically AI training docs).
   ///
-  /// Backend: `GET /api/v1/storage/list?subfolder=chatbot-files/&extensions=txt,pdf,docx`
+  /// Backend: `GET /api/v1/storage/list?subfolder=listings/&extensions=...`
   /// Returns: `{ "files": [ { file_name, file_url, file_size, file_type, last_modified } ] }`
   Future<List<Map<String, dynamic>>> listStorageFiles({
-    String subfolder = 'chatbot-files/',
+    String subfolder = 'listings/',
     List<String> extensions = const ['txt', 'pdf', 'docx'],
     int maxKeys = 200,
   }) async {
@@ -615,7 +612,7 @@ class ApiService {
   /// When [asyncMode] is true, returns immediately with a `job_id` (HTTP 202);
   /// poll [getRagIndexJobStatus] for progress.
   Future<Map<String, dynamic>> uploadRagDocument({
-    String folder = chatbotStorageFolder,
+    String folder = profileImagesStorageFolder,
     required String filename,
     String? filePath,
     List<int>? fileBytes,
@@ -675,7 +672,7 @@ class ApiService {
   /// Returns immediately with a `job_id`; poll [getRagIndexJobStatus].
   Future<Map<String, dynamic>> uploadRagUrl({
     required String url,
-    String folder = chatbotStorageFolder,
+    String folder = profileImagesStorageFolder,
   }) async {
     final trimmed = url.trim();
     if (trimmed.isEmpty) {

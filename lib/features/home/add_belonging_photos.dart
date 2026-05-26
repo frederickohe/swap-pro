@@ -106,7 +106,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
       final api = context.read<ApiService>();
       final primaryUrl = await api.uploadFile(
         file: widget.specLabelImage,
-        storageFolder: ApiService.productImageStorageFolder,
+        storageFolder: ApiService.listingsStorageFolder,
       );
 
       final galleryUrls = <String>[];
@@ -114,7 +114,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
         galleryUrls.add(
           await api.uploadFile(
             file: file,
-            storageFolder: ApiService.productImageStorageFolder,
+            storageFolder: ApiService.listingsStorageFolder,
           ),
         );
       }

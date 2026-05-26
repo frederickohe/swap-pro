@@ -56,7 +56,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
     try {
       final api = context.read<ApiService>();
       final files = await api.listMyStorageFiles(
-        folder: ApiService.chatbotStorageFolder,
+        folder: ApiService.profileImagesStorageFolder,
       );
       if (!mounted) return;
       setState(() {
@@ -1065,7 +1065,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
     try {
       final api = context.read<ApiService>();
       final list = await api.listMyStorageFiles(
-        folder: ApiService.chatbotStorageFolder,
+        folder: ApiService.profileImagesStorageFolder,
       );
       if (!mounted) return;
       setState(() {
@@ -1089,7 +1089,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
     try {
       final api = context.read<ApiService>();
       await api.deleteMyStorageFile(
-        folder: ApiService.chatbotStorageFolder,
+        folder: ApiService.profileImagesStorageFolder,
         fileName: name,
       );
       if (!mounted) return;
