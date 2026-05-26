@@ -201,7 +201,11 @@ class _DashListingsPageState extends State<DashListingsPage> {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Listed Properties',
-                style: _text(size: 22, weight: FontWeight.w600, color: Colors.black),
+                style: _text(
+                  size: 22,
+                  weight: FontWeight.w600,
+                  color: Colors.black,
+                ),
               ),
             ),
           ),
@@ -247,7 +251,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
               decoration: InputDecoration(
                 hintText: 'Search ...',
                 hintStyle: _text(
-                  size: 14,
+                  size: 12,
                   weight: FontWeight.w500,
                   color: _ink.withValues(alpha: 0.5),
                 ),
@@ -289,9 +293,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Text(
-          _query.isEmpty
-              ? 'No listings yet'
-              : 'No listings match "$_query"',
+          _query.isEmpty ? 'No listings yet' : 'No listings match "$_query"',
           textAlign: TextAlign.center,
           style: _text(size: 16, color: _subtitle),
         ),
@@ -346,10 +348,7 @@ class _DashListing {
 }
 
 class _ListingRow extends StatelessWidget {
-  const _ListingRow({
-    required this.data,
-    required this.onView,
-  });
+  const _ListingRow({required this.data, required this.onView});
 
   final _DashListing data;
   final VoidCallback onView;

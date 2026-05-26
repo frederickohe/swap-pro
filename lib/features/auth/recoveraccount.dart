@@ -64,7 +64,7 @@ class _RecoverAccountState extends State<RecoverAccount> {
                     ),
                     SizedBox(height: 38 * m.hScale),
                     AuthSplitTitle(
-                      boldPart: 'Reset Password',
+                      boldPart: 'Reset PIN',
                       fontSize: 32 * m.wScale,
                     ),
                     SizedBox(height: 20 * m.hScale),
@@ -81,7 +81,7 @@ class _RecoverAccountState extends State<RecoverAccount> {
                     AuthFormField(
                       controller: emailController,
                       hint: 'Email',
-                      icon: Icons.email_outlined,
+                      iconSvg: AuthIcons.emailFill,
                       height: m.fieldHeight,
                       radius: m.fieldRadius,
                       enabled: !isLoading,

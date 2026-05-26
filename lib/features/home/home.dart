@@ -7,9 +7,8 @@ const _kInkSoft = Color(0xFF787676);
 const _kSearchBorder = Color(0xFFECECF3);
 const _kNotifBorder = Color(0xFFDFDFDF);
 const _kBadge = Color(0xFFFD5F4A);
-const _kChipBg = Color(0xFFF5F4F8);
 const _kNavBg = Color(0xFF111111);
-const _kNavActive = Color(0x80414141);
+const _kGold = Color(0xFFC3B649);
 const _kHeartBg = Color(0xFF292526);
 const _kStar = Color(0xFFFFD33C);
 
@@ -58,6 +57,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int _navIndex = 0;
   Future<int>? _unreadCountFuture;
+  Future<List<_ProductCardData>>? _featuredListingsFuture;
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _likedPropertyIds = {};
 
@@ -76,37 +76,6 @@ class _HomeState extends State<Home> {
     _CategoryItem('Utensils', Icons.restaurant_outlined),
   ];
 
-  final List<String> _wishlistItems = [
-    'Car spare parts',
-    'Turbo Washing Machine',
-    'Brush',
-    'Eggs',
-    'Kids Skating Boots K892',
-  ];
-
-  static const _featuredProducts = [
-    _ProductCardData(
-      id: 'home-2-bedroom-self-c',
-      title: '2 Bedroom Self C',
-      location: 'Lapaz',
-      price: '\$212.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
-      imageHeight: 217,
-    ),
-    _ProductCardData(
-      id: 'home-bmw-forza-2020',
-      title: 'BMW Forza 2020',
-      location: 'North Kaneshie',
-      price: '₵662.99',
-      rating: 5.0,
-      imageUrl:
-          'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-      imageHeight: 251,
-    ),
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -116,7 +85,34 @@ class _HomeState extends State<Home> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _unreadCountFuture ??= context.read<ApiService>().getUnreadNotificationCount();
+    final api = context.read<ApiService>();
+    _unreadCountFuture ??= api.getUnreadNotificationCount();
+    _featuredListingsFuture ??= _loadFeaturedListings(api);
+  }
+
+  Future<List<_ProductCardData>> _loadFeaturedListings(ApiService api) async {
+    final result = await api.searchListings(page: 1, size: 10);
+    final items = result['items'];
+    if (items is! List || items.isEmpty) return const [];
+
+    final cards = <_ProductCardData>[];
+    for (var i = 0; i < items.length; i++) {
+      final raw = items[i];
+      if (raw is! Map) continue;
+      final json = Map<String, dynamic>.from(raw);
+      cards.add(
+        _ProductCardData.fromListing(json, imageHeight: i.isOdd ? 251 : 217),
+      );
+    }
+    return cards;
+  }
+
+  Future<void> _refreshFeaturedListings() async {
+    setState(() {
+      _featuredListingsFuture = _loadFeaturedListings(
+        context.read<ApiService>(),
+      );
+    });
   }
 
   void _openSearchResults() {
@@ -124,16 +120,17 @@ class _HomeState extends State<Home> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SearchPropertiesPage(
-          query: query.isEmpty ? null : query,
-        ),
+        builder: (_) =>
+            SearchPropertiesPage(query: query.isEmpty ? null : query),
       ),
     );
   }
 
   Future<void> _refreshNotifications() async {
     setState(() {
-      _unreadCountFuture = context.read<ApiService>().getUnreadNotificationCount();
+      _unreadCountFuture = context
+          .read<ApiService>()
+          .getUnreadNotificationCount();
     });
   }
 
@@ -177,19 +174,13 @@ class _HomeState extends State<Home> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(23, 36, 23, 0),
-                    child: _buildWishlistHeader(),
+                    child: _buildFeaturedHeader(),
                   ),
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(21, 12, 21, 0),
-                    child: _buildWishlistChips(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(20, 28, 20, 120 + bottomInset),
-                    child: _buildProductRow(),
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, 120 + bottomInset),
+                    child: _buildFeaturedListings(),
                   ),
                 ),
               ],
@@ -239,46 +230,10 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildLocationSearch() {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: _kSearchBorder),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on_outlined, size: 18, color: _kInk),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              style: _textStyle(size: 14, color: _kInk.withValues(alpha: 0.9)),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _openSearchResults(),
-              decoration: InputDecoration(
-                hintText: 'Search ...',
-                hintStyle: _textStyle(
-                  size: 14,
-                  color: _kInk.withValues(alpha: 0.5),
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: _openSearchResults,
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.search, size: 18, color: _kInk),
-            ),
-          ),
-        ],
-      ),
+    return _LocationSearchBar(
+      controller: _searchController,
+      onSearch: _openSearchResults,
+      textStyle: _textStyle,
     );
   }
 
@@ -295,67 +250,85 @@ class _HomeState extends State<Home> {
       ),
       itemBuilder: (context, index) {
         final cat = _categories[index];
-        return _CategoryTile(
-          label: cat.label,
-          icon: cat.icon,
-          onTap: () {},
-        );
+        return _CategoryTile(label: cat.label, icon: cat.icon, onTap: () {});
       },
     );
   }
 
-  Widget _buildWishlistHeader() {
-    return Row(
-      children: [
-        Text(
-          'Your Wishlist',
-          style: _textStyle(size: 22, weight: FontWeight.w600),
-        ),
-        const Spacer(),
-        GestureDetector(
-          onTap: () async {
-            final wish = await Navigator.push<String>(
-              context,
-              MaterialPageRoute(builder: (_) => const AddWishPage()),
-            );
-            if (wish != null && wish.isNotEmpty && mounted) {
-              setState(() => _wishlistItems.add(wish));
-            }
-          },
-          child: Text(
-            'Add New +',
-            style: _textStyle(size: 16, weight: FontWeight.w500),
-          ),
-        ),
-      ],
+  Widget _buildFeaturedHeader() {
+    return Text(
+      'Featured Listings',
+      style: _textStyle(size: 22, weight: FontWeight.w600),
     );
   }
 
-  Widget _buildWishlistChips() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _wishlistItems
-          .map((label) => _WishlistChip(label: label, onTap: () {}))
-          .toList(),
+  Widget _buildFeaturedListings() {
+    return FutureBuilder<List<_ProductCardData>>(
+      future: _featuredListingsFuture,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            children: [
+              Text(
+                'Could not load listings.',
+                style: _textStyle(size: 14, color: _kInkSoft),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: _refreshFeaturedListings,
+                child: const Text('Retry'),
+              ),
+            ],
+          );
+        }
+        final products = snap.data ?? const [];
+        if (products.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              'No listings available yet.',
+              style: _textStyle(size: 14, color: _kInkSoft),
+            ),
+          );
+        }
+        return _buildProductRow(products);
+      },
     );
   }
 
-  void _openPropertyDetail(_ProductCardData product) {
+  Future<void> _openPropertyDetail(_ProductCardData product) async {
+    PropertyDetailData detail;
+    if (product.listingJson != null) {
+      detail = PropertyDetailData.fromListing(product.listingJson!);
+    } else {
+      try {
+        final listing = await context.read<ApiService>().getListing(product.id);
+        if (!mounted) return;
+        detail = PropertyDetailData.fromListing(listing);
+      } catch (_) {
+        if (!mounted) return;
+        detail = PropertyDetailData.demo(
+          title: product.title,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          location: product.location,
+        );
+      }
+    }
+    if (!mounted) return;
     Navigator.push(
       context,
       PageTransition(
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: PropertyDetailPage(
-          data: PropertyDetailData.demo(
-            title: product.title,
-            price: product.price,
-            imageUrl: product.imageUrl,
-            location: product.location,
-          ),
-        ),
+        child: PropertyDetailPage(data: detail),
       ),
     );
   }
@@ -370,18 +343,19 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Widget _buildProductRow() {
+  Widget _buildProductRow(List<_ProductCardData> products) {
+    final visible = products.take(2).toList(growable: false);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < _featuredProducts.length; i++) ...[
+        for (var i = 0; i < visible.length; i++) ...[
           if (i > 0) const SizedBox(width: 12),
           Expanded(
             child: _ProductCard(
-              data: _featuredProducts[i],
-              isLiked: _likedPropertyIds.contains(_featuredProducts[i].id),
-              onImageTap: () => _openPropertyDetail(_featuredProducts[i]),
-              onLikeTap: () => _toggleLike(_featuredProducts[i].id),
+              data: visible[i],
+              isLiked: _likedPropertyIds.contains(visible[i].id),
+              onImageTap: () => _openPropertyDetail(visible[i]),
+              onLikeTap: () => _toggleLike(visible[i].id),
             ),
           ),
         ],
@@ -390,29 +364,14 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildFabColumn() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _FabCircle(
-          icon: Icons.tune,
-          onTap: () async {
-            await Navigator.push<SearchFiltersResult>(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
-            );
-          },
-        ),
-        const SizedBox(height: 15),
-        _FabCircle(
-          icon: Icons.add_circle_outline,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddBelongingPage()),
-            );
-          },
-        ),
-      ],
+    return _FabCircle(
+      icon: Icons.add_circle_outline,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddBelongingPage()),
+        );
+      },
     );
   }
 
@@ -504,6 +463,7 @@ class _ProductCardData {
   final double rating;
   final String imageUrl;
   final double imageHeight;
+  final Map<String, dynamic>? listingJson;
 
   const _ProductCardData({
     required this.id,
@@ -513,7 +473,183 @@ class _ProductCardData {
     required this.rating,
     required this.imageUrl,
     required this.imageHeight,
+    this.listingJson,
   });
+
+  factory _ProductCardData.fromListing(
+    Map<String, dynamic> json, {
+    required double imageHeight,
+  }) {
+    final id = (json['id'] ?? '').toString();
+    final title = (json['title'] ?? '').toString();
+    final category = (json['category'] ?? '').toString().trim();
+    final condition = (json['condition'] ?? '').toString().trim();
+    final location = category.isNotEmpty
+        ? category
+        : (condition.isNotEmpty ? condition : 'Listing');
+
+    final value = json['estimated_value'];
+    final price = value is num
+        ? 'GH₵ ${value.toStringAsFixed(2)}'
+        : (value?.toString().trim().isNotEmpty == true ? 'GH₵ $value' : '—');
+
+    final imageUrl = (json['primary_image_url'] ?? '').toString().trim();
+    final fallback =
+        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80';
+
+    return _ProductCardData(
+      id: id.isEmpty ? title : id,
+      title: title.isEmpty ? 'Untitled listing' : title,
+      location: location,
+      price: price,
+      rating: 5.0,
+      imageUrl: imageUrl.isEmpty ? fallback : imageUrl,
+      imageHeight: imageHeight,
+      listingJson: json,
+    );
+  }
+}
+
+/// Figma "Location Search" (node 159:602) — pin left, compact search cluster right.
+class _LocationSearchBar extends StatelessWidget {
+  const _LocationSearchBar({
+    required this.controller,
+    required this.onSearch,
+    required this.textStyle,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onSearch;
+  final TextStyle Function({double size, FontWeight weight, Color color})
+  textStyle;
+
+  static const double _height = 50;
+  static const double _iconSize = 15;
+  static const double _searchIconSize = 14;
+  static const double _textSize = 12;
+  static const double _clusterGap = 23;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _height,
+      decoration: BoxDecoration(
+        color: _kBg,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: _kSearchBorder, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const _FilledLocationPin(size: _iconSize),
+          const Spacer(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 72, maxWidth: 140),
+                child: TextField(
+                  controller: controller,
+                  style: textStyle(
+                    size: _textSize,
+                    weight: FontWeight.w500,
+                    color: _kInk,
+                  ),
+                  textAlign: TextAlign.left,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => onSearch(),
+                  decoration: InputDecoration(
+                    hintText: 'Search ...',
+                    hintStyle: textStyle(
+                      size: _textSize,
+                      weight: FontWeight.w300,
+                      color: _kInk,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    isCollapsed: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: _clusterGap),
+              GestureDetector(
+                onTap: onSearch,
+                behavior: HitTestBehavior.opaque,
+                child: Icon(
+                  Icons.search,
+                  size: _searchIconSize,
+                  color: _kInk,
+                  weight: 600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Filled black map pin with white center dot (Figma Icon / Location).
+class _FilledLocationPin extends StatelessWidget {
+  const _FilledLocationPin({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _FilledLocationPinPainter(color: _kInk),
+        size: Size(size, size),
+      ),
+    );
+  }
+}
+
+class _FilledLocationPinPainter extends CustomPainter {
+  _FilledLocationPinPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final pinPath = Path()
+      ..moveTo(w * 0.5, h * 0.92)
+      ..cubicTo(w * 0.22, h * 0.58, w * 0.08, h * 0.42, w * 0.08, h * 0.28)
+      ..arcToPoint(
+        Offset(w * 0.92, h * 0.28),
+        radius: Radius.circular(w * 0.42),
+        clockwise: true,
+      )
+      ..cubicTo(w * 0.92, h * 0.42, w * 0.78, h * 0.58, w * 0.5, h * 0.92)
+      ..close();
+
+    canvas.drawPath(pinPath, Paint()..color = color);
+
+    final dotCenter = Offset(w * 0.5, h * 0.30);
+    canvas.drawCircle(dotCenter, w * 0.14, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      dotCenter,
+      w * 0.14,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.04,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FilledLocationPinPainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
 }
 
 class _NotificationButton extends StatelessWidget {
@@ -536,11 +672,7 @@ class _NotificationButton extends StatelessWidget {
               border: Border.all(color: _kNotifBorder, width: 1.2),
             ),
             child: const Center(
-              child: Icon(
-                Icons.notifications_none,
-                size: 22,
-                color: _kInk,
-              ),
+              child: Icon(Icons.notifications_none, size: 22, color: _kInk),
             ),
           ),
           if (showBadge)
@@ -599,37 +731,6 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-class _WishlistChip extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _WishlistChip({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _kChipBg,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.style(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: _kInk,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProductCard extends StatelessWidget {
   final _ProductCardData data;
   final bool isLiked;
@@ -663,10 +764,7 @@ class _ProductCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFFE8E8E8),
-                      child: const Icon(
-                        Icons.image_outlined,
-                        color: _kInkSoft,
-                      ),
+                      child: const Icon(Icons.image_outlined, color: _kInkSoft),
                     ),
                   ),
                 ),
@@ -709,10 +807,7 @@ class _ProductCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           data.location,
-          style: AppTypography.style(
-            fontSize: 12,
-            color: _kInkSoft,
-          ),
+          style: AppTypography.style(fontSize: 12, color: _kInkSoft),
         ),
         const SizedBox(height: 8),
         Row(
@@ -756,10 +851,7 @@ class _FabCircle extends StatelessWidget {
       child: Container(
         width: 60,
         height: 60,
-        decoration: const BoxDecoration(
-          color: _kNavBg,
-          shape: BoxShape.circle,
-        ),
+        decoration: const BoxDecoration(color: _kNavBg, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.white, size: 28),
       ),
     );
@@ -781,14 +873,14 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 50,
         height: 50,
-        decoration: BoxDecoration(
-          color: selected ? _kNavActive : Colors.transparent,
-          shape: BoxShape.circle,
+        child: Icon(
+          icon,
+          color: selected ? _kGold : Colors.white,
+          size: 26,
         ),
-        child: Icon(icon, color: Colors.white, size: 26),
       ),
     );
   }

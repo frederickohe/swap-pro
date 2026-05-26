@@ -14,26 +14,35 @@ class _SigninState extends State<Signin> {
   static const double _figmaH = 932;
 
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final List<TextEditingController> _pinControllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
+
+  String get _pin => AuthPinField.join(_pinControllers);
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    for (final c in _pinControllers) {
+      c.dispose();
+    }
+    for (final n in _pinFocusNodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
   void _submitLogin() {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty || _pin.length != 4) {
       return;
     }
 
     context.read<AuthBloc>().add(
           LoginEvent(
             email: _emailController.text.trim(),
-            password: _passwordController.text,
+            password: _pin,
           ),
         );
   }
@@ -122,7 +131,7 @@ class _SigninState extends State<Signin> {
                           ),
                           SizedBox(height: 20 * hScale),
                           Text(
-                            'Enter your email and password',
+                            'Enter your email and PIN',
                             style: AppTypography.style(
                               fontSize: 14 * wScale,
                               fontWeight: FontWeight.w400,
@@ -144,64 +153,44 @@ class _SigninState extends State<Signin> {
                             AuthFormField(
                               controller: _emailController,
                               hint: 'Email',
-                              icon: Icons.email_outlined,
+                              iconSvg: AuthIcons.emailFill,
                               height: fieldHeight,
                               radius: fieldRadius,
                               enabled: !isLoading,
                               keyboardType: TextInputType.emailAddress,
                             ),
                             SizedBox(height: formGap),
-                            AuthFormField(
-                              controller: _passwordController,
-                              hint: 'Password',
-                              icon: Icons.lock_outline,
-                              height: fieldHeight,
-                              radius: fieldRadius,
+                            AuthPinField(
+                              controllers: _pinControllers,
+                              focusNodes: _pinFocusNodes,
                               enabled: !isLoading,
-                              obscureText: _obscurePassword,
+                              wScale: wScale,
+                              hScale: hScale,
                             ),
                             SizedBox(height: formGap),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                GestureDetector(
-                                  onTap: isLoading
-                                      ? null
-                                      : () {
-                                          Navigator.of(context).push(
-                                            PageTransition(
-                                              type: PageTransitionType
-                                                  .rightToLeftWithFade,
-                                              child: const RecoverAccount(),
-                                            ),
-                                          );
-                                        },
-                                  child: Text(
-                                    'Forgot password?',
-                                    style: AppTypography.style(
-                                      fontSize: 14 * wScale,
-                                      fontWeight: FontWeight.w400,
-                                      color: _dark,
-                                    ),
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: isLoading
-                                      ? null
-                                      : () => setState(
-                                            () => _obscurePassword =
-                                                !_obscurePassword,
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: GestureDetector(
+                                onTap: isLoading
+                                    ? null
+                                    : () {
+                                        Navigator.of(context).push(
+                                          PageTransition(
+                                            type: PageTransitionType
+                                                .rightToLeftWithFade,
+                                            child: const RecoverAccount(),
                                           ),
-                                  child: Text(
-                                    'Show password',
-                                    style: AppTypography.style(
-                                      fontSize: 14 * wScale,
-                                      fontWeight: FontWeight.w400,
-                                      color: _dark,
-                                    ),
+                                        );
+                                      },
+                                child: Text(
+                                  'Forgot PIN?',
+                                  style: AppTypography.style(
+                                    fontSize: 12 * wScale,
+                                    fontWeight: FontWeight.w400,
+                                    color: _dark,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         ),

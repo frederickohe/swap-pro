@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:swappro/common_design/app_typography.dart';
 
 /// Auth screen text field — light fill, gold icon, thin black border when focused.
@@ -8,7 +9,8 @@ class AuthFormField extends StatefulWidget {
     super.key,
     required this.controller,
     required this.hint,
-    required this.icon,
+    this.icon,
+    this.iconSvg,
     required this.height,
     required this.radius,
     required this.enabled,
@@ -20,11 +22,12 @@ class AuthFormField extends StatefulWidget {
     this.readOnly = false,
     this.onChanged,
     this.onSubmitted,
-  });
+  }) : assert(icon != null || iconSvg != null);
 
   final TextEditingController controller;
   final String hint;
-  final IconData icon;
+  final IconData? icon;
+  final String? iconSvg;
   final double height;
   final double radius;
   final bool enabled;
@@ -40,6 +43,8 @@ class AuthFormField extends StatefulWidget {
   static const Color dark = Color(0xFF111111);
   static const Color gold = Color(0xFFC3B649);
   static const Color fieldFill = Color(0xFFF5F5F8);
+  static const double inputFontSize = 14;
+  static const double hintFontSize = 12;
 
   @override
   State<AuthFormField> createState() => _AuthFormFieldState();
@@ -105,7 +110,7 @@ class _AuthFormFieldState extends State<AuthFormField> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Icon(widget.icon, size: 20, color: AuthFormField.gold),
+          _AuthFieldIcon(icon: widget.icon, iconSvg: widget.iconSvg),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -120,14 +125,14 @@ class _AuthFormFieldState extends State<AuthFormField> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: AppTypography.style(
-                fontSize: 14,
+                fontSize: AuthFormField.inputFontSize,
                 fontWeight: FontWeight.w400,
                 color: AuthFormField.dark,
               ),
               decoration: InputDecoration(
                 hintText: widget.hint,
                 hintStyle: AppTypography.style(
-                  fontSize: 14,
+                  fontSize: AuthFormField.hintFontSize,
                   fontWeight: FontWeight.w400,
                   color: AuthFormField.dark,
                 ),
@@ -182,5 +187,24 @@ class AuthFormFieldShell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _AuthFieldIcon extends StatelessWidget {
+  const _AuthFieldIcon({this.icon, this.iconSvg});
+
+  final IconData? icon;
+  final String? iconSvg;
+
+  @override
+  Widget build(BuildContext context) {
+    if (iconSvg != null) {
+      return Iconify(
+        iconSvg!,
+        size: 20,
+        color: AuthFormField.gold,
+      );
+    }
+    return Icon(icon, size: 20, color: AuthFormField.gold);
   }
 }

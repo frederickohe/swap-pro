@@ -32,7 +32,7 @@ class _SignupState extends State<Signup> {
 
   bool _ghanaCardFocused = false;
 
-  String get _pin => _pinControllers.map((c) => c.text).join();
+  String get _pin => AuthPinField.join(_pinControllers);
 
   String get _ghanaCardValue {
     final ten = ghanaCardTenController.text.trim();
@@ -47,6 +47,10 @@ class _SignupState extends State<Signup> {
       fontWeight: FontWeight.w400,
       color: _dark,
     );
+  }
+
+  static TextStyle _ghanaHintStyle() {
+    return _ghanaSegmentStyle().copyWith(fontSize: AuthFormField.hintFontSize);
   }
 
   double _ghanaTenFieldWidth(BuildContext context, double wScale) {
@@ -83,9 +87,6 @@ class _SignupState extends State<Signup> {
     ghanaCardTenController.addListener(_onGhanaTenChanged);
     _ghanaCardTenFocusNode.addListener(_updateGhanaCardFocus);
     _ghanaCardCheckFocusNode.addListener(_updateGhanaCardFocus);
-    for (final node in _pinFocusNodes) {
-      node.addListener(() => setState(() {}));
-    }
   }
 
   @override
@@ -162,8 +163,9 @@ class _SignupState extends State<Signup> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(10),
               ],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '0000000000',
+                hintStyle: _ghanaHintStyle(),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -189,8 +191,9 @@ class _SignupState extends State<Signup> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(1),
               ],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '0',
+                hintStyle: _ghanaHintStyle(),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -199,69 +202,6 @@ class _SignupState extends State<Signup> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPinRow({
-    required bool enabled,
-    required double gap,
-  }) {
-    return Row(
-      children: List.generate(4, (index) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: index == 0 ? 0 : gap / 2,
-              right: index == 3 ? 0 : gap / 2,
-            ),
-            child: TextField(
-                controller: _pinControllers[index],
-                focusNode: _pinFocusNodes[index],
-                enabled: enabled,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                style: AppTypography.style(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: _dark,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(1),
-                ],
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  counterText: '',
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
-                ),
-                onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    if (index < 3) {
-                      _pinFocusNodes[index + 1].requestFocus();
-                    } else {
-                      _pinFocusNodes[index].unfocus();
-                    }
-                  } else if (value.isEmpty && index > 0) {
-                    _pinControllers[index - 1].clear();
-                    _pinFocusNodes[index - 1].requestFocus();
-                  }
-                },
-                onTap: () {
-                  _pinControllers[index].selection = TextSelection.collapsed(
-                    offset: _pinControllers[index].text.length,
-                  );
-                },
-                onSubmitted: (_) {
-                  if (index < 3) {
-                    _pinFocusNodes[index + 1].requestFocus();
-                  }
-                },
-              ),
-            ),
-        );
-      }),
     );
   }
 
@@ -364,7 +304,7 @@ class _SignupState extends State<Signup> {
                     AuthFormField(
                       controller: usernameController,
                       hint: 'Username',
-                      icon: Icons.person_outline,
+                      iconSvg: AuthIcons.rename16,
                       height: fieldHeight,
                       radius: fieldRadius,
                       enabled: !isLoading,
@@ -399,22 +339,19 @@ class _SignupState extends State<Signup> {
                     AuthFormField(
                       controller: emailController,
                       hint: 'Email',
-                      icon: Icons.email_outlined,
+                      iconSvg: AuthIcons.emailFill,
                       height: fieldHeight,
                       radius: fieldRadius,
                       enabled: !isLoading,
                       keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: formGap),
-                    AuthFormFieldShell(
-                      height: fieldHeight,
-                      radius: fieldRadius,
-                      icon: Icons.lock_outline,
-                      focused: _pinFocusNodes.any((node) => node.hasFocus),
-                      child: _buildPinRow(
-                        enabled: !isLoading,
-                        gap: formGap,
-                      ),
+                    AuthPinField(
+                      controllers: _pinControllers,
+                      focusNodes: _pinFocusNodes,
+                      enabled: !isLoading,
+                      wScale: wScale,
+                      hScale: hScale,
                     ),
                     SizedBox(height: 48 * hScale),
                     Center(

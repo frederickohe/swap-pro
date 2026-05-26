@@ -47,9 +47,7 @@ class LogorSign extends StatelessWidget {
                   ),
                 );
               },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: Text(
                 'Admin',
                 style: AppTypography.style(
@@ -123,13 +121,13 @@ class _BottomPanel extends StatelessWidget {
     );
 
     TextStyle outlinedButtonStyle() => AppTypography.style(
-      fontSize: 16 * wScale,
+      fontSize: 14 * wScale,
       fontWeight: FontWeight.w500,
       color: LogorSign._textBlack,
     );
 
     TextStyle filledButtonStyle() => AppTypography.style(
-      fontSize: 16 * wScale,
+      fontSize: 14 * wScale,
       fontWeight: FontWeight.w500,
       color: Colors.white,
     );
@@ -147,10 +145,13 @@ class _BottomPanel extends StatelessWidget {
               text: TextSpan(
                 style: titleStyle(),
                 children: [
-                  const TextSpan(text: 'Ready to '),
+                  TextSpan(
+                    text: 'Ready to ',
+                    style: titleStyle().copyWith(fontWeight: FontWeight.w300),
+                  ),
                   TextSpan(
                     text: 'Swap?',
-                    style: titleStyle().copyWith(fontWeight: FontWeight.w700),
+                    style: titleStyle().copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -186,7 +187,7 @@ class _BottomPanel extends StatelessWidget {
                     ),
                     backgroundColor: Colors.transparent,
                   ),
-                  child: Text('Sign In', style: outlinedButtonStyle()),
+                  child: Text('Log in', style: outlinedButtonStyle()),
                 ),
               ),
             ),

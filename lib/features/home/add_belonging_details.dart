@@ -33,15 +33,6 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
     'Poor',
   ];
 
-  static const List<String> _quantityOptions = [
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '10+',
-  ];
-
   /// ISO 4217 codes, alphabetical.
   static const List<String> _currencyOptions = [
     'AED',
@@ -203,38 +194,88 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _manufacturerController = TextEditingController();
+  final _serialNumberController = TextEditingController();
+  final _buildVersionController = TextEditingController();
   final _priceController = TextEditingController();
 
   final _titleFocus = FocusNode();
   final _descriptionFocus = FocusNode();
-  final _manufacturerFocus = FocusNode();
+  final _serialNumberFocus = FocusNode();
+  final _buildVersionFocus = FocusNode();
   final _priceFocus = FocusNode();
 
   String? _condition;
-  String? _quantity;
   String _currency = 'GHS';
+  bool _ownershipDocumentsAvailable = false;
+  double? _locationLat;
+  double? _locationLng;
+  final List<String> _extraWishDescriptions = [];
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _manufacturerController.dispose();
+    _serialNumberController.dispose();
+    _buildVersionController.dispose();
     _priceController.dispose();
     _titleFocus.dispose();
     _descriptionFocus.dispose();
-    _manufacturerFocus.dispose();
+    _serialNumberFocus.dispose();
+    _buildVersionFocus.dispose();
     _priceFocus.dispose();
     super.dispose();
   }
 
   bool get _canProceed {
-    if (_titleController.text.trim().isEmpty) return false;
-    if (_descriptionController.text.trim().isEmpty) return false;
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    if (title.length < 3) return false;
+    if (description.length < 10) return false;
     if (_condition == null || _condition!.isEmpty) return false;
-    if (_quantity == null || _quantity!.isEmpty) return false;
-    if (_priceController.text.trim().isEmpty) return false;
+    if (_parsePrice(_priceController.text.trim()) == null) return false;
+    if (_locationLat == null || _locationLng == null) return false;
     return true;
+  }
+
+  List<Map<String, dynamic>> _buildWishlistPayload() {
+    final items = <Map<String, dynamic>>[];
+    final incoming = widget.incomingCategory?.trim();
+    if (incoming != null && incoming.isNotEmpty) {
+      items.add({'category': incoming});
+    }
+    for (final wish in _extraWishDescriptions) {
+      final trimmed = wish.trim();
+      if (trimmed.isNotEmpty) {
+        items.add({'description': trimmed});
+      }
+    }
+    return items;
+  }
+
+  Future<void> _pickLocation() async {
+    final result = await Navigator.push<BelongingLocationPick>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddBelongingLocationPickerPage(
+          initialLatitude: _locationLat,
+          initialLongitude: _locationLng,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _locationLat = result.latitude;
+      _locationLng = result.longitude;
+    });
+  }
+
+  Future<void> _addWish() async {
+    final wish = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddWishPage()),
+    );
+    if (wish == null || wish.trim().isEmpty || !mounted) return;
+    setState(() => _extraWishDescriptions.add(wish.trim()));
   }
 
   double? _parsePrice(String raw) {
@@ -247,7 +288,12 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
 
     final price = _parsePrice(_priceController.text.trim());
     if (price == null || price <= 0) {
-      context.showAppSnackBar('Enter a valid price');
+      context.showAppSnackBar('Enter a valid estimated value');
+      return;
+    }
+
+    if (_locationLat == null || _locationLng == null) {
+      context.showAppSnackBar('Pick a location on the map');
       return;
     }
 
@@ -257,15 +303,17 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
         type: PageTransitionType.rightToLeftWithFade,
         child: AddBelongingPhotosPage(
           itemCategory: widget.itemCategory,
-          incomingCategory: widget.incomingCategory,
           specLabelImage: widget.specLabelImage,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
-          manufacturer: _manufacturerController.text.trim(),
           condition: _condition!,
-          quantity: _quantity!,
-          currency: _currency,
-          priceText: _priceController.text.trim(),
+          estimatedValue: price,
+          serialNumber: _serialNumberController.text.trim(),
+          buildVersion: _buildVersionController.text.trim(),
+          ownershipDocumentsAvailable: _ownershipDocumentsAvailable,
+          wishlist: _buildWishlistPayload(),
+          locationLat: _locationLat!,
+          locationLng: _locationLng!,
         ),
       ),
     );
@@ -322,9 +370,17 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
                     ),
                     SizedBox(height: 30 * wScale),
                     _BelongingFormField(
-                      controller: _manufacturerController,
-                      focusNode: _manufacturerFocus,
-                      hint: 'Manufacturer',
+                      controller: _serialNumberController,
+                      focusNode: _serialNumberFocus,
+                      hint: 'Serial number (optional)',
+                      height: 70 * wScale,
+                      radius: 10 * wScale,
+                    ),
+                    SizedBox(height: 30 * wScale),
+                    _BelongingFormField(
+                      controller: _buildVersionController,
+                      focusNode: _buildVersionFocus,
+                      hint: 'Build version (optional)',
                       height: 70 * wScale,
                       radius: 10 * wScale,
                     ),
@@ -338,20 +394,14 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
                       onChanged: (value) => setState(() => _condition = value),
                     ),
                     SizedBox(height: 30 * wScale),
-                    _LabeledField(
-                      label: 'Number available for swap',
-                      child: _BelongingDropdownField(
-                        hint: 'Select quantity',
-                        value: _quantity,
-                        options: _quantityOptions,
-                        height: 70 * wScale,
-                        radius: 10 * wScale,
-                        onChanged: (value) => setState(() => _quantity = value),
-                      ),
+                    _OwnershipDocumentsRow(
+                      value: _ownershipDocumentsAvailable,
+                      onChanged: (v) =>
+                          setState(() => _ownershipDocumentsAvailable = v),
                     ),
                     SizedBox(height: 30 * wScale),
                     _LabeledField(
-                      label: 'Price',
+                      label: 'Estimated value',
                       child: _PriceWithCurrencyField(
                         controller: _priceController,
                         focusNode: _priceFocus,
@@ -365,6 +415,48 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
                           }
                         },
                         onAmountChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    SizedBox(height: 30 * wScale),
+                    _LabeledField(
+                      label: 'Location',
+                      child: _LocationPickerField(
+                        hasLocation:
+                            _locationLat != null && _locationLng != null,
+                        latitude: _locationLat,
+                        longitude: _locationLng,
+                        onTap: _pickLocation,
+                      ),
+                    ),
+                    if (widget.incomingCategory != null &&
+                        widget.incomingCategory!.isNotEmpty) ...[
+                      SizedBox(height: 30 * wScale),
+                      _LabeledField(
+                        label: 'Swap wish (from earlier)',
+                        child: _WishlistChipRow(
+                          labels: [widget.incomingCategory!],
+                        ),
+                      ),
+                    ],
+                    if (_extraWishDescriptions.isNotEmpty) ...[
+                      SizedBox(height: 20 * wScale),
+                      _WishlistChipRow(
+                        labels: _extraWishDescriptions,
+                        onRemove: (index) => setState(
+                          () => _extraWishDescriptions.removeAt(index),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 16 * wScale),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _addWish,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add wishlist item'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF111111),
+                        ),
                       ),
                     ),
                     SizedBox(height: 24 * wScale),
@@ -693,7 +785,7 @@ class _PriceWithCurrencyFieldState extends State<_PriceWithCurrencyField> {
                   color: const Color(0xFF111111),
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter swap price',
+                  hintText: 'Enter estimated value',
                   hintStyle: AppTypography.style(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
@@ -708,6 +800,144 @@ class _PriceWithCurrencyFieldState extends State<_PriceWithCurrencyField> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _OwnershipDocumentsRow extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _OwnershipDocumentsRow({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F4F8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Ownership documents available',
+              style: AppTypography.style(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF111111),
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: Colors.white,
+            activeTrackColor: const Color(0xFFC3B649),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationPickerField extends StatelessWidget {
+  final bool hasLocation;
+  final double? latitude;
+  final double? longitude;
+  final VoidCallback onTap;
+
+  const _LocationPickerField({
+    required this.hasLocation,
+    required this.latitude,
+    required this.longitude,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F4F8),
+          borderRadius: BorderRadius.circular(10),
+          border: hasLocation
+              ? Border.all(color: const Color(0xFF111111), width: 0.8)
+              : null,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.map_outlined, color: Color(0xFF111111)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                hasLocation
+                    ? 'Lat ${latitude!.toStringAsFixed(4)}, '
+                        'Lng ${longitude!.toStringAsFixed(4)}'
+                    : 'Tap to pick location on map',
+                style: AppTypography.style(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF111111),
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF111111)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WishlistChipRow extends StatelessWidget {
+  final List<String> labels;
+  final void Function(int index)? onRemove;
+
+  const _WishlistChipRow({required this.labels, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var i = 0; i < labels.length; i++)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111111),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  labels[i],
+                  style: AppTypography.style(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+                if (onRemove != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => onRemove!(i),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

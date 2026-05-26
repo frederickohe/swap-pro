@@ -59,7 +59,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
               state is AuthLoading) {
             print('⏳ Auth loading: ${state.runtimeType}');
             return const Scaffold(
-              body: Center(child: SwapproLoadingIndicator()),
+              body: Center(
+                child: SwapproLoadingIndicator(size: 50, showLabel: true),
+              ),
             );
           } else if (state is TokenRefreshFailed) {
             print('✗ Token Refresh Failed: ${state.message} - showing Signin');

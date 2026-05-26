@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
 
 class ResetPassword extends StatefulWidget {
@@ -25,19 +24,8 @@ class _ResetPasswordState extends State<ResetPassword> {
   final List<FocusNode> _confirmPinFocusNodes =
       List.generate(4, (_) => FocusNode());
 
-  String get _newPin => _newPinControllers.map((c) => c.text).join();
-  String get _confirmPin => _confirmPinControllers.map((c) => c.text).join();
-
-  @override
-  void initState() {
-    super.initState();
-    for (final node in _newPinFocusNodes) {
-      node.addListener(() => setState(() {}));
-    }
-    for (final node in _confirmPinFocusNodes) {
-      node.addListener(() => setState(() {}));
-    }
-  }
+  String get _newPin => AuthPinField.join(_newPinControllers);
+  String get _confirmPin => AuthPinField.join(_confirmPinControllers);
 
   @override
   void dispose() {
@@ -54,71 +42,6 @@ class _ResetPasswordState extends State<ResetPassword> {
       n.dispose();
     }
     super.dispose();
-  }
-
-  Widget _buildPinRow({
-    required List<TextEditingController> controllers,
-    required List<FocusNode> focusNodes,
-    required bool enabled,
-    required double gap,
-  }) {
-    return Row(
-      children: List.generate(4, (index) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: index == 0 ? 0 : gap / 2,
-              right: index == 3 ? 0 : gap / 2,
-            ),
-            child: TextField(
-              controller: controllers[index],
-              focusNode: focusNodes[index],
-              enabled: enabled,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              style: AppTypography.style(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: AuthScreenLayout.dark,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(1),
-              ],
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                counterText: '',
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
-              onChanged: (value) {
-                if (value.isNotEmpty) {
-                  if (index < 3) {
-                    focusNodes[index + 1].requestFocus();
-                  } else {
-                    focusNodes[index].unfocus();
-                  }
-                } else if (value.isEmpty && index > 0) {
-                  controllers[index - 1].clear();
-                  focusNodes[index - 1].requestFocus();
-                }
-              },
-              onTap: () {
-                controllers[index].selection = TextSelection.collapsed(
-                  offset: controllers[index].text.length,
-                );
-              },
-              onSubmitted: (_) {
-                if (index < 3) {
-                  focusNodes[index + 1].requestFocus();
-                }
-              },
-            ),
-          ),
-        );
-      }),
-    );
   }
 
   @override
@@ -158,7 +81,7 @@ class _ResetPasswordState extends State<ResetPassword> {
                   ),
                   SizedBox(height: 38 * m.hScale),
                   AuthSplitTitle(
-                    boldPart: 'New Password',
+                    boldPart: 'New PIN',
                     fontSize: 32 * m.wScale,
                   ),
                   SizedBox(height: 20 * m.hScale),
@@ -181,17 +104,12 @@ class _ResetPasswordState extends State<ResetPassword> {
                     ),
                   ),
                   SizedBox(height: m.formGap),
-                  AuthFormFieldShell(
-                    height: m.fieldHeight,
-                    radius: m.fieldRadius,
-                    icon: Icons.lock_outline,
-                    focused: _newPinFocusNodes.any((node) => node.hasFocus),
-                    child: _buildPinRow(
-                      controllers: _newPinControllers,
-                      focusNodes: _newPinFocusNodes,
-                      enabled: !isLoading,
-                      gap: m.formGap,
-                    ),
+                  AuthPinField(
+                    controllers: _newPinControllers,
+                    focusNodes: _newPinFocusNodes,
+                    enabled: !isLoading,
+                    wScale: m.wScale,
+                    hScale: m.hScale,
                   ),
                   SizedBox(height: m.formGap * 2),
                   Text(
@@ -203,23 +121,17 @@ class _ResetPasswordState extends State<ResetPassword> {
                     ),
                   ),
                   SizedBox(height: m.formGap),
-                  AuthFormFieldShell(
-                    height: m.fieldHeight,
-                    radius: m.fieldRadius,
-                    icon: Icons.lock_outline,
-                    focused:
-                        _confirmPinFocusNodes.any((node) => node.hasFocus),
-                    child: _buildPinRow(
-                      controllers: _confirmPinControllers,
-                      focusNodes: _confirmPinFocusNodes,
-                      enabled: !isLoading,
-                      gap: m.formGap,
-                    ),
+                  AuthPinField(
+                    controllers: _confirmPinControllers,
+                    focusNodes: _confirmPinFocusNodes,
+                    enabled: !isLoading,
+                    wScale: m.wScale,
+                    hScale: m.hScale,
                   ),
                   SizedBox(height: 48 * m.hScale),
                   Center(
                     child: AuthPrimaryButton(
-                      label: 'Reset Password',
+                      label: 'Reset PIN',
                       isLoading: isLoading,
                       width: m.buttonWidth,
                       height: m.buttonHeight,

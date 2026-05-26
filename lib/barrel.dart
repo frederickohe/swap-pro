@@ -51,6 +51,7 @@ export 'package:swappro/features/home/add_belonging.dart';
 export 'package:swappro/features/home/add_wish.dart';
 export 'package:swappro/features/home/add_belonging_spec_label.dart';
 export 'package:swappro/features/home/add_belonging_details.dart';
+export 'package:swappro/features/home/add_belonging_location_picker.dart';
 export 'package:swappro/features/home/add_belonging_photos.dart';
 export 'package:swappro/features/home/add_belonging_complete.dart';
 export 'package:swappro/features/auth/authinit.dart';
@@ -100,6 +101,7 @@ export 'package:iconify_flutter/icons/humbleicons.dart';
 export 'package:iconify_flutter/icons/ep.dart';
 export 'package:iconify_flutter/icons/uim.dart';
 export 'package:swappro/icons/fluent.dart';
+export 'package:swappro/icons/auth_icons.dart';
 
 // Design Imports
 export 'package:swappro/common_design/app_typography.dart';
@@ -109,4 +111,5 @@ export 'package:swappro/common_design/widgets/swappro_loading_indicator.dart';
 export 'package:swappro/common_design/widgets/app_snackbar.dart';
 export 'package:swappro/common_design/widgets/auth_form_field.dart';
 export 'package:swappro/common_design/widgets/auth_screen_widgets.dart';
+export 'package:swappro/common_design/widgets/auth_pin_field.dart';
 export 'package:page_transition/page_transition.dart';

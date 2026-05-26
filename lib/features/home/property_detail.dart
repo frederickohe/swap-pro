@@ -357,6 +357,75 @@ class PropertyDetailData {
   final String receipts;
   final String status;
 
+  /// Build detail payload from `GET /api/v1/listings/{id}` (or search item).
+  factory PropertyDetailData.fromListing(
+    Map<String, dynamic> json, {
+    String ownerName = 'Seller',
+    String? ownerAvatarUrl,
+  }) {
+    final wishlistRaw = json['wishlist'];
+    final wishlistItems = <String>[];
+    if (wishlistRaw is List) {
+      for (final item in wishlistRaw) {
+        if (item is Map) {
+          final label =
+              (item['description'] ?? item['category'] ?? '').toString().trim();
+          if (label.isNotEmpty) wishlistItems.add(label);
+        } else {
+          final label = item.toString().trim();
+          if (label.isNotEmpty) wishlistItems.add(label);
+        }
+      }
+    }
+
+    final imageUrls = <String>[];
+    final primary = (json['primary_image_url'] ?? '').toString().trim();
+    if (primary.isNotEmpty) imageUrls.add(primary);
+    final extras = json['image_urls'];
+    if (extras is List) {
+      for (final url in extras) {
+        final s = url.toString().trim();
+        if (s.isNotEmpty && !imageUrls.contains(s)) imageUrls.add(s);
+      }
+    }
+    if (imageUrls.isEmpty) {
+      imageUrls.add(
+        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
+      );
+    }
+
+    final value = json['estimated_value'];
+    final price = value is num
+        ? 'GH₵ ${value.toStringAsFixed(2)}'
+        : (value?.toString().trim().isNotEmpty == true ? 'GH₵ $value' : '—');
+
+    final createdAt = json['created_at']?.toString() ?? '';
+    String date = '—';
+    if (createdAt.length >= 10) {
+      try {
+        final dt = DateTime.parse(createdAt);
+        date =
+            '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      } catch (_) {
+        date = createdAt.substring(0, 10);
+      }
+    }
+
+    return PropertyDetailData(
+      title: (json['title'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      imageUrls: imageUrls,
+      ownerName: ownerName,
+      ownerAvatarUrl: ownerAvatarUrl,
+      wishlistItems: wishlistItems,
+      price: price,
+      date: date,
+      category: (json['category'] ?? '—').toString(),
+      receipts: json['ownership_documents_available'] == true ? 'Yes' : 'No',
+      status: (json['condition'] ?? json['status'] ?? '—').toString(),
+    );
+  }
+
   /// Demo detail payload aligned with Figma "Property 2" sample content.
   factory PropertyDetailData.demo({
     required String title,

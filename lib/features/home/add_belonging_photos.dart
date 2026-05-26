@@ -6,28 +6,32 @@ import 'package:swappro/barrel.dart';
 /// Add belonging flow — step 4 gallery photos (Figma "Add 4", node 194:467).
 class AddBelongingPhotosPage extends StatefulWidget {
   final String itemCategory;
-  final String? incomingCategory;
   final File specLabelImage;
   final String title;
   final String description;
-  final String manufacturer;
   final String condition;
-  final String quantity;
-  final String currency;
-  final String priceText;
+  final double estimatedValue;
+  final String serialNumber;
+  final String buildVersion;
+  final bool ownershipDocumentsAvailable;
+  final List<Map<String, dynamic>> wishlist;
+  final double locationLat;
+  final double locationLng;
 
   const AddBelongingPhotosPage({
     super.key,
     required this.itemCategory,
-    this.incomingCategory,
     required this.specLabelImage,
     required this.title,
     required this.description,
-    required this.manufacturer,
     required this.condition,
-    required this.quantity,
-    required this.currency,
-    required this.priceText,
+    required this.estimatedValue,
+    this.serialNumber = '',
+    this.buildVersion = '',
+    this.ownershipDocumentsAvailable = false,
+    this.wishlist = const [],
+    required this.locationLat,
+    required this.locationLng,
   });
 
   @override
@@ -40,7 +44,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
   static const Color _ink = Color(0xFF111111);
 
   static const double _figmaW = 428;
-  static const int _maxPhotos = 6;
+  static const int _maxPhotos = 5;
 
   final List<File> _photos = [];
   bool _pickingImage = false;
@@ -94,30 +98,13 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
     setState(() => _photos.removeAt(index));
   }
 
-  int? _parseQuantity(String value) {
-    if (value.isEmpty) return null;
-    if (value == '10+') return 10;
-    return int.tryParse(value);
-  }
-
-  double? _parsePrice(String raw) {
-    final cleaned = raw.replaceAll(RegExp(r'[^0-9.]'), '');
-    return double.tryParse(cleaned);
-  }
-
   Future<void> _submit() async {
     if (!_canProceed) return;
-
-    final price = _parsePrice(widget.priceText);
-    if (price == null || price <= 0) {
-      context.showAppSnackBar('Enter a valid price');
-      return;
-    }
 
     setState(() => _submitting = true);
     try {
       final api = context.read<ApiService>();
-      final specUrl = await api.uploadFile(
+      final primaryUrl = await api.uploadFile(
         file: widget.specLabelImage,
         storageFolder: ApiService.productImageStorageFolder,
       );
@@ -132,27 +119,20 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
         );
       }
 
-      final manufacturer = widget.manufacturer.trim();
-      var description = widget.description.trim();
-      if (manufacturer.isNotEmpty) {
-        description = description.isEmpty
-            ? 'Manufacturer: $manufacturer'
-            : '$description\nManufacturer: $manufacturer';
-      }
-
-      final priceLabel = '${widget.priceText.trim()} ${widget.currency}'.trim();
-      description = description.isEmpty
-          ? 'Listed price: $priceLabel'
-          : '$description\nListed price: $priceLabel';
-
-      await api.createProduct(
-        name: widget.title.trim(),
-        description: description,
-        price: price,
+      await api.createBelongingListing(
+        title: widget.title,
+        description: widget.description,
         category: widget.itemCategory,
         condition: widget.condition,
-        numberInStock: _parseQuantity(widget.quantity),
-        photos: [specUrl, ...galleryUrls],
+        primaryImageUrl: primaryUrl,
+        imageUrls: galleryUrls,
+        estimatedValue: widget.estimatedValue,
+        serialNumber: widget.serialNumber,
+        buildVersion: widget.buildVersion,
+        ownershipDocumentsAvailable: widget.ownershipDocumentsAvailable,
+        wishlist: widget.wishlist,
+        locationLat: widget.locationLat,
+        locationLng: widget.locationLng,
       );
 
       if (!mounted) return;
@@ -217,7 +197,16 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
                         height: 1.25,
                       ),
                     ),
-                    SizedBox(height: 54 * wScale),
+                    SizedBox(height: 12 * wScale),
+                    Text(
+                      'Add up to $_maxPhotos gallery images (spec label is the main photo).',
+                      style: AppTypography.style(
+                        fontSize: 13 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF111111),
+                      ),
+                    ),
+                    SizedBox(height: 42 * wScale),
                     Center(
                       child: SizedBox(
                         width: tileW * 2 + gap,

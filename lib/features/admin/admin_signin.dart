@@ -16,24 +16,35 @@ class _AdminSignInState extends State<AdminSignIn> {
   static const double _figmaH = 1024;
 
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final List<TextEditingController> _pinControllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
+
+  String get _pin => AuthPinField.join(_pinControllers);
+
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    for (final c in _pinControllers) {
+      c.dispose();
+    }
+    for (final n in _pinFocusNodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
   void _submitLogin() {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty || _pin.length != 4) {
       return;
     }
 
     context.read<AuthBloc>().add(
           LoginEvent(
             email: _emailController.text.trim(),
-            password: _passwordController.text,
+            password: _pin,
           ),
         );
   }
@@ -64,7 +75,11 @@ class _AdminSignInState extends State<AdminSignIn> {
     final buttonWidth = 277 * wScale;
     final buttonHeight = 62 * hScale;
     final buttonRadius = 10 * wScale;
-    final buttonTop = formTop + fieldHeight + fieldGap + fieldHeight + 24 * hScale;
+    final pinWScale = contentWidth / 430;
+    final pinHScale = h / 932;
+    final pinHeight = AuthPinField.height(pinHScale);
+    final buttonTop =
+        formTop + fieldHeight + fieldGap + pinHeight + 24 * hScale;
 
     final titleFontSize = (67 / 1024 * h).clamp(28.0, 48.0);
 
@@ -139,22 +154,19 @@ class _AdminSignInState extends State<AdminSignIn> {
                           AuthFormField(
                             controller: _emailController,
                             hint: 'Email',
-                            icon: Icons.email_outlined,
+                            iconSvg: AuthIcons.emailFill,
                             height: fieldHeight,
                             radius: fieldRadius,
                             enabled: !isLoading,
                             keyboardType: TextInputType.emailAddress,
                           ),
                           SizedBox(height: fieldGap),
-                          AuthFormField(
-                            controller: _passwordController,
-                            hint: 'Password',
-                            icon: Icons.lock_outline,
-                            height: fieldHeight,
-                            radius: fieldRadius,
+                          AuthPinField(
+                            controllers: _pinControllers,
+                            focusNodes: _pinFocusNodes,
                             enabled: !isLoading,
-                            obscureText: true,
-                            onSubmitted: (_) => _submitLogin(),
+                            wScale: pinWScale,
+                            hScale: pinHScale,
                           ),
                         ],
                       ),

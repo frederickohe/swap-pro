@@ -33,7 +33,7 @@ class SplashPge extends StatelessWidget {
             final imageTextGap = 10 * hScale;
             final titleSubtitleGap = 19 * hScale;
             final titleFontSize = 38 * wScale;
-            final subtitleFontSize = 16 * wScale;
+            final subtitleFontSize = 12 * wScale;
             final homeIndicatorWidth = 134 * wScale;
             final homeIndicatorHeight = 5 * hScale;
             final homeIndicatorBottom = (34 - 21 - 5) * hScale;

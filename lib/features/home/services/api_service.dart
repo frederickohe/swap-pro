@@ -1707,6 +1707,163 @@ class ApiService {
     return null;
   }
 
+  /// GET /api/v1/listings/search — paginated active listings.
+  Future<Map<String, dynamic>> searchListings({
+    String? keyword,
+    String? category,
+    double? minValue,
+    double? maxValue,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    String? searcherListingId,
+    int page = 1,
+    int size = 20,
+  }) async {
+    final qp = <String, String>{
+      'page': '$page',
+      'size': '${size.clamp(1, 100)}',
+    };
+    void add(String key, String? value) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) qp[key] = trimmed;
+    }
+
+    add('keyword', keyword);
+    add('category', category);
+    if (minValue != null) qp['min_value'] = '$minValue';
+    if (maxValue != null) qp['max_value'] = '$maxValue';
+    if (lat != null) qp['lat'] = '$lat';
+    if (lng != null) qp['lng'] = '$lng';
+    if (radiusKm != null) qp['radius_km'] = '$radiusKm';
+    add('searcher_listing_id', searcherListingId);
+
+    final uri = Uri.parse(
+      '$baseUrl/listings/search',
+    ).replace(queryParameters: qp);
+    final response = await httpClient.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'items': <dynamic>[], 'total': 0, 'page': page, 'size': size};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to search listings (${response.statusCode})',
+    );
+  }
+
+  /// GET /api/v1/listings/{listingId}
+  Future<Map<String, dynamic>> getListing(String listingId) async {
+    final uri = Uri.parse(
+      '$baseUrl/listings/${Uri.encodeComponent(listingId)}',
+    );
+    final response = await httpClient.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    if (response.statusCode == 404) {
+      throw Exception('Listing not found');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to load listing (${response.statusCode})',
+    );
+  }
+
+  /// GET /api/v1/listings/mine — current user's listings.
+  Future<List<Map<String, dynamic>>> getMyListings({String? status}) async {
+    final qp = <String, String>{};
+    final trimmedStatus = status?.trim();
+    if (trimmedStatus != null && trimmedStatus.isNotEmpty) {
+      qp['status'] = trimmedStatus;
+    }
+    final uri = Uri.parse(
+      '$baseUrl/listings/mine',
+    ).replace(queryParameters: qp.isEmpty ? null : qp);
+    final response = await httpClient.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) return _decodeMapList(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to load your listings (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/listings — create a listing ([ListingCreateRequest]).
+  Future<Map<String, dynamic>> createBelongingListing({
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String primaryImageUrl,
+    required List<String> imageUrls,
+    required double estimatedValue,
+    String? serialNumber,
+    String? buildVersion,
+    bool ownershipDocumentsAvailable = false,
+    List<Map<String, dynamic>> wishlist = const [],
+    double? locationLat,
+    double? locationLng,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title.trim(),
+      'description': description.trim(),
+      'category': category.trim(),
+      'condition': condition.trim(),
+      'primary_image_url': primaryImageUrl.trim(),
+      'image_urls': imageUrls.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+      'ownership_documents_available': ownershipDocumentsAvailable,
+      'estimated_value': estimatedValue,
+      'wishlist': wishlist,
+    };
+    final serial = serialNumber?.trim();
+    if (serial != null && serial.isNotEmpty) body['serial_number'] = serial;
+    final build = buildVersion?.trim();
+    if (build != null && build.isNotEmpty) body['build_version'] = build;
+    if (locationLat != null) body['location_lat'] = locationLat;
+    if (locationLng != null) body['location_lng'] = locationLng;
+    return createListing(body);
+  }
+
+  /// POST /api/v1/listings — create a listing.
+  Future<Map<String, dynamic>> createListing(
+    Map<String, dynamic> body,
+  ) async {
+    final uri = Uri.parse('$baseUrl/listings');
+    final response = await httpClient.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to create listing (${response.statusCode})',
+    );
+  }
+
   /// GET /api/v1/customers/list
   Future<List<Map<String, dynamic>>> listCustomers() async {
     final response = await httpClient.get(Uri.parse('$baseUrl/customers/list'));

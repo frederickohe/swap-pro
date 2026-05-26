@@ -14,19 +14,32 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   static const Color _backBtnBg = Color(0xFFF5F4F8);
 
   static const double _figmaW = 428;
+  static const double _figmaH = 932;
 
-  /// Row layout from Figma frame 194:129 (horizontal rows, stacked vertically).
-  static const List<List<String>> _itemCategoryRows = [
-    ['Electronics', 'Home & Kitchen', 'kids'],
-    ['Books', 'Fashion', 'Sports', 'Tools'],
-    ['Fitness', 'Beauty Products', 'Vehicles'],
-    ['Vehicle Parts', 'Fitness', 'Personal Care'],
-    ['Media', 'Video Games'],
+  /// Figma frame 194:129 — chips flow horizontally and wrap when full.
+  static const List<String> _itemCategories = [
+    'Electronics',
+    'Home & Kitchen',
+    'kids',
+    'Books',
+    'Fashion',
+    'Sports',
+    'Tools',
+    'Fitness',
+    'Beauty Products',
+    'Vehicles',
+    'Vehicle Parts',
+    'Fitness',
+    'Personal Care',
+    'Media',
+    'Video Games',
   ];
 
-  static const List<List<String>> _incomingCategoryRows = [
-    ['House', 'Lands', 'Building'],
-    ['Software'],
+  static const List<String> _incomingCategories = [
+    'House',
+    'Lands',
+    'Building',
+    'Software',
   ];
 
   int? _selectedItemCategoryIndex;
@@ -44,10 +57,7 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
     try {
       final user = await context.read<ApiService>().getUserProfile();
       if (!mounted) return;
-      final raw = (user['fullname'] ??
-              user['name'] ??
-              user['username'] ??
-              '')
+      final raw = (user['fullname'] ?? user['name'] ?? user['username'] ?? '')
           .toString()
           .trim();
       final first = raw.isEmpty ? 'there' : raw.split(RegExp(r'\s+')).first;
@@ -59,25 +69,20 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
     }
   }
 
-  String _labelAtIndex(List<List<String>> rows, int? index) {
-    if (index == null) return '';
-    var cursor = 0;
-    for (final row in rows) {
-      for (final label in row) {
-        if (cursor == index) return label;
-        cursor++;
-      }
-    }
-    return '';
+  String _labelAtIndex(List<String> labels, int? index) {
+    if (index == null || index < 0 || index >= labels.length) return '';
+    return labels[index];
   }
 
   void _goToSpecLabelStep() {
-    final itemCategory =
-        _labelAtIndex(_itemCategoryRows, _selectedItemCategoryIndex);
+    final itemCategory = _labelAtIndex(
+      _itemCategories,
+      _selectedItemCategoryIndex,
+    );
     if (itemCategory.isEmpty) return;
 
     final incomingCategory = _labelAtIndex(
-      _incomingCategoryRows,
+      _incomingCategories,
       _selectedIncomingCategoryIndex,
     );
 
@@ -87,8 +92,7 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
         type: PageTransitionType.rightToLeftWithFade,
         child: AddBelongingSpecLabelPage(
           itemCategory: itemCategory,
-          incomingCategory:
-              incomingCategory.isEmpty ? null : incomingCategory,
+          incomingCategory: incomingCategory.isEmpty ? null : incomingCategory,
         ),
       ),
     );
@@ -96,7 +100,10 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final wScale = MediaQuery.sizeOf(context).width / _figmaW;
+    final size = MediaQuery.sizeOf(context);
+    final wScale = size.width / _figmaW;
+    final hScale = size.height / _figmaH;
+    final canContinue = _selectedItemCategoryIndex != null;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -105,27 +112,47 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(15 * wScale, 8 * wScale, 15 * wScale, 0),
+                padding: EdgeInsets.fromLTRB(
+                  15 * wScale,
+                  8 * wScale,
+                  15 * wScale,
+                  0,
+                ),
                 child: _buildHeader(wScale),
               ),
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(26 * wScale, 48 * wScale, 26 * wScale, 0),
+                padding: EdgeInsets.fromLTRB(
+                  26 * wScale,
+                  48 * wScale,
+                  26 * wScale,
+                  0,
+                ),
                 child: _buildGreeting(wScale),
               ),
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(26 * wScale, 49 * wScale, 26 * wScale, 0),
+                padding: EdgeInsets.fromLTRB(
+                  26 * wScale,
+                  49 * wScale,
+                  26 * wScale,
+                  0,
+                ),
                 child: _buildSectionTitle('Select Category', wScale),
               ),
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(24 * wScale, 37 * wScale, 24 * wScale, 0),
+                padding: EdgeInsets.fromLTRB(
+                  24 * wScale,
+                  37 * wScale,
+                  24 * wScale,
+                  0,
+                ),
                 child: _FigmaCategoryGrid(
-                  rows: _itemCategoryRows,
+                  labels: _itemCategories,
                   selectedIndex: _selectedItemCategoryIndex,
                   onSelected: (index) {
                     setState(() => _selectedItemCategoryIndex = index);
@@ -133,43 +160,23 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
                 ),
               ),
             ),
-            if (_selectedItemCategoryIndex != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(26 * wScale, 32 * wScale, 26 * wScale, 0),
-                  child: Center(
-                    child: AppButton(
-                      buttonText: 'Next',
-                      onPressed: _goToSpecLabelStep,
-                    ),
-                  ),
-                ),
-              ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   26 * wScale,
-                  _selectedItemCategoryIndex != null ? 32 * wScale : 66 * wScale,
+                  32 * wScale,
                   26 * wScale,
-                  0,
-                ),
-                child: _buildSectionTitle('Incoming Category', wScale),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  24 * wScale,
-                  22 * wScale,
-                  24 * wScale,
                   32 + MediaQuery.paddingOf(context).bottom,
                 ),
-                child: _FigmaCategoryGrid(
-                  rows: _incomingCategoryRows,
-                  selectedIndex: _selectedIncomingCategoryIndex,
-                  onSelected: (index) {
-                    setState(() => _selectedIncomingCategoryIndex = index);
-                  },
+                child: Center(
+                  child: AuthPrimaryButton(
+                    label: 'Next',
+                    onPressed: canContinue ? _goToSpecLabelStep : null,
+                    width: 277 * wScale,
+                    height: 62 * hScale,
+                    radius: 10 * wScale,
+                    fontSize: 16 * wScale,
+                  ),
                 ),
               ),
             ),
@@ -232,9 +239,9 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
     }
 
     return Text(
-      'Hi $_firstName, Fill detail of your belonging',
+      'Hi $_firstName, Detail your belonging for us',
       style: AppTypography.style(
-        fontSize: 28 * wScale,
+        fontSize: 24 * wScale,
         fontWeight: FontWeight.w500,
         color: Colors.black,
         height: 1.25,
@@ -254,14 +261,14 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   }
 }
 
-/// Figma chip grid: short pills per label, 8px horizontal gap, 20px between rows.
+/// Figma frame 194:129 — chips in a single flow, 8px gap, 20px between wrapped rows.
 class _FigmaCategoryGrid extends StatelessWidget {
-  final List<List<String>> rows;
+  final List<String> labels;
   final int? selectedIndex;
   final ValueChanged<int> onSelected;
 
   const _FigmaCategoryGrid({
-    required this.rows,
+    required this.labels,
     required this.selectedIndex,
     required this.onSelected,
   });
@@ -269,35 +276,20 @@ class _FigmaCategoryGrid extends StatelessWidget {
   static const Color _chipBg = Color(0xFF111111);
   static const Color _chipSelectedBorder = Color(0xFFC3B649);
 
-  int _indexFor(int row, int col) {
-    var index = 0;
-    for (var r = 0; r < row; r++) {
-      index += rows[r].length;
-    }
-    return index + col;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 20,
+      alignment: WrapAlignment.start,
+      crossAxisAlignment: WrapCrossAlignment.start,
       children: [
-        for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
-          if (rowIndex > 0) const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var colIndex = 0; colIndex < rows[rowIndex].length; colIndex++) ...[
-                if (colIndex > 0) const SizedBox(width: 8),
-                _CategoryChip(
-                  label: rows[rowIndex][colIndex],
-                  selected: selectedIndex == _indexFor(rowIndex, colIndex),
-                  onTap: () => onSelected(_indexFor(rowIndex, colIndex)),
-                ),
-              ],
-            ],
+        for (var i = 0; i < labels.length; i++)
+          _CategoryChip(
+            label: labels[i],
+            selected: selectedIndex == i,
+            onTap: () => onSelected(i),
           ),
-        ],
       ],
     );
   }
