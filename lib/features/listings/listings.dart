@@ -16,7 +16,6 @@ class _ListingsPageState extends State<ListingsPage> {
   static const Color _ink = Color(0xFF111111);
   static const Color _subtitle = Color(0xFF787676);
   static const Color _price = Color(0xFF292526);
-  static const Color _gold = Color(0xFFC3B649);
   static const Color _searchBorder = Color(0xFFECECF3);
   static const Color _menuBorder = Color(0xFFDFDFDF);
   static const Color _divider = Color(0xFFF6F6F6);
@@ -570,33 +569,33 @@ class _ListingListTile extends StatelessWidget {
                       color: _price,
                     ),
                   ),
+                  if (swapSelectMode && onSelect != null) ...[
+                    SizedBox(height: 14 * wScale),
+                    GestureDetector(
+                      onTap: onSelect,
+                      child: Container(
+                        width: 90 * wScale,
+                        height: 32 * wScale,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _dark,
+                          borderRadius: BorderRadius.circular(10 * wScale),
+                        ),
+                        child: Text(
+                          'Select',
+                          style: AppTypography.style(
+                            fontSize: 12 * wScale,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
-          if (swapSelectMode && onSelect != null) ...[
-            SizedBox(width: 12 * wScale),
-            GestureDetector(
-              onTap: onSelect,
-              child: Container(
-                width: 56 * wScale,
-                height: 32 * wScale,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _dark,
-                  borderRadius: BorderRadius.circular(10 * wScale),
-                ),
-                child: Text(
-                  'Select',
-                  style: AppTypography.style(
-                    fontSize: 12 * wScale,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

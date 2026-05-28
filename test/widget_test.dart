@@ -7,16 +7,20 @@ void main() {
   testWidgets('MyApp builds with required dependencies', (
     WidgetTester tester,
   ) async {
-    final tokenService = TokenService();
-    final httpClient = SessionAwareHttpClient(
-      tokenService: tokenService,
-      baseUrl: 'http://localhost:8000',
+    final successBloc = SuccessBloc();
+    final authBloc = AuthBloc(
+      tokenService: TokenService(),
+      successBloc: successBloc,
     );
 
     await tester.pumpWidget(
-      BlocProvider(
-        create: (_) => ThemeBloc(),
-        child: MyApp(httpClient: httpClient),
+      MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: authBloc),
+          BlocProvider.value(value: successBloc),
+          BlocProvider(create: (_) => ThemeBloc()),
+        ],
+        child: const MyApp(),
       ),
     );
     await tester.pump();

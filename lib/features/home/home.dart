@@ -59,6 +59,7 @@ class _HomeState extends State<Home> {
   Future<int>? _unreadCountFuture;
   Future<List<_ProductCardData>>? _featuredListingsFuture;
   final TextEditingController _searchController = TextEditingController();
+  bool _onboardingChecked = false;
 
   // Bottom-nav icons (match Figma Iconify IDs exactly).
   //
@@ -91,6 +92,26 @@ class _HomeState extends State<Home> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowOnboarding());
+  }
+
+  Future<void> _maybeShowOnboarding() async {
+    if (!mounted || _onboardingChecked) return;
+    _onboardingChecked = true;
+    try {
+      final completed = await OnboardingService().isCompleted();
+      if (!mounted || completed) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const FtuOnboardingPage()),
+      );
+    } catch (_) {
+      // Onboarding is best-effort; never block Home.
+    }
   }
 
   @override

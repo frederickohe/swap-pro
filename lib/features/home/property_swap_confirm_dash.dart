@@ -383,14 +383,20 @@ class _PriceBarColumn extends StatelessWidget {
       crossAxisAlignment: crossAlign,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          price,
-          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-          style: AppTypography.style(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: color,
-            height: 1.2,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(
+            price,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+            style: AppTypography.style(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: color,
+              height: 1.2,
+            ),
           ),
         ),
         const SizedBox(height: 10),

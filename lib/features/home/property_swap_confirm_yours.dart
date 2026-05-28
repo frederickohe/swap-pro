@@ -9,7 +9,6 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
   static const Color _titleInk = Color(0xFF121111);
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _heartBg = Color(0xFF292526);
-  static const Color _star = Color(0xFFFFD33C);
 
   @override
   Widget build(BuildContext context) {
@@ -164,31 +163,20 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   yourProperty.category,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.style(fontSize: 12, color: _inkSoft),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      yourProperty.price,
-                      style: AppTypography.style(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _heartBg,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.star, size: 18, color: _star),
-                    const SizedBox(width: 4),
-                    Text(
-                      '5.0',
-                      style: AppTypography.style(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _heartBg,
-                      ),
-                    ),
-                  ],
+                Text(
+                  yourProperty.price,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.style(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _heartBg,
+                  ),
                 ),
               ],
             ),

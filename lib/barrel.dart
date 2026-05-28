@@ -84,6 +84,10 @@ export 'package:swappro/features/settings/two_factor_auth.dart';
 export 'package:swappro/features/notifications/models/app_notification.dart';
 export 'package:swappro/features/notifications/notifications_inbox.dart';
 
+// Onboarding
+export 'package:swappro/features/onboarding/ftu_onboarding.dart';
+export 'package:swappro/features/onboarding/onboarding_service.dart';
+
 // barrel.dart
 export 'package:swappro/features/integrations/models/platform_embed_session.dart';
 export 'package:swappro/features/integrations/widgets/embedded_platform_webview.dart';

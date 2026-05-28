@@ -151,7 +151,7 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
                   24 * wScale,
                   0,
                 ),
-                child: _FigmaCategoryGrid(
+                child: _ModernCategoryGrid(
                   labels: _itemCategories,
                   scale: wScale,
                   selectedIndex: _selectedItemCategoryIndex,
@@ -262,92 +262,184 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   }
 }
 
-/// Figma frame 194:129 — chips hug label width, 8px gap, wrap to next line, 20px row gap.
-class _FigmaCategoryGrid extends StatelessWidget {
+class _ModernCategoryGrid extends StatelessWidget {
   final List<String> labels;
   final double scale;
   final int? selectedIndex;
   final ValueChanged<int> onSelected;
 
-  const _FigmaCategoryGrid({
+  const _ModernCategoryGrid({
     required this.labels,
     required this.scale,
     required this.selectedIndex,
     required this.onSelected,
   });
 
-  static const Color _chipBg = Color(0xFF111111);
-  static const Color _chipSelectedBorder = Color(0xFFC3B649);
+  static const Color _ink = Color(0xFF111111);
+  static const Color _gold = Color(0xFFC3B649);
+  static const Color _cardBorder = Color(0xFFE6E8EF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBgSelected = Color(0xFF111111);
+  static const Color _cardIconBg = Color(0xFFF5F4F8);
 
   @override
   Widget build(BuildContext context) {
-    final gap = 8 * scale;
-    final rowGap = 20 * scale;
+    final gap = 12 * scale;
+    final cardHeight = 72 * scale;
+    final radius = 16 * scale;
 
-    return Wrap(
-      spacing: gap,
-      runSpacing: rowGap,
-      alignment: WrapAlignment.start,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      children: [
-        for (var i = 0; i < labels.length; i++)
-          _CategoryChip(
-            label: labels[i],
-            scale: scale,
-            selected: selectedIndex == i,
-            onTap: () => onSelected(i),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        final minTile = 170 * scale;
+        final crossAxisCount = w >= (minTile * 3 + gap * 2)
+            ? 3
+            : (w >= (minTile * 2 + gap) ? 2 : 1);
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: labels.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: gap,
+            mainAxisSpacing: gap,
+            mainAxisExtent: cardHeight,
           ),
-      ],
+          itemBuilder: (context, i) {
+            final selected = selectedIndex == i;
+            return _CategoryCard(
+              label: labels[i],
+              selected: selected,
+              radius: radius,
+              onTap: () => onSelected(i),
+              icon: _iconFor(labels[i]),
+            );
+          },
+        );
+      },
     );
+  }
+
+  IconData _iconFor(String label) {
+    final s = label.toLowerCase();
+    if (s.contains('elect')) return Icons.devices;
+    if (s.contains('home') || s.contains('kitchen')) return Icons.chair_alt;
+    if (s.contains('kid')) return Icons.child_care;
+    if (s.contains('book')) return Icons.menu_book;
+    if (s.contains('fashion')) return Icons.checkroom;
+    if (s.contains('sport')) return Icons.sports_soccer;
+    if (s.contains('tool')) return Icons.handyman;
+    if (s.contains('fitness')) return Icons.fitness_center;
+    if (s.contains('beauty')) return Icons.spa;
+    if (s.contains('vehicle part')) return Icons.build_circle;
+    if (s.contains('vehicle')) return Icons.directions_car;
+    if (s.contains('personal care')) return Icons.self_improvement;
+    if (s.contains('media')) return Icons.movie;
+    if (s.contains('video game')) return Icons.sports_esports;
+    return Icons.category;
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _CategoryCard extends StatelessWidget {
   final String label;
-  final double scale;
   final bool selected;
   final VoidCallback onTap;
+  final double radius;
+  final IconData icon;
 
-  const _CategoryChip({
+  const _CategoryCard({
     required this.label,
-    required this.scale,
     required this.selected,
     required this.onTap,
+    required this.radius,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    final height = 40 * scale;
-    final radius = 20 * scale;
-    final hPad = 23 * scale;
-    final fontSize = 14 * scale;
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final padH = 14 / scale;
+    final padV = 12 / scale;
+    final iconSize = 22 / scale;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: height,
-        padding: EdgeInsets.symmetric(horizontal: hPad),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _FigmaCategoryGrid._chipBg,
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(
-            color: selected
-                ? _FigmaCategoryGrid._chipSelectedBorder
-                : Colors.transparent,
-            width: 2,
+    final bg = selected ? _ModernCategoryGrid._cardBgSelected : _ModernCategoryGrid._cardBg;
+    final borderColor = selected ? _ModernCategoryGrid._gold : _ModernCategoryGrid._cardBorder;
+    final textColor = selected ? Colors.white : _ModernCategoryGrid._ink;
+    final iconBg = selected ? Colors.white.withValues(alpha: 0.14) : _ModernCategoryGrid._cardIconBg;
+    final iconColor = selected ? Colors.white : _ModernCategoryGrid._ink;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(radius),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
           ),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          softWrap: false,
-          style: AppTypography.style(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-            height: 22 / 14,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
+            child: Row(
+              children: [
+                Container(
+                  width: 40 / scale,
+                  height: 40 / scale,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(12 / scale),
+                  ),
+                  child: Icon(icon, size: iconSize, color: iconColor),
+                ),
+                SizedBox(width: 12 / scale),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.style(
+                      fontSize: 14 / scale,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+                if (selected) ...[
+                  SizedBox(width: 10 / scale),
+                  Container(
+                    width: 26 / scale,
+                    height: 26 / scale,
+                    decoration: BoxDecoration(
+                      color: _ModernCategoryGrid._gold,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Icon(
+                      Icons.check,
+                      size: 16 / scale,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
