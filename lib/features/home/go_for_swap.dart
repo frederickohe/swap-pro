@@ -1,6 +1,8 @@
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:swappro/barrel.dart';
+import 'package:swappro/utils/phone_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Ready Swap — receiver details and listing locations on a map.
 class GoForSwapPage extends StatefulWidget {
@@ -109,6 +111,18 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
     return null;
   }
 
+  Future<void> _callReceiver(String phone) async {
+    final normalized = normalizePhone(phone);
+    if (normalized.isEmpty) return;
+    final uri = Uri(scheme: 'tel', path: normalized);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      return;
+    }
+    if (!mounted) return;
+    context.showAppSnackBar('Could not start a phone call');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,7 +172,6 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
     final counterListing = _listingMap('counterparty_listing');
     final yourListing = _listingMap('your_listing');
     final hubName = (_details?['hub_name'] ?? '').toString().trim();
-    final meeting = (_details?['meeting_time'] ?? '').toString().trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,17 +185,38 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
           ),
         ),
         const SizedBox(height: 12),
-        if (name.isNotEmpty) _detailRow(label: 'Name', value: name),
+        if (name.isNotEmpty)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: AppTypography.style(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    height: 20 / 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
         if (phone.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _detailRow(label: 'Phone', value: phone),
+          SizedBox(height: name.isNotEmpty ? 10 : 0),
+          _detailRow(
+            label: 'Phone',
+            value: phone,
+            prominent: true,
+            trailing: _callButton(phone),
+          ),
         ],
         if (email.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _detailRow(label: 'Email', value: email),
+          const SizedBox(height: 8),
+          _detailRow(label: 'Email', value: email, prominent: true),
         ],
         if (counterListing != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _detailRow(
             label: 'Their item',
             value: (counterListing['title'] ?? widget.propertyTitle ?? 'Listing')
@@ -190,51 +224,78 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
           ),
         ],
         if (yourListing != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _detailRow(
             label: 'Your item',
             value: (yourListing['title'] ?? 'Your listing').toString(),
           ),
         ],
         if (hubName.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _detailRow(label: 'Swap hub', value: hubName),
-        ],
-        if (meeting.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _detailRow(label: 'Meeting', value: meeting),
         ],
       ],
     );
   }
 
-  Widget _detailRow({required String label, required String value}) {
+  Widget _callButton(String phone) {
+    const side = 34.0;
+    return Material(
+      color: _gold.withValues(alpha: 0.15),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => _callReceiver(phone),
+        child: Padding(
+          padding: const EdgeInsets.all((side - 18) / 2),
+          child: const Icon(Icons.call, size: 18, color: _accentGreen),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow({
+    required String label,
+    required String value,
+    bool prominent = false,
+    Widget? trailing,
+  }) {
+    final labelSize = prominent ? 13.0 : 12.5;
+    final valueSize = prominent ? 13.0 : 12.5;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
+        SizedBox(
+          width: 92,
           child: Text(
             label,
             style: AppTypography.style(
-              fontSize: 15,
+              fontSize: labelSize,
               fontWeight: FontWeight.w400,
-              color: Colors.black,
-              height: 20 / 15,
+              color: Colors.black87,
+              height: 16 / labelSize,
             ),
           ),
         ),
-        Flexible(
+        const SizedBox(width: 10),
+        Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: AppTypography.style(
-              fontSize: 14,
+              fontSize: valueSize,
               fontWeight: FontWeight.w500,
               color: _accentGreen,
-              height: 18 / 14,
+              height: 16 / valueSize,
             ),
           ),
         ),
+        if (trailing != null) ...[
+          const SizedBox(width: 10),
+          trailing,
+        ],
       ],
     );
   }

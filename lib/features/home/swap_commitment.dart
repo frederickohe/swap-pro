@@ -211,6 +211,10 @@ class _SwapCommitmentPageState extends State<SwapCommitmentPage> {
               .trim();
       final reference =
           (paymentMap?['reference'] ?? init['reference'] ?? '').toString().trim();
+      final callbackUrl =
+          (paymentMap?['callback_url'] ?? paymentMap?['callbackUrl'] ?? '')
+              .toString()
+              .trim();
 
       if (authUrl.isEmpty || reference.isEmpty) {
         if (!context.mounted) return;
@@ -226,6 +230,7 @@ class _SwapCommitmentPageState extends State<SwapCommitmentPage> {
           builder: (_) => PaystackCheckoutWebView(
             authorizationUrl: authUrl,
             reference: reference,
+            callbackUrl: callbackUrl.isEmpty ? null : callbackUrl,
           ),
         ),
       );

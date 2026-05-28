@@ -1,6 +1,4 @@
 import 'package:swappro/barrel.dart';
-import 'dart:developer';
-import 'package:swappro/features/notifications/models/app_notification.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
@@ -1993,6 +1991,31 @@ class ApiService {
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to reject swap request (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/swaps/requests/{swapRequestId}/cancel — initiator withdraws sent request.
+  Future<Map<String, dynamic>> cancelSwapRequest(String swapRequestId) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/cancel',
+    );
+    final response = await httpClient.post(uri);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to cancel swap request (${response.statusCode})',
     );
   }
 

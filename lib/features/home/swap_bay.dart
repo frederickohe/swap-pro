@@ -184,9 +184,12 @@ class _SwapBayViewState extends State<_SwapBayView> {
   }
 
   Future<void> _cancelRequest(SwapBayItem item) async {
-    context.showAppSnackBar(
-      'To withdraw a sent request, contact support for now.',
-    );
+    final cubit = context.read<SwapBayCubit>();
+    final ok = await cubit.cancelSentRequest(item.swapRequestId);
+    if (!mounted) return;
+    if (ok) {
+      context.showAppSnackBar('Swap request cancelled.');
+    }
   }
 
   Future<void> _acceptOffer(SwapBayItem item) async {

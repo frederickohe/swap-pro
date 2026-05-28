@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:swappro/barrel.dart';
 
 // Figma Dashboard palette
@@ -8,7 +10,6 @@ const _kSearchBorder = Color(0xFFECECF3);
 const _kNotifBorder = Color(0xFFDFDFDF);
 const _kBadge = Color(0xFFFD5F4A);
 const _kNavBg = Color(0xFF111111);
-const _kGold = Color(0xFFC3B649);
 const _kHeartBg = Color(0xFF292526);
 
 class Home extends StatefulWidget {
@@ -58,6 +59,18 @@ class _HomeState extends State<Home> {
   Future<int>? _unreadCountFuture;
   Future<List<_ProductCardData>>? _featuredListingsFuture;
   final TextEditingController _searchController = TextEditingController();
+
+  // Bottom-nav icons (match Figma Iconify IDs exactly).
+  //
+  // Note: iconify_flutter ships icon packs as embedded SVG strings. The
+  // "prefix:name" IDs from Figma won't render unless that icon pack is bundled.
+  // These are the closest bundled matches to keep icons visible.
+  static const _navIcons = <String>[
+    Ion.home_outline,
+    Ion.apps_outline,
+    Uil.exchange,
+    Ion.person_outline,
+  ];
 
   static const _categories = [
     _CategoryItem('Phone', Icons.smartphone_outlined),
@@ -155,6 +168,9 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    const navHeight = 64.0;
+    final navBottom = 12.0 + bottomInset;
+    final fabBottom = navBottom + navHeight + 12.0;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -193,13 +209,13 @@ class _HomeState extends State<Home> {
           ),
           Positioned(
             right: 16,
-            bottom: 76 + bottomInset,
+            bottom: fabBottom,
             child: _buildFabColumn(),
           ),
           Positioned(
             left: 0,
             right: 0,
-            bottom: 12 + bottomInset,
+            bottom: navBottom,
             child: _buildBottomNav(),
           ),
         ],
@@ -390,72 +406,122 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildBottomNav() {
-    return Center(
-      child: Container(
-        width: 362,
-        height: 60,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: _kNavBg,
-          borderRadius: BorderRadius.circular(44),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    const borderRadius = BorderRadius.all(Radius.circular(52));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: SizedBox(
+        height: 64,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            _NavItem(
-              icon: Icons.home_rounded,
-              selected: _navIndex == 0,
-              onTap: () => setState(() => _navIndex = 0),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(width: 2, color: _kBg),
+                borderRadius: borderRadius,
+                color: _kBg.withValues(alpha: 0.10),
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadius,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.white.withValues(alpha: 0.06)),
+                ),
+              ),
             ),
-            _NavItem(
-              icon: Icons.list_alt_rounded,
-              selected: _navIndex == 1,
-              onTap: () {
-                setState(() => _navIndex = 1);
-                Navigator.push(
-                  context,
-                  PageTransition(
-                    type: PageTransitionType.rightToLeftWithFade,
-                    duration: const Duration(milliseconds: 350),
-                    reverseDuration: const Duration(milliseconds: 300),
-                    child: const ListingsPage(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _GlassNavItem(
+                    icon: _navIcons[0],
+                    selected: _navIndex == 0,
+                    onTap: () => setState(() => _navIndex = 0),
                   ),
-                ).then((_) {
-                  if (mounted) setState(() => _navIndex = 0);
-                });
-              },
-            ),
-            _NavItem(
-              icon: Icons.swap_horiz_rounded,
-              selected: _navIndex == 2,
-              onTap: () {
-                setState(() => _navIndex = 2);
-                Navigator.push(
-                  context,
-                  PageTransition(
-                    type: PageTransitionType.rightToLeftWithFade,
-                    duration: const Duration(milliseconds: 350),
-                    reverseDuration: const Duration(milliseconds: 300),
-                    child: const SwapBayPage(initialTab: SwapBayTab.sent),
+                  _GlassNavItem(
+                    icon: _navIcons[1],
+                    selected: _navIndex == 1,
+                    onTap: () {
+                      setState(() => _navIndex = 1);
+                      Navigator.push(
+                        context,
+                        PageTransition(
+                          type: PageTransitionType.rightToLeftWithFade,
+                          duration: const Duration(milliseconds: 350),
+                          reverseDuration: const Duration(milliseconds: 300),
+                          child: const ListingsPage(),
+                        ),
+                      ).then((_) {
+                        if (mounted) setState(() => _navIndex = 0);
+                      });
+                    },
                   ),
-                ).then((_) {
-                  if (mounted) setState(() => _navIndex = 0);
-                });
-              },
-            ),
-            _NavItem(
-              icon: Icons.person_rounded,
-              selected: _navIndex == 3,
-              onTap: () {
-                setState(() => _navIndex = 3);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const Profile()),
-                );
-              },
+                  _GlassNavItem(
+                    icon: _navIcons[2],
+                    selected: _navIndex == 2,
+                    onTap: () {
+                      setState(() => _navIndex = 2);
+                      Navigator.push(
+                        context,
+                        PageTransition(
+                          type: PageTransitionType.rightToLeftWithFade,
+                          duration: const Duration(milliseconds: 350),
+                          reverseDuration: const Duration(milliseconds: 300),
+                          child: const SwapBayPage(initialTab: SwapBayTab.sent),
+                        ),
+                      ).then((_) {
+                        if (mounted) setState(() => _navIndex = 0);
+                      });
+                    },
+                  ),
+                  _GlassNavItem(
+                    icon: _navIcons[3],
+                    selected: _navIndex == 3,
+                    onTap: () {
+                      setState(() => _navIndex = 3);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const Profile()),
+                      ).then((_) {
+                        if (mounted) setState(() => _navIndex = 0);
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassNavItem extends StatelessWidget {
+  const _GlassNavItem({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 28,
+      containedInkWell: true,
+      highlightShape: BoxShape.circle,
+      child: Center(
+        child: Iconify(
+          icon,
+          color: selected ? const Color(0xFFC3B649) : const Color(0xFF111111),
+          size: 30,
         ),
       ),
     );
@@ -683,7 +749,11 @@ class _NotificationButton extends StatelessWidget {
               border: Border.all(color: _kNotifBorder, width: 1.2),
             ),
             child: const Center(
-              child: Icon(Icons.notifications_none, size: 22, color: _kInk),
+              child: Iconify(
+                Ion.notifications_outline,
+                size: 20,
+                color: _kInk,
+              ),
             ),
           ),
           if (showBadge)
@@ -821,30 +891,6 @@ class _FabCircle extends StatelessWidget {
         height: 60,
         decoration: const BoxDecoration(color: _kNavBg, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.white, size: 28),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 50,
-        height: 50,
-        child: Icon(icon, color: selected ? _kGold : Colors.white, size: 26),
       ),
     );
   }

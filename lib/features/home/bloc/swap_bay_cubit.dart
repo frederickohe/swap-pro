@@ -91,8 +91,19 @@ class SwapBayState extends Equatable {
       SwapBayTab.accepted =>
         status == 'PENDING_INITIATOR_FEE' &&
         req['initiator_fee_paid'] != true,
-      SwapBayTab.readySwaps => status == 'PENDING_HUB_MEETING',
+      SwapBayTab.readySwaps => _isReadySwap(req, status),
     };
+  }
+
+  /// Ready Swap — both initiator and listing owner, after commitment fee is paid.
+  static bool _isReadySwap(Map<String, dynamic> req, String status) {
+    if (status == 'PENDING_HUB_MEETING') return true;
+    if (req['initiator_fee_paid'] == true && req['owner_approved'] == true) {
+      return status == 'PENDING_INITIATOR_FEE' ||
+          status == 'PENDING_HUB_MEETING' ||
+          status == 'PENDING_OWNER_FEE';
+    }
+    return false;
   }
 
   SwapBayState copyWith({
@@ -252,6 +263,24 @@ class SwapBayCubit extends Cubit<SwapBayState> {
     emit(state.copyWith(actionInProgress: true, clearError: true));
     try {
       await _apiService.rejectSwapRequest(swapRequestId);
+      await load();
+      emit(state.copyWith(actionInProgress: false));
+      return true;
+    } catch (e) {
+      emit(
+        state.copyWith(
+          actionInProgress: false,
+          error: e.toString(),
+        ),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> cancelSentRequest(String swapRequestId) async {
+    emit(state.copyWith(actionInProgress: true, clearError: true));
+    try {
+      await _apiService.cancelSwapRequest(swapRequestId);
       await load();
       emit(state.copyWith(actionInProgress: false));
       return true;

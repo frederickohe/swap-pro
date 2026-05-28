@@ -240,7 +240,7 @@ class _ProfileState extends State<Profile> {
 
   Widget _buildTopBar(double wScale, double hScale) {
     return AppScreenTopBar(
-      title: 'Your Account',
+      title: 'Your Profile',
       scale: wScale,
       showAvatar: false,
       padding: EdgeInsets.fromLTRB(15 * wScale, 10 * hScale, 15 * wScale, 0),

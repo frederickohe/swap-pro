@@ -72,13 +72,8 @@ class _AddBelongingCompletePageState extends State<AddBelongingCompletePage>
     super.dispose();
   }
 
-  void _goToListings(BuildContext context) {
-    Navigator.of(context).pushReplacement(
-      PageTransition(
-        type: PageTransitionType.rightToLeftWithFade,
-        child: const ListingsPage(),
-      ),
-    );
+  void _goToHome(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(Home.routeFromWelcome(), (_) => false);
   }
 
   @override
@@ -169,7 +164,7 @@ class _AddBelongingCompletePageState extends State<AddBelongingCompletePage>
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _goToListings(context),
+                        onTap: () => _goToHome(context),
                         borderRadius: BorderRadius.circular(10 * wScale),
                         child: Ink(
                           width: 277 * wScale,

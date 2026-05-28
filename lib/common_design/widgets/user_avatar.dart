@@ -55,7 +55,7 @@ class UserAvatar extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                  MaterialPageRoute(builder: (_) => const Profile()),
                 );
               },
           child: child,

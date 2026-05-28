@@ -7,10 +7,13 @@ class PaystackCheckoutWebView extends StatefulWidget {
     super.key,
     required this.authorizationUrl,
     required this.reference,
+    this.callbackUrl,
   });
 
   final String authorizationUrl;
   final String reference;
+  /// Server callback URL Paystack redirects to after payment (if configured).
+  final String? callbackUrl;
 
   @override
   State<PaystackCheckoutWebView> createState() => _PaystackCheckoutWebViewState();
@@ -22,11 +25,14 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
   String? _error;
   var _completed = false;
 
+  String get _reference => widget.reference.trim();
+
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setUserAgent('Flutter;Webview')
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
@@ -56,31 +62,77 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
     }
   }
 
+  void _completeCheckout() {
+    if (!mounted || _completed || _reference.isEmpty) return;
+    _completed = true;
+    Navigator.of(context).pop(_reference);
+  }
+
   void _onUrl(String url) {
     if (!mounted || _completed) return;
     setState(() => _loading = false);
-
-    final lower = url.toLowerCase();
-    final ref = widget.reference.trim();
-    if (ref.isEmpty) return;
-
-    final hasRef = lower.contains(ref.toLowerCase()) ||
-        lower.contains('reference=${Uri.encodeComponent(ref).toLowerCase()}') ||
-        lower.contains('trxref=${Uri.encodeComponent(ref).toLowerCase()}');
-
-    final looksSuccessful = lower.contains('success') ||
-        lower.contains('callback') ||
-        lower.contains('close') ||
-        hasRef;
-
-    if (hasRef && looksSuccessful) {
-      _completed = true;
-      Navigator.of(context).pop(ref);
+    if (_shouldCompleteForUrl(url)) {
+      _completeCheckout();
     }
+  }
+
+  bool _shouldCompleteForUrl(String url) {
+    if (_reference.isEmpty) return false;
+
+    final uri = Uri.tryParse(url);
+    if (uri == null) return false;
+
+    final host = uri.host.toLowerCase();
+    final path = uri.path.toLowerCase();
+    final lower = url.toLowerCase();
+
+    final refParam = (uri.queryParameters['reference'] ??
+            uri.queryParameters['trxref'] ??
+            '')
+        .trim();
+    if (refParam.isNotEmpty && refParam == _reference) {
+      return true;
+    }
+
+    final callback = widget.callbackUrl?.trim();
+    if (callback != null && callback.isNotEmpty) {
+      final callbackUri = Uri.tryParse(callback);
+      if (callbackUri != null) {
+        final sameHost = host == callbackUri.host.toLowerCase();
+        final callbackPath = callbackUri.path.toLowerCase();
+        if (sameHost &&
+            (path == callbackPath ||
+                path.startsWith('$callbackPath/') ||
+                lower.startsWith(callback.toLowerCase()))) {
+          return true;
+        }
+      }
+    }
+
+    if (host == 'standard.paystack.co' && path.contains('close')) {
+      return true;
+    }
+
+    if (host.contains('paystack.com') &&
+        (path.contains('success') || lower.contains('successful'))) {
+      return true;
+    }
+
+    if (lower.contains(_reference.toLowerCase()) &&
+        (lower.contains('reference=') ||
+            lower.contains('trxref=') ||
+            lower.contains('/return') ||
+            lower.contains('callback'))) {
+      return true;
+    }
+
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -95,6 +147,19 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
             color: Colors.black,
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: _completed ? null : _completeCheckout,
+            child: Text(
+              'Done',
+              style: AppTypography.style(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: _completed ? Colors.grey : const Color(0xFF176B02),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -114,6 +179,33 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
           if (_loading)
             const Center(child: SwapproLoadingIndicator()),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24, 8, 24, 12 + bottomInset),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: _completed ? null : _completeCheckout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF111111),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                "I've completed payment",
+                style: AppTypography.style(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

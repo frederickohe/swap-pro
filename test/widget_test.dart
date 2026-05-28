@@ -4,11 +4,19 @@ import 'package:swappro/barrel.dart';
 import 'package:swappro/main.dart';
 
 void main() {
-  testWidgets('MyApp builds with required dependencies', (WidgetTester tester) async {
+  testWidgets('MyApp builds with required dependencies', (
+    WidgetTester tester,
+  ) async {
+    final tokenService = TokenService();
+    final httpClient = SessionAwareHttpClient(
+      tokenService: tokenService,
+      baseUrl: 'http://localhost:8000',
+    );
+
     await tester.pumpWidget(
       BlocProvider(
         create: (_) => ThemeBloc(),
-        child: MyApp(),
+        child: MyApp(httpClient: httpClient),
       ),
     );
     await tester.pump();
