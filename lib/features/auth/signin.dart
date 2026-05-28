@@ -34,7 +34,16 @@ class _SigninState extends State<Signin> {
     super.dispose();
   }
 
+  void _onPinChanged() {
+    if (_pin.length == 4) {
+      _submitLogin();
+    }
+  }
+
   void _submitLogin() {
+    if (context.read<AuthBloc>().state is AuthLoading) {
+      return;
+    }
     if (_emailController.text.trim().isEmpty || _pin.length != 4) {
       return;
     }
@@ -166,6 +175,7 @@ class _SigninState extends State<Signin> {
                               enabled: !isLoading,
                               wScale: wScale,
                               hScale: hScale,
+                              onChanged: _onPinChanged,
                             ),
                             SizedBox(height: formGap),
                             Align(

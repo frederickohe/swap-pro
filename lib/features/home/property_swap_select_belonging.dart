@@ -114,17 +114,16 @@ class _PropertySwapSelectBelongingPageState
       subtitle: item.subtitle,
       price: item.price,
       imageUrl: item.imageUrl,
+      listingId: item.productId,
     );
+    context.read<SwapRequestCubit>().selectOffer(yours);
     Navigator.push(
       context,
       PageTransition(
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: PropertySwapConfirmYoursPage(
-          yourProperty: yours,
-          otherProperty: widget.otherProperty,
-        ),
+        child: const PropertySwapConfirmYoursPage(),
       ),
     );
   }
@@ -163,9 +162,12 @@ class _PropertySwapSelectBelongingPageState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-              child: _buildTopBar(context),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(15, 8, 15, 0),
+              child: AppScreenTopBar(
+                title: 'Listed Properties',
+                centerTitle: false,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -192,45 +194,6 @@ class _PropertySwapSelectBelongingPageState
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    return SizedBox(
-      height: 65,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(
-                Icons.keyboard_backspace,
-                size: 28,
-                color: Color(0xFF1C1B1F),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 66),
-            child: Text(
-              'Listed Properties',
-              style: AppTypography.style(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-                height: 29 / 20,
-              ),
-            ),
-          ),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: UserAvatar(size: 65, onLightBackground: true),
-          ),
-        ],
       ),
     );
   }

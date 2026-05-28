@@ -36,7 +36,16 @@ class _AdminSignInState extends State<AdminSignIn> {
     super.dispose();
   }
 
+  void _onPinChanged() {
+    if (_pin.length == 4) {
+      _submitLogin();
+    }
+  }
+
   void _submitLogin() {
+    if (context.read<AuthBloc>().state is AuthLoading) {
+      return;
+    }
     if (_emailController.text.trim().isEmpty || _pin.length != 4) {
       return;
     }
@@ -167,6 +176,7 @@ class _AdminSignInState extends State<AdminSignIn> {
                             enabled: !isLoading,
                             wScale: pinWScale,
                             hScale: pinHScale,
+                            onChanged: _onPinChanged,
                           ),
                         ],
                       ),

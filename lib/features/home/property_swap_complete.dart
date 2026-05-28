@@ -79,7 +79,7 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: const SwapBayPage(),
+        child: const SwapBayPage(initialTab: SwapBayTab.sent),
       ),
     );
   }
@@ -118,7 +118,7 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
               top: 0,
               child: FadeTransition(
                 opacity: _headerOpacity,
-                child: UserAvatar(size: 65 * wScale),
+                child: UserAvatar(size: SettingsScreenStyle.chromeButtonSize * wScale),
               ),
             ),
             Positioned(

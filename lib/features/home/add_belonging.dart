@@ -153,6 +153,7 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
                 ),
                 child: _FigmaCategoryGrid(
                   labels: _itemCategories,
+                  scale: wScale,
                   selectedIndex: _selectedItemCategoryIndex,
                   onSelected: (index) {
                     setState(() => _selectedItemCategoryIndex = index);
@@ -261,14 +262,16 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   }
 }
 
-/// Figma frame 194:129 — chips in a single flow, 8px gap, 20px between wrapped rows.
+/// Figma frame 194:129 — chips hug label width, 8px gap, wrap to next line, 20px row gap.
 class _FigmaCategoryGrid extends StatelessWidget {
   final List<String> labels;
+  final double scale;
   final int? selectedIndex;
   final ValueChanged<int> onSelected;
 
   const _FigmaCategoryGrid({
     required this.labels,
+    required this.scale,
     required this.selectedIndex,
     required this.onSelected,
   });
@@ -278,15 +281,19 @@ class _FigmaCategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gap = 8 * scale;
+    final rowGap = 20 * scale;
+
     return Wrap(
-      spacing: 8,
-      runSpacing: 20,
+      spacing: gap,
+      runSpacing: rowGap,
       alignment: WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.start,
       children: [
         for (var i = 0; i < labels.length; i++)
           _CategoryChip(
             label: labels[i],
+            scale: scale,
             selected: selectedIndex == i,
             onTap: () => onSelected(i),
           ),
@@ -297,37 +304,47 @@ class _FigmaCategoryGrid extends StatelessWidget {
 
 class _CategoryChip extends StatelessWidget {
   final String label;
+  final double scale;
   final bool selected;
   final VoidCallback onTap;
 
   const _CategoryChip({
     required this.label,
+    required this.scale,
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final height = 40 * scale;
+    final radius = 20 * scale;
+    final hPad = 23 * scale;
+    final fontSize = 14 * scale;
+
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 23),
+        height: height,
+        padding: EdgeInsets.symmetric(horizontal: hPad),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: _FigmaCategoryGrid._chipBg,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(radius),
           border: Border.all(
             color: selected
                 ? _FigmaCategoryGrid._chipSelectedBorder
-                : _FigmaCategoryGrid._chipBg,
-            width: selected ? 2 : 0,
+                : Colors.transparent,
+            width: 2,
           ),
         ),
         child: Text(
           label,
+          maxLines: 1,
+          softWrap: false,
           style: AppTypography.style(
-            fontSize: 14,
+            fontSize: fontSize,
             fontWeight: FontWeight.w500,
             color: Colors.white,
             height: 22 / 14,

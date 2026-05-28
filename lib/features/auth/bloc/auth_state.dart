@@ -140,3 +140,7 @@ class TokenRefreshFailed extends AuthState {
   @override
   List<Object> get props => [message];
 }
+
+class ServerUnreachable extends AuthState {
+  const ServerUnreachable();
+}

@@ -10,7 +10,6 @@ const _kBadge = Color(0xFFFD5F4A);
 const _kNavBg = Color(0xFF111111);
 const _kGold = Color(0xFFC3B649);
 const _kHeartBg = Color(0xFF292526);
-const _kStar = Color(0xFFFFD33C);
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -90,7 +89,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<List<_ProductCardData>> _loadFeaturedListings(ApiService api) async {
-    final result = await api.searchListings(page: 1, size: 10);
+    final result = await api.searchListings(page: 1, size: 20);
     final items = result['items'];
     if (items is! List || items.isEmpty) return const [];
 
@@ -122,6 +121,13 @@ class _HomeState extends State<Home> {
         builder: (_) =>
             SearchPropertiesPage(query: query.isEmpty ? null : query),
       ),
+    );
+  }
+
+  void _openCategorySearch(String category) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SearchPropertiesPage(query: category)),
     );
   }
 
@@ -166,8 +172,8 @@ class _HomeState extends State<Home> {
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 36, 16, 0),
-                    child: _buildCategoryGrid(),
+                    padding: const EdgeInsets.only(top: 36),
+                    child: _buildCategoryStrip(),
                   ),
                 ),
                 SliverToBoxAdapter(
@@ -236,27 +242,29 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildCategoryGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _categories.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 70,
-        crossAxisSpacing: 0,
-        childAspectRatio: 60 / 54,
+  Widget _buildCategoryStrip() {
+    return SizedBox(
+      height: 70,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 28),
+        itemBuilder: (context, index) {
+          final cat = _categories[index];
+          return _CategoryTile(
+            label: cat.label,
+            icon: cat.icon,
+            onTap: () => _openCategorySearch(cat.label),
+          );
+        },
       ),
-      itemBuilder: (context, index) {
-        final cat = _categories[index];
-        return _CategoryTile(label: cat.label, icon: cat.icon, onTap: () {});
-      },
     );
   }
 
   Widget _buildFeaturedHeader() {
     return Text(
-      'Featured Listings',
+      'Top Swaps',
       style: _textStyle(size: 22, weight: FontWeight.w600),
     );
   }
@@ -296,7 +304,7 @@ class _HomeState extends State<Home> {
             ),
           );
         }
-        return _buildProductRow(products);
+        return _buildProductGrid(products);
       },
     );
   }
@@ -332,27 +340,46 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildProductRow(List<_ProductCardData> products) {
-    final visible = products.take(2).toList(growable: false);
+  Widget _buildProductGrid(List<_ProductCardData> products) {
+    final left = <_ProductCardData>[];
+    final right = <_ProductCardData>[];
+    for (var i = 0; i < products.length; i++) {
+      if (i.isEven) {
+        left.add(products[i]);
+      } else {
+        right.add(products[i]);
+      }
+    }
+
+    Widget buildColumn(List<_ProductCardData> column) {
+      if (column.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < column.length; i++) ...[
+            if (i > 0) const SizedBox(height: 24),
+            _ProductCard(
+              data: column[i],
+              onImageTap: () => _openPropertyDetail(column[i]),
+            ),
+          ],
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < visible.length; i++) ...[
-          if (i > 0) const SizedBox(width: 12),
-          Expanded(
-            child: _ProductCard(
-              data: visible[i],
-              onImageTap: () => _openPropertyDetail(visible[i]),
-            ),
-          ),
-        ],
+        Expanded(child: buildColumn(left)),
+        const SizedBox(width: 12),
+        Expanded(child: buildColumn(right)),
       ],
     );
   }
 
   Widget _buildFabColumn() {
     return _FabCircle(
-      icon: Icons.add_circle_outline,
+      icon: Icons.add_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -377,12 +404,12 @@ class _HomeState extends State<Home> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _NavItem(
-              icon: Icons.home_outlined,
+              icon: Icons.home_rounded,
               selected: _navIndex == 0,
               onTap: () => setState(() => _navIndex = 0),
             ),
             _NavItem(
-              icon: Icons.format_list_bulleted,
+              icon: Icons.list_alt_rounded,
               selected: _navIndex == 1,
               onTap: () {
                 setState(() => _navIndex = 1);
@@ -392,7 +419,7 @@ class _HomeState extends State<Home> {
                     type: PageTransitionType.rightToLeftWithFade,
                     duration: const Duration(milliseconds: 350),
                     reverseDuration: const Duration(milliseconds: 300),
-                    child: const DashListingsPage(),
+                    child: const ListingsPage(),
                   ),
                 ).then((_) {
                   if (mounted) setState(() => _navIndex = 0);
@@ -400,7 +427,7 @@ class _HomeState extends State<Home> {
               },
             ),
             _NavItem(
-              icon: Icons.swap_horiz,
+              icon: Icons.swap_horiz_rounded,
               selected: _navIndex == 2,
               onTap: () {
                 setState(() => _navIndex = 2);
@@ -418,7 +445,7 @@ class _HomeState extends State<Home> {
               },
             ),
             _NavItem(
-              icon: Icons.person_outline,
+              icon: Icons.person_rounded,
               selected: _navIndex == 3,
               onTap: () {
                 setState(() => _navIndex = 3);
@@ -447,7 +474,6 @@ class _ProductCardData {
   final String title;
   final String location;
   final String price;
-  final double rating;
   final String imageUrl;
   final double imageHeight;
   final Map<String, dynamic>? listingJson;
@@ -457,7 +483,6 @@ class _ProductCardData {
     required this.title,
     required this.location,
     required this.price,
-    required this.rating,
     required this.imageUrl,
     required this.imageHeight,
     this.listingJson,
@@ -489,7 +514,6 @@ class _ProductCardData {
       title: title.isEmpty ? 'Untitled listing' : title,
       location: location,
       price: price,
-      rating: 5.0,
       imageUrl: displayUrl ?? fallback,
       imageHeight: imageHeight,
       listingJson: json,
@@ -512,7 +536,7 @@ class _LocationSearchBar extends StatelessWidget {
 
   static const double _height = 50;
   static const double _iconSize = 15;
-  static const double _searchIconSize = 14;
+  static const double _searchIconSize = 20;
   static const double _textSize = 12;
   static const double _clusterGap = 23;
 
@@ -698,21 +722,26 @@ class _CategoryTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 32, color: _kInk),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTypography.style(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: _kInk,
+      child: SizedBox(
+        width: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: _kInk),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.style(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: _kInk,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -722,10 +751,7 @@ class _ProductCard extends StatelessWidget {
   final _ProductCardData data;
   final VoidCallback onImageTap;
 
-  const _ProductCard({
-    required this.data,
-    required this.onImageTap,
-  });
+  const _ProductCard({required this.data, required this.onImageTap});
 
   @override
   Widget build(BuildContext context) {
@@ -767,28 +793,13 @@ class _ProductCard extends StatelessWidget {
           style: AppTypography.style(fontSize: 12, color: _kInkSoft),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Text(
-              data.price,
-              style: AppTypography.style(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _kHeartBg,
-              ),
-            ),
-            const Spacer(),
-            const Icon(Icons.star, size: 16, color: _kStar),
-            const SizedBox(width: 4),
-            Text(
-              data.rating.toStringAsFixed(1),
-              style: AppTypography.style(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: _kHeartBg,
-              ),
-            ),
-          ],
+        Text(
+          data.price,
+          style: AppTypography.style(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _kHeartBg,
+          ),
         ),
       ],
     );
@@ -833,11 +844,7 @@ class _NavItem extends StatelessWidget {
       child: SizedBox(
         width: 50,
         height: 50,
-        child: Icon(
-          icon,
-          color: selected ? _kGold : Colors.white,
-          size: 26,
-        ),
+        child: Icon(icon, color: selected ? _kGold : Colors.white, size: 26),
       ),
     );
   }

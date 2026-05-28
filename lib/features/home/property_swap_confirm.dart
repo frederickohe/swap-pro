@@ -8,18 +8,12 @@ class PropertySwapConfirmPage extends StatelessWidget {
 
   static const Color _gold = Color(0xFFC3B649);
   static const Color _ink = Color(0xFF111111);
-  static const Color _backBg = Color(0xFFF5F4F8);
   static const Color _titleInk = Color(0xFF121111);
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _heartBg = Color(0xFF292526);
   static const Color _star = Color(0xFFFFD33C);
 
-  static const String _trustMessage =
-      'To foster trust and guarantee the safety of our community '
-      'members, we strongly encourage all users to verify their identity.';
-
-  String get _imageUrl =>
-      data.imageUrls.isNotEmpty ? data.imageUrls.first : '';
+  String get _imageUrl => data.imageUrls.isNotEmpty ? data.imageUrls.first : '';
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +30,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
               _buildHeader(context),
               const SizedBox(height: 78),
               Text(
-                'Confirm Other Property',
+                'Interested in this property?',
                 textAlign: TextAlign.center,
                 style: AppTypography.style(
                   fontSize: 22,
@@ -47,20 +41,6 @@ class PropertySwapConfirmPage extends StatelessWidget {
               ),
               const SizedBox(height: 26),
               Center(child: _buildProductCard()),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _trustMessage,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.style(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    height: 1.45,
-                  ),
-                ),
-              ),
               const SizedBox(height: 30),
               _buildConfirmButton(context),
             ],
@@ -71,47 +51,13 @@ class PropertySwapConfirmPage extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return SizedBox(
-      height: 65,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _buildBackButton(context),
-          ),
-          Text(
-            'Swapping',
-            style: AppTypography.style(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: UserAvatar(size: 65),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: const BoxDecoration(
-          color: _backBg,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          size: 18,
-          color: _gold,
-        ),
+    return AppScreenTopBar(
+      title: 'Swapping',
+      lightScreen: false,
+      titleStyle: AppTypography.style(
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
       ),
     );
   }
@@ -140,10 +86,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFFE8E8E8),
-                      child: const Icon(
-                        Icons.image_outlined,
-                        color: _inkSoft,
-                      ),
+                      child: const Icon(Icons.image_outlined, color: _inkSoft),
                     ),
                   ),
                   Positioned(
@@ -185,10 +128,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   data.category,
-                  style: AppTypography.style(
-                    fontSize: 12,
-                    color: _inkSoft,
-                  ),
+                  style: AppTypography.style(fontSize: 12, color: _inkSoft),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -225,13 +165,14 @@ class PropertySwapConfirmPage extends StatelessWidget {
   Widget _buildConfirmButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        context.read<SwapRequestCubit>().start(target: data);
         Navigator.push(
           context,
           PageTransition(
             type: PageTransitionType.rightToLeftWithFade,
             duration: const Duration(milliseconds: 350),
             reverseDuration: const Duration(milliseconds: 300),
-            child: PropertySwapSelectPage(otherProperty: data),
+            child: const ListingsPage(swapSelectMode: true),
           ),
         );
       },
@@ -243,7 +184,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
         ),
         child: Text(
-          'Confirm Other Property',
+          'Confirm',
           style: AppTypography.style(
             fontSize: 16,
             fontWeight: FontWeight.w600,

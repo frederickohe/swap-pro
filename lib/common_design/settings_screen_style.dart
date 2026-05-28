@@ -6,7 +6,10 @@ class SettingsScreenStyle {
   SettingsScreenStyle._();
 
   static const Color gold = Color(0xFFC3B649);
-  static const Color backButtonBg = Color(0xFFF5F4F8);
+  /// Matches Figma "Your listings" back button / avatar placeholder.
+  static const Color backButtonBg = Color(0xFFF5F6F8);
+  static const double chromeButtonSize = 50;
+  static const double topBarHeight = 65;
   static const Color ink = Color(0xFF111111);
   static const Color menuText = Color(0xFF1C1C28);
   static const Color divider = Color(0xFFF6F6F6);
@@ -33,24 +36,27 @@ class SettingsScreenStyle {
 }
 
 class SettingsScreenBackButton extends StatelessWidget {
-  const SettingsScreenBackButton({super.key, this.onPressed});
+  const SettingsScreenBackButton({super.key, this.onPressed, this.size});
 
   final VoidCallback? onPressed;
+  final double? size;
 
   @override
   Widget build(BuildContext context) {
+    final side = size ?? SettingsScreenStyle.chromeButtonSize;
+    final iconSize = 18 * (side / SettingsScreenStyle.chromeButtonSize);
     return GestureDetector(
       onTap: onPressed ?? () => Navigator.of(context).maybePop(),
       child: Container(
-        width: 50,
-        height: 50,
+        width: side,
+        height: side,
         decoration: const BoxDecoration(
           color: SettingsScreenStyle.backButtonBg,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.arrow_back_ios_new,
-          size: 18,
+          size: iconSize,
           color: SettingsScreenStyle.gold,
         ),
       ),
@@ -77,7 +83,7 @@ class SettingsScreenHeader extends StatelessWidget {
     return Padding(
       padding: padding,
       child: SizedBox(
-        height: 50,
+        height: SettingsScreenStyle.topBarHeight,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -92,7 +98,11 @@ class SettingsScreenHeader extends StatelessWidget {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: trailing ?? const SizedBox(width: 50, height: 50),
+              child: trailing ??
+                  SizedBox(
+                    width: SettingsScreenStyle.chromeButtonSize,
+                    height: SettingsScreenStyle.chromeButtonSize,
+                  ),
             ),
           ],
         ),

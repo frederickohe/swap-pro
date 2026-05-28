@@ -1801,6 +1801,201 @@ class ApiService {
     );
   }
 
+  /// Create a swap request between two listings.
+  ///
+  /// Backend: `POST /api/v1/swaps/requests` — no payment at creation.
+  /// Owner approves first; initiator pays later to unlock owner contact details.
+  /// Body: `{ "owner_listing_id": "...", "initiator_listing_id": "..." }`
+  /// — [targetListingId] is the market listing (owner); [offerListingId] is yours (initiator).
+  Future<Map<String, dynamic>> createSwapRequest({
+    required String targetListingId,
+    required String offerListingId,
+  }) async {
+    final target = targetListingId.trim();
+    final offer = offerListingId.trim();
+    if (target.isEmpty || offer.isEmpty) {
+      throw ArgumentError('targetListingId and offerListingId are required');
+    }
+
+    final uri = Uri.parse('$baseUrl/swaps/requests');
+    final response = await httpClient.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'owner_listing_id': target,
+        'initiator_listing_id': offer,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to create swap request (${response.statusCode})',
+    );
+  }
+
+  /// GET /api/v1/swaps/requests — list swap requests for the current user.
+  ///
+  /// [role]: `initiator` (sent), `owner` (received), or `all` (default).
+  Future<List<Map<String, dynamic>>> listSwapRequests({
+    String role = 'all',
+  }) async {
+    final trimmedRole = role.trim().toLowerCase();
+    final uri = Uri.parse('$baseUrl/swaps/requests').replace(
+      queryParameters: {
+        'role': trimmedRole.isEmpty ? 'all' : trimmedRole,
+      },
+    );
+    final response = await httpClient.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) return _decodeMapList(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to load swap requests (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/swaps/requests/{swapRequestId}/approve — owner accepts offer.
+  Future<Map<String, dynamic>> approveSwapRequest(String swapRequestId) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/approve',
+    );
+    final response = await httpClient.post(uri);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to approve swap request (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/swaps/requests/{swapRequestId}/initiator-fee — start Paystack checkout.
+  Future<Map<String, dynamic>> initializeInitiatorFeePayment(
+    String swapRequestId,
+  ) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/initiator-fee',
+    );
+    final response = await httpClient.post(uri);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to start payment (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/swaps/requests/confirm-initiator-fee — verify Paystack payment.
+  Future<Map<String, dynamic>> confirmInitiatorFee(String reference) async {
+    final ref = reference.trim();
+    if (ref.isEmpty) {
+      throw ArgumentError('reference is required');
+    }
+    final uri = Uri.parse('$baseUrl/swaps/requests/confirm-initiator-fee');
+    final response = await httpClient.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'reference': ref}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to confirm payment (${response.statusCode})',
+    );
+  }
+
+  /// GET /api/v1/swaps/requests/{swapRequestId}/meetup-details
+  Future<Map<String, dynamic>> getSwapMeetupDetails(String swapRequestId) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/meetup-details',
+    );
+    final response = await httpClient.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to load swap details (${response.statusCode})',
+    );
+  }
+
+  /// POST /api/v1/swaps/requests/{swapRequestId}/reject — owner declines offer.
+  Future<Map<String, dynamic>> rejectSwapRequest(String swapRequestId) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/reject',
+    );
+    final response = await httpClient.post(uri);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to reject swap request (${response.statusCode})',
+    );
+  }
+
   /// POST /api/v1/listings — create a listing ([ListingCreateRequest]).
   Future<Map<String, dynamic>> createBelongingListing({
     required String title,

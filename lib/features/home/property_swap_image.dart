@@ -91,22 +91,7 @@ class _PropertySwapImagePageState extends State<PropertySwapImagePage> {
   }
 
   Widget _buildBackButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: const BoxDecoration(
-          color: PropertySwapImagePage._backBg,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          size: 18,
-          color: PropertySwapImagePage._gold,
-        ),
-      ),
-    );
+    return SettingsScreenBackButton(onPressed: () => Navigator.pop(context));
   }
 
   Widget _buildThumbnailStrip(List<String> urls) {

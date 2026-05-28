@@ -13,7 +13,6 @@ class _DashListingsPageState extends State<DashListingsPage> {
   static const Color _subtitle = Color(0xFF787676);
   static const Color _searchBorder = Color(0xFFECECF3);
   static const Color _menuBorder = Color(0xFFDFDFDF);
-  static const Color _backBg = Color(0xFFF5F4F8);
   static const Color _gold = Color(0xFFC3B649);
   static const Color _divider = Color(0xFFF6F6F6);
   static const Color _viewBtn = Color(0xFF111111);
@@ -25,7 +24,6 @@ class _DashListingsPageState extends State<DashListingsPage> {
   String _query = '';
 
   List<_DashListing> _allListings = [];
-  String? _profilePictureUrl;
   bool _loading = true;
   String? _error;
 
@@ -48,14 +46,10 @@ class _DashListingsPageState extends State<DashListingsPage> {
     });
     try {
       final api = context.read<ApiService>();
-      final user = await api.getUserProfile();
-      final photo =
-          (user['profile_picture_url'] ?? user['avatar_url'] ?? '').toString();
       final listings = await api.getMyListings();
       if (!mounted) return;
 
       setState(() {
-        _profilePictureUrl = photo.trim().isEmpty ? null : photo.trim();
         _allListings = listings.map(_DashListing.fromJson).toList();
       });
     } catch (e) {
@@ -160,8 +154,16 @@ class _DashListingsPageState extends State<DashListingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(15, 8, 20, 0),
-                  child: _buildTopBar(context),
+                  padding: const EdgeInsets.fromLTRB(15, 8, 15, 0),
+                  child: AppScreenTopBar(
+                    title: 'Listed Properties',
+                    centerTitle: false,
+                    titleStyle: AppTypography.style(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
                 ),
                 if (_error != null)
                   Padding(
@@ -223,74 +225,6 @@ class _DashListingsPageState extends State<DashListingsPage> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
-    return SizedBox(
-      height: 65,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: _backBg,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18,
-                  color: _gold,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 56, right: 72),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Listed Properties',
-                style: _text(
-                  size: 22,
-                  weight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ClipOval(
-              child: SizedBox(
-                width: 65,
-                height: 65,
-                child: _profilePictureUrl != null
-                    ? Image.network(
-                        _profilePictureUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _avatarPlaceholder(),
-                      )
-                    : _avatarPlaceholder(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _avatarPlaceholder() {
-    return Container(
-      color: _backBg,
-      child: const Icon(Icons.person, color: _subtitle, size: 32),
-    );
-  }
-
   Widget _buildSearchRow(BuildContext context) {
     return Row(
       children: [
@@ -317,7 +251,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
                 ),
                 suffixIcon: GestureDetector(
                   onTap: _applySearch,
-                  child: const Icon(Icons.search, size: 18, color: _ink),
+                  child: const Icon(Icons.search, size: 22, color: _ink),
                 ),
                 border: InputBorder.none,
                 isDense: true,

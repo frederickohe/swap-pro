@@ -239,40 +239,11 @@ class _ProfileState extends State<Profile> {
   }
 
   Widget _buildTopBar(double wScale, double hScale) {
-    return Padding(
+    return AppScreenTopBar(
+      title: 'Your Account',
+      scale: wScale,
+      showAvatar: false,
       padding: EdgeInsets.fromLTRB(15 * wScale, 10 * hScale, 15 * wScale, 0),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 50 * wScale,
-                height: 50 * wScale,
-                decoration: const BoxDecoration(
-                  color: _backBtnBg,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18 * wScale,
-                  color: _gold,
-                ),
-              ),
-            ),
-          ),
-          Text(
-            'Your Account',
-            style: AppTypography.style(
-              fontSize: 20 * wScale,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -475,18 +446,7 @@ class _ProfileState extends State<Profile> {
               ),
             )
           else
-            for (var i = 0; i < _previewListings.length; i++) ...[
-              if (i > 0) ...[
-                SizedBox(height: 18 * hScale),
-                Divider(color: _divider, height: 1, thickness: 1),
-                SizedBox(height: 18 * hScale),
-              ],
-              _ListingCard(
-                item: _previewListings[i],
-                wScale: wScale,
-                onView: () => _openListingDetail(_previewListings[i]),
-              ),
-            ],
+            _buildListingsPreview(wScale),
           SizedBox(height: 28 * hScale),
           GestureDetector(
             onTap: () {
@@ -508,6 +468,41 @@ class _ProfileState extends State<Profile> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildListingsPreview(double wScale) {
+    final items = _previewListings;
+    if (items.length == 1) {
+      return _ProfileListingGridCard(
+        item: items[0],
+        wScale: wScale,
+        imageHeight: 217 * wScale,
+        onTap: () => _openListingDetail(items[0]),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _ProfileListingGridCard(
+            item: items[0],
+            wScale: wScale,
+            imageHeight: 217 * wScale,
+            onTap: () => _openListingDetail(items[0]),
+          ),
+        ),
+        SizedBox(width: 45 * wScale),
+        Expanded(
+          child: _ProfileListingGridCard(
+            item: items[1],
+            wScale: wScale,
+            imageHeight: 251 * wScale,
+            onTap: () => _openListingDetail(items[1]),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -602,127 +597,93 @@ class _ListingItem {
   }
 }
 
-class _ListingCard extends StatelessWidget {
-  const _ListingCard({
+/// Vertical listing card — matches [ListingsPage] grid cards.
+class _ProfileListingGridCard extends StatelessWidget {
+  const _ProfileListingGridCard({
     required this.item,
     required this.wScale,
-    required this.onView,
+    required this.imageHeight,
+    required this.onTap,
   });
 
   final _ListingItem item;
   final double wScale;
-  final VoidCallback onView;
+  final double imageHeight;
+  final VoidCallback onTap;
 
-  static const double _thumbW = 255;
-  static const double _thumbH = 217;
-
-  static const Color _subtitleGray = Color(0xFF787676);
-  static const Color _priceDark = Color(0xFF292526);
-  static const Color _dark = Color(0xFF111111);
+  static const Color _inkTitle = Color(0xFF121111);
+  static const Color _subtitle = Color(0xFF787676);
+  static const Color _price = Color(0xFF292526);
 
   @override
   Widget build(BuildContext context) {
-    final thumbW = _thumbW * wScale;
-    final thumbH = _thumbH * wScale;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14 * wScale),
-          child: _buildThumb(thumbW, thumbH),
-        ),
-        SizedBox(width: 15 * wScale),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: AppTypography.style(
-                        fontSize: 14 * wScale,
-                        fontWeight: FontWeight.w500,
-                        color: _dark,
-                      ),
-                    ),
-                    SizedBox(height: 4 * wScale),
-                    Text(
-                      item.subtitle,
-                      style: AppTypography.style(
-                        fontSize: 11 * wScale,
-                        fontWeight: FontWeight.w400,
-                        color: _subtitleGray,
-                      ),
-                    ),
-                    SizedBox(height: 16 * wScale),
-                    Text(
-                      item.price,
-                      style: AppTypography.style(
-                        fontSize: 14 * wScale,
-                        fontWeight: FontWeight.w500,
-                        color: _priceDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Icon(Icons.more_horiz, size: 24 * wScale, color: _priceDark),
-                  SizedBox(height: 20 * wScale),
-                  GestureDetector(
-                    onTap: onView,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8 * wScale,
-                        vertical: 5 * wScale,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _dark,
-                        borderRadius: BorderRadius.circular(10 * wScale),
-                      ),
-                      child: Text(
-                        'View',
-                        style: AppTypography.style(
-                          fontSize: 12 * wScale,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10 * wScale),
+            child: SizedBox(
+              height: imageHeight,
+              width: double.infinity,
+              child: _buildImage(),
+            ),
           ),
-        ),
-      ],
+          SizedBox(height: 8 * wScale),
+          Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.style(
+              fontSize: 14 * wScale,
+              fontWeight: FontWeight.w600,
+              color: _inkTitle,
+            ),
+          ),
+          SizedBox(height: 4 * wScale),
+          Text(
+            item.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.style(
+              fontSize: 12 * wScale,
+              color: _subtitle,
+            ),
+          ),
+          SizedBox(height: 8 * wScale),
+          Text(
+            item.price,
+            style: AppTypography.style(
+              fontSize: 12 * wScale,
+              fontWeight: FontWeight.w600,
+              color: _price,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildThumb(double thumbW, double thumbH) {
+  Widget _buildImage() {
     if (item.imageUrl != null) {
       return Image.network(
         item.imageUrl!,
-        width: thumbW,
-        height: thumbH,
         fit: BoxFit.cover,
-        errorBuilder: (_, e, s) => _placeholder(thumbW, thumbH),
+        errorBuilder: (_, e, s) => _placeholder(),
       );
     }
-    return _placeholder(thumbW, thumbH);
+    return _placeholder();
   }
 
-  Widget _placeholder(double thumbW, double thumbH) {
+  Widget _placeholder() {
     return Container(
-      width: thumbW,
-      height: thumbH,
       color: const Color(0xFFF5F5F8),
-      child: Icon(Icons.image_outlined, color: _dark.withValues(alpha: 0.3)),
+      child: Icon(
+        Icons.image_outlined,
+        color: _price.withValues(alpha: 0.3),
+      ),
     );
   }
 }

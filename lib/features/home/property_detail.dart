@@ -2,9 +2,14 @@ import 'package:swappro/barrel.dart';
 
 /// Property detail — Figma "Property 2" frame (node 1:368).
 class PropertyDetailPage extends StatelessWidget {
-  const PropertyDetailPage({super.key, required this.data});
+  const PropertyDetailPage({
+    super.key,
+    required this.data,
+    this.showSwapThis = false,
+  });
 
   final PropertyDetailData data;
+  final bool showSwapThis;
 
   static const Color _ink = Color(0xFF111111);
   static const Color _gold = Color(0xFFC3B649);
@@ -69,15 +74,16 @@ class PropertyDetailPage extends StatelessWidget {
                     _buildPriceRow(),
                     const SizedBox(height: 38),
                     _buildMetadataGrid(),
-                    SizedBox(height: 100 + bottomInset),
+                    SizedBox(height: (showSwapThis ? 100 : 24) + bottomInset),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 16 + bottomInset),
-              child: _buildSwapButton(context),
-            ),
+            if (showSwapThis)
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 16 + bottomInset),
+                child: _buildSwapButton(context),
+              ),
           ],
         ),
       ),
@@ -87,18 +93,7 @@ class PropertyDetailPage extends StatelessWidget {
   Widget _buildBackButton(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          width: 50,
-          height: 50,
-          decoration: const BoxDecoration(
-            color: _backBg,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: _gold),
-        ),
-      ),
+      child: SettingsScreenBackButton(onPressed: () => Navigator.pop(context)),
     );
   }
 
@@ -387,6 +382,7 @@ class _SwapThisButtonState extends State<_SwapThisButton>
 
 class PropertyDetailData {
   const PropertyDetailData({
+    this.listingId,
     required this.title,
     required this.description,
     required this.imageUrls,
@@ -400,6 +396,7 @@ class PropertyDetailData {
     required this.status,
   });
 
+  final String? listingId;
   final String title;
   final String description;
   final List<String> imageUrls;
@@ -418,6 +415,7 @@ class PropertyDetailData {
     String? ownerName,
     String? ownerAvatarUrl,
   }) {
+    final listingId = json['id']?.toString().trim();
     final resolvedOwnerName = () {
       if (ownerName != null && ownerName.trim().isNotEmpty) {
         return ownerName.trim();
@@ -476,6 +474,7 @@ class PropertyDetailData {
     }
 
     return PropertyDetailData(
+      listingId: (listingId != null && listingId.isNotEmpty) ? listingId : null,
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
       imageUrls: imageUrls,
@@ -499,6 +498,7 @@ class PropertyDetailData {
   }) {
     final category = location ?? 'Building';
     return PropertyDetailData(
+      listingId: null,
       title: title,
       description: 'Nice $title for a cool swap deal.',
       imageUrls: [

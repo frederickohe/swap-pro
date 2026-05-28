@@ -9,9 +9,20 @@ import 'package:swappro/barrel.dart';
 class SessionAwareHttpClient extends http.BaseClient {
   final TokenService tokenService;
   final String? baseUrl;
+  final ConnectivityNotifier? connectivityNotifier;
   final http.Client _innerClient = http.Client();
 
-  SessionAwareHttpClient({required this.tokenService, this.baseUrl});
+  SessionAwareHttpClient({
+    required this.tokenService,
+    this.baseUrl,
+    this.connectivityNotifier,
+  });
+
+  void _reportUnreachableIfNeeded(Object error) {
+    if (BackendConnectivity.isNetworkFailure(error)) {
+      connectivityNotifier?.reportUnreachable();
+    }
+  }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -21,8 +32,13 @@ class SessionAwareHttpClient extends http.BaseClient {
       request.headers['Authorization'] = 'Bearer $accessToken';
     }
 
-    // Send the request
-    var response = await _innerClient.send(request);
+    http.StreamedResponse response;
+    try {
+      response = await _innerClient.send(request);
+    } catch (e) {
+      _reportUnreachableIfNeeded(e);
+      rethrow;
+    }
 
     // If we get a 401, attempt token refresh and retry
     if (response.statusCode == 401) {
@@ -35,7 +51,12 @@ class SessionAwareHttpClient extends http.BaseClient {
             request.headers['Authorization'] = 'Bearer $newAccessToken';
             // Clone the request to resend it
             final clonedRequest = _cloneRequest(request);
-            response = await _innerClient.send(clonedRequest);
+            try {
+              response = await _innerClient.send(clonedRequest);
+            } catch (e) {
+              _reportUnreachableIfNeeded(e);
+              rethrow;
+            }
           }
         }
       }

@@ -18,16 +18,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        // Handle session expiration
         if (state is SessionExpired) {
           context.showAppSnackBar(state.message);
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/signin', (route) => false);
-        }
-        // Handle token refresh failure
-        else if (state is TokenRefreshFailed) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const Signin()),
+            (route) => false,
+          );
+        } else if (state is TokenRefreshFailed) {
           context.showAppSnackBar('Session error: ${state.message}');
+        } else if (state is ServerUnreachable) {
+          appConnectivityNotifier.reportUnreachable();
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -66,6 +66,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
           } else if (state is TokenRefreshFailed) {
             print('✗ Token Refresh Failed: ${state.message} - showing Signin');
             return const Signin();
+          } else if (state is ServerUnreachable) {
+            return const Scaffold(
+              body: Center(
+                child: SwapproLoadingIndicator(size: 50, showLabel: true),
+              ),
+            );
           } else {
             print('⏳ Unhandled auth state: $state');
             return const Signin();

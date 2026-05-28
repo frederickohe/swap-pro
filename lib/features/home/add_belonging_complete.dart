@@ -115,7 +115,7 @@ class _AddBelongingCompletePageState extends State<AddBelongingCompletePage>
               top: 0,
               child: FadeTransition(
                 opacity: _headerOpacity,
-                child: UserAvatar(size: 65 * wScale),
+                child: UserAvatar(size: SettingsScreenStyle.chromeButtonSize * wScale),
               ),
             ),
             Positioned(

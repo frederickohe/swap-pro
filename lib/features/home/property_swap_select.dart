@@ -15,10 +15,6 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _divider = Color(0xFFF6F6F6);
 
-  static const String _trustMessage =
-      'To foster trust and guarantee the safety of our community '
-      'members, we strongly encourage all users to verify their identity.';
-
   late final ApiService _apiService = ApiService(
     httpClient: SessionAwareHttpClient(tokenService: TokenService()),
   );
@@ -117,16 +113,7 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
                   height: 51 / 32,
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                _trustMessage,
-                style: AppTypography.style(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                  height: 1.45,
-                ),
-              ),
+
               const SizedBox(height: 20),
               if (_error != null)
                 Padding(
@@ -150,40 +137,14 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return SizedBox(
-      height: 65,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(
-                Icons.keyboard_backspace,
-                size: 28,
-                color: Color(0xFF1C1B1F),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 46),
-            child: Text(
-              'Swapping',
-              style: AppTypography.style(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-                height: 29 / 24,
-              ),
-            ),
-          ),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: UserAvatar(size: 65, onLightBackground: true),
-          ),
-        ],
+    return AppScreenTopBar(
+      title: 'Swapping',
+      centerTitle: false,
+      titleStyle: AppTypography.style(
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+        height: 29 / 24,
       ),
     );
   }
@@ -273,8 +234,9 @@ class _SelectableListing {
 
   factory _SelectableListing.fromProduct(Map<String, dynamic> product) {
     final name = (product['name'] ?? product['title'] ?? '').toString().trim();
-    final category =
-        (product['category'] ?? product['condition'] ?? '').toString().trim();
+    final category = (product['category'] ?? product['condition'] ?? '')
+        .toString()
+        .trim();
     final rawPrice = product['price'];
     final priceStr = _formatPrice(rawPrice);
 
@@ -285,8 +247,9 @@ class _SelectableListing {
       if (first.isNotEmpty) imageUrl = first;
     }
     if (imageUrl == null) {
-      final fallback =
-          (product['image_url'] ?? product['thumbnail'] ?? '').toString().trim();
+      final fallback = (product['image_url'] ?? product['thumbnail'] ?? '')
+          .toString()
+          .trim();
       if (fallback.isNotEmpty) imageUrl = fallback;
     }
 
@@ -303,8 +266,7 @@ class _SelectableListing {
     if (value == null) return '';
     if (value is num) {
       final whole = value == value.roundToDouble();
-      final text =
-          whole ? value.round().toString() : value.toStringAsFixed(2);
+      final text = whole ? value.round().toString() : value.toStringAsFixed(2);
       return '\$$text';
     }
     final s = value.toString().trim();

@@ -2,126 +2,103 @@ import 'package:swappro/barrel.dart';
 
 /// Swap flow — confirm your listing (Figma "Belonging2", node 1:555).
 class PropertySwapConfirmYoursPage extends StatelessWidget {
-  const PropertySwapConfirmYoursPage({
-    super.key,
-    required this.yourProperty,
-    required this.otherProperty,
-  });
-
-  final PropertyDetailData yourProperty;
-  final PropertyDetailData otherProperty;
+  const PropertySwapConfirmYoursPage({super.key});
 
   static const Color _gold = Color(0xFFC3B649);
   static const Color _ink = Color(0xFF111111);
-  static const Color _backBg = Color(0xFFF5F4F8);
   static const Color _titleInk = Color(0xFF121111);
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _heartBg = Color(0xFF292526);
   static const Color _star = Color(0xFFFFD33C);
 
-  static const String _trustMessage =
-      'To foster trust and guarantee the safety of our community '
-      'members, we strongly encourage all users to verify their identity.';
-
-  String get _imageUrl =>
-      yourProperty.imageUrls.isNotEmpty ? yourProperty.imageUrls.first : '';
-
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
-    return Scaffold(
-      backgroundColor: _gold,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(19, 8, 25, 16 + bottomInset),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 78),
-              Text(
-                'Confirm Your Property',
-                textAlign: TextAlign.center,
-                style: AppTypography.style(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 26),
-              Center(child: _buildProductCard()),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _trustMessage,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.style(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    height: 1.45,
+    return BlocBuilder<SwapRequestCubit, SwapRequestState>(
+      builder: (context, state) {
+        final yourProperty = state.offer;
+        if (yourProperty == null) {
+          return Scaffold(
+            backgroundColor: _gold,
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'No listing selected',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.style(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Go back'),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
-              _buildConfirmButton(context),
-            ],
+            ),
+          );
+        }
+
+        final imageUrl = yourProperty.imageUrls.isNotEmpty
+            ? yourProperty.imageUrls.first
+            : '';
+        final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+        return Scaffold(
+          backgroundColor: _gold,
+          body: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(19, 8, 25, 16 + bottomInset),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 78),
+                  Text(
+                    'Confirm Your Property',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.style(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  Center(child: _buildProductCard(yourProperty, imageUrl)),
+                  const SizedBox(height: 30),
+                  _buildConfirmButton(context, state),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    return SizedBox(
-      height: 65,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _buildBackButton(context),
-          ),
-          Text(
-            'Swapping',
-            style: AppTypography.style(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: UserAvatar(size: 65),
-          ),
-        ],
+    return AppScreenTopBar(
+      title: 'Swapping',
+      lightScreen: false,
+      titleStyle: AppTypography.style(
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
       ),
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: const BoxDecoration(
-          color: _backBg,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          size: 18,
-          color: _gold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductCard() {
+  Widget _buildProductCard(PropertyDetailData yourProperty, String imageUrl) {
     return Container(
       width: 155,
       decoration: BoxDecoration(
@@ -141,14 +118,11 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    _imageUrl,
+                    imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFFE8E8E8),
-                      child: const Icon(
-                        Icons.image_outlined,
-                        color: _inkSoft,
-                      ),
+                      child: const Icon(Icons.image_outlined, color: _inkSoft),
                     ),
                   ),
                   Positioned(
@@ -190,10 +164,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   yourProperty.category,
-                  style: AppTypography.style(
-                    fontSize: 12,
-                    color: _inkSoft,
-                  ),
+                  style: AppTypography.style(fontSize: 12, color: _inkSoft),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -227,15 +198,20 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
     );
   }
 
-  Widget _buildConfirmButton(BuildContext context) {
+  Widget _buildConfirmButton(BuildContext context, SwapRequestState state) {
+    final target = state.target;
+    final offer = state.offer;
+
     return GestureDetector(
-      onTap: () {
-        PropertySwapSettlementSheet.show(
-          context,
-          yourProperty: yourProperty,
-          otherProperty: otherProperty,
-        );
-      },
+      onTap: target == null || offer == null
+          ? null
+          : () {
+              PropertySwapSettlementSheet.show(
+                context,
+                yourProperty: offer,
+                otherProperty: target,
+              );
+            },
       child: Container(
         height: 48,
         alignment: Alignment.center,
@@ -251,7 +227,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
           ],
         ),
         child: Text(
-          'Confirm Swap Property',
+          'Confirm Your Property',
           style: AppTypography.style(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -263,14 +239,16 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
   }
 }
 
-/// Maps a belonging list row into [PropertyDetailData] for the confirm step.
+/// Maps a belonging list row into [PropertyDetailData] for legacy/demo flows.
 PropertyDetailData propertyDetailFromBelonging({
   required String title,
   required String subtitle,
   required String price,
   String? imageUrl,
+  String? listingId,
 }) {
   return PropertyDetailData(
+    listingId: listingId,
     title: title,
     description: '',
     imageUrls: imageUrl != null && imageUrl.isNotEmpty ? [imageUrl] : const [],

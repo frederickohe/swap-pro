@@ -1,31 +1,58 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/features/initial_ui/server_error_page.dart';
+import 'package:swappro/services/connectivity_notifier.dart';
 
 // Initialize services at app level
 late TokenService _tokenService;
 late SessionAwareHttpClient _httpClient;
 late ApiService _apiService;
+late AuthBloc _authBloc;
+
+void _onConnectivityChanged() {
+  if (!appConnectivityNotifier.isServerUnreachable) return;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final nav = NavigationService.navigatorKey.currentState;
+    if (nav == null) return;
+
+    final currentRoute = ModalRoute.of(nav.context)?.settings.name;
+    if (currentRoute == 'ServerErrorPage') return;
+
+    nav.pushAndRemoveUntil(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'ServerErrorPage'),
+        builder: (_) => ServerErrorPage(
+          onRetry: () async {
+            _authBloc.add(const CheckSessionEvent());
+          },
+        ),
+      ),
+      (route) => false,
+    );
+  });
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   print('=== APP STARTING ===');
 
-  // Initialize environment variables
   await AppConfig.init();
   print('✓ AppConfig initialized');
 
-  // Initialize session handling services
+  appConnectivityNotifier.addListener(_onConnectivityChanged);
+
   _tokenService = TokenService();
   _httpClient = SessionAwareHttpClient(
     tokenService: _tokenService,
     baseUrl: AppConfig.backendUrl,
+    connectivityNotifier: appConnectivityNotifier,
   );
   _apiService = ApiService(httpClient: _httpClient);
   print('✓ Services initialized');
 
-  // Create blocs
   final successBloc = SuccessBloc();
-  final authBloc = AuthBloc(
+  _authBloc = AuthBloc(
     tokenService: _tokenService,
     successBloc: successBloc,
   );
@@ -38,26 +65,27 @@ void main() async {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider.value(value: authBloc),
+          BlocProvider.value(value: _authBloc),
           BlocProvider.value(value: successBloc),
           BlocProvider(create: (context) => ThemeBloc()),
+          BlocProvider(
+            create: (context) =>
+                SwapRequestCubit(apiService: context.read<ApiService>()),
+          ),
         ],
-        child: MyApp(httpClient: _httpClient),
+        child: const MyApp(),
       ),
     ),
   );
   print('=== APP INITIALIZED ===');
 }
 
-//Getters
 SessionAwareHttpClient get appHttpClient => _httpClient;
 ApiService get apiService => _apiService;
 TokenService get tokenService => _tokenService;
 
 class MyApp extends StatelessWidget {
-  final SessionAwareHttpClient httpClient;
-
-  const MyApp({required this.httpClient, super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {

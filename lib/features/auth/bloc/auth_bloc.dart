@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:swappro/config/app_config.dart';
 import 'package:swappro/common_bloc/success_bloc.dart';
+import 'package:swappro/services/backend_connectivity.dart';
 import 'package:swappro/utils/phone_utils.dart';
 import '../models/token_model.dart';
 import '../services/token_service.dart';
@@ -123,6 +124,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError(message: errorMsg, source: 'login'));
       }
     } catch (e) {
+      if (BackendConnectivity.isNetworkFailure(e)) {
+        emit(const ServerUnreachable());
+        return;
+      }
       emit(AuthError(message: e.toString(), source: 'login'));
     }
   }
@@ -299,21 +304,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthEvent event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      final userString = prefs.getString('user');
-
-      if (token != null && userString != null) {
-        final user = json.decode(userString);
-        emit(Authenticated(user: user));
-      } else {
-        emit(Unauthenticated());
-      }
-    } catch (e) {
-      emit(AuthError(message: e.toString(), source: 'check_auth'));
-    }
+    add(const CheckSessionEvent());
   }
 
   Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
@@ -560,8 +551,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(TokenRefreshFailed(message: errorMsg));
       }
     } catch (e) {
+      if (BackendConnectivity.isNetworkFailure(e)) {
+        emit(const ServerUnreachable());
+        return;
+      }
       emit(TokenRefreshFailed(message: 'Token refresh error: $e'));
     }
+  }
+
+  Future<bool> _restoreUserProfile(Emitter<AuthState> emit) async {
+    final userResponse = await http
+        .get(
+          Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
+          headers: await _getAuthHeaders(),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (userResponse.statusCode == 200) {
+      final userData = json.decode(userResponse.body);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', json.encode(userData));
+      emit(Authenticated(user: userData));
+      return true;
+    }
+
+    if (userResponse.statusCode == 401) {
+      add(const RefreshTokenEvent());
+      return true;
+    }
+
+    return false;
   }
 
   // Session Check Handler
@@ -569,32 +588,54 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckSessionEvent event,
     Emitter<AuthState> emit,
   ) async {
+    emit(AuthLoading());
     try {
-      final hasValidSession = await tokenService.hasValidSession();
+      final reachable = await BackendConnectivity.isReachable();
+      if (!reachable) {
+        emit(const ServerUnreachable());
+        return;
+      }
 
-      if (!hasValidSession) {
+      final token = await tokenService.getToken();
+      if (token == null) {
         emit(const Unauthenticated());
         return;
       }
 
-      // Check if token should be refreshed proactively
-      final shouldRefresh = await tokenService.shouldRefreshToken();
-      if (shouldRefresh) {
+      if (token.isExpired) {
+        final refreshToken = await tokenService.getRefreshToken();
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          add(const RefreshTokenEvent());
+          return;
+        }
+        await tokenService.clearTokens();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('user');
+        emit(const Unauthenticated());
+        return;
+      }
+
+      if (await tokenService.shouldRefreshToken()) {
         add(const RefreshTokenEvent());
         return;
       }
 
-      // Session is valid, get user data
       final prefs = await SharedPreferences.getInstance();
       final userString = prefs.getString('user');
-
       if (userString != null) {
-        final user = json.decode(userString);
-        emit(Authenticated(user: user));
-      } else {
-        emit(Unauthenticated());
+        emit(Authenticated(user: json.decode(userString)));
+        return;
+      }
+
+      final restored = await _restoreUserProfile(emit);
+      if (!restored) {
+        emit(const Unauthenticated());
       }
     } catch (e) {
+      if (BackendConnectivity.isNetworkFailure(e)) {
+        emit(const ServerUnreachable());
+        return;
+      }
       emit(
         AuthError(message: 'Session check failed: $e', source: 'check_session'),
       );

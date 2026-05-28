@@ -84,7 +84,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
                       'price difference',
                       textAlign: TextAlign.center,
                       style: AppTypography.style(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400,
                         color: _bodyInk,
                         height: 1.35,
@@ -95,7 +95,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
                       'Do you agree to make topup payment for this transaction?',
                       textAlign: TextAlign.center,
                       style: AppTypography.style(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400,
                         color: _bodyInk,
                         height: 1.35,
@@ -130,20 +130,17 @@ class PropertySwapSettlementSheet extends StatelessWidget {
               Expanded(
                 child: _PropertyThumb(
                   imageUrl: _yourImage,
-                  width: 146,
-                  height: 113,
+                  width: 165,
+                  height: 125,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: _PropertyThumb(
-                    imageUrl: _otherImage,
-                    width: 181,
-                    height: 139,
-                    alignEnd: true,
-                  ),
+                child: _PropertyThumb(
+                  imageUrl: _otherImage,
+                  width: 165,
+                  height: 125,
+                  alignEnd: true,
                 ),
               ),
             ],
@@ -163,7 +160,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
               ],
             ),
             child: const Icon(
-              Icons.swap_horiz,
+              Icons.swap_calls,
               size: 32,
               color: _gold,
             ),
@@ -183,7 +180,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.style(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.black,
               height: 1.2,
@@ -198,7 +195,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.right,
             style: AppTypography.style(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.black,
               height: 1.2,
@@ -217,7 +214,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
           child: Text(
             _formatDisplayPrice(yourProperty.price),
             style: AppTypography.style(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
               color: yoursLower ? _priceLower : _priceHigher,
               height: 1.2,
@@ -230,7 +227,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
             _formatDisplayPrice(otherProperty.price),
             textAlign: TextAlign.right,
             style: AppTypography.style(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
               color: yoursLower ? _priceHigher : _priceLower,
               height: 1.2,
@@ -249,10 +246,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: PropertySwapConfirmDashPage(
-          yourProperty: yourProperty,
-          otherProperty: otherProperty,
-        ),
+        child: const PropertySwapConfirmDashPage(),
       ),
     );
   }
@@ -273,7 +267,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTypography.style(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),

@@ -14,7 +14,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   static const Color _ink = Color(0xFF111111);
   static const Color _searchBorder = Color(0xFFECECF3);
   static const Color _menuBorder = Color(0xFFDFDFDF);
-  static const Color _backBg = Color(0xFFF5F4F8);
   static const Color _gold = Color(0xFFC3B649);
 
   late final TextEditingController _searchController;
@@ -158,8 +157,15 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: _buildTopBar(context),
+              padding: const EdgeInsets.fromLTRB(15, 8, 15, 0),
+              child: AppScreenTopBar(
+                title: 'Search Properties',
+                titleStyle: AppTypography.style(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(21, 20, 21, 0),
@@ -189,44 +195,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: _backBg,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18,
-                  color: _gold,
-                ),
-              ),
-            ),
-          ),
-          Text(
-            'Search Properties',
-            style: _textStyle(
-              size: 22,
-              weight: FontWeight.w400,
-              color: Colors.black,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -352,7 +320,6 @@ class _SearchProduct {
   final String title;
   final String location;
   final String price;
-  final double rating;
   final String imageUrl;
   final double imageHeight;
   final Map<String, dynamic>? listingJson;
@@ -362,7 +329,6 @@ class _SearchProduct {
     required this.title,
     required this.location,
     required this.price,
-    required this.rating,
     required this.imageUrl,
     required this.imageHeight,
     this.listingJson,
@@ -392,7 +358,6 @@ class _SearchProduct {
       title: title.isEmpty ? 'Untitled listing' : title,
       location: location,
       price: price,
-      rating: 5.0,
       imageUrl: displayUrl ?? _kListingImageFallback,
       imageHeight: imageHeight,
       listingJson: json,
@@ -412,6 +377,7 @@ class _SearchProductCard extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => PropertyDetailPage(
             data: PropertyDetailData.fromListing(data.listingJson!),
+            showSwapThis: true,
           ),
         ),
       );
@@ -425,7 +391,10 @@ class _SearchProductCard extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) =>
-              PropertyDetailPage(data: PropertyDetailData.fromListing(listing)),
+              PropertyDetailPage(
+                data: PropertyDetailData.fromListing(listing),
+                showSwapThis: true,
+              ),
         ),
       );
     } catch (e) {
@@ -436,7 +405,6 @@ class _SearchProductCard extends StatelessWidget {
 
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _heartBg = Color(0xFF292526);
-  static const Color _star = Color(0xFFFFD33C);
   static const Color _titleInk = Color(0xFF121111);
 
   @override
@@ -479,28 +447,13 @@ class _SearchProductCard extends StatelessWidget {
             style: AppTypography.style(fontSize: 12, color: _inkSoft),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                data.price,
-                style: AppTypography.style(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _heartBg,
-                ),
-              ),
-              const Spacer(),
-              const Icon(Icons.star, size: 18, color: _star),
-              const SizedBox(width: 4),
-              Text(
-                data.rating.toStringAsFixed(1),
-                style: AppTypography.style(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: _heartBg,
-                ),
-              ),
-            ],
+          Text(
+            data.price,
+            style: AppTypography.style(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _heartBg,
+            ),
           ),
         ],
       ),
