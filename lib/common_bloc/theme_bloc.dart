@@ -5,7 +5,13 @@ class ThemeBloc extends Cubit<ThemeState> {
 
   static ThemeData _defaultTheme() {
     return AppTypography.applyTo(
-      ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      ThemeData(
+        colorScheme: ColorScheme.light(
+          primary: AppTypography.brandInk,
+          secondary: AppTypography.brandGold,
+          onPrimary: Colors.white,
+        ),
+      ),
     );
   }
 

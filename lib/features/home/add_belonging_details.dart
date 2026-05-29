@@ -209,6 +209,8 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
   bool _ownershipDocumentsAvailable = false;
   double? _locationLat;
   double? _locationLng;
+  String? _locationAreaLabel;
+  final _geocoding = GeocodingService();
   final List<String> _extraWishDescriptions = [];
 
   @override
@@ -266,7 +268,14 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
     setState(() {
       _locationLat = result.latitude;
       _locationLng = result.longitude;
+      _locationAreaLabel = null;
     });
+    final area = await _geocoding.reverseGeocodeArea(
+      latitude: result.latitude,
+      longitude: result.longitude,
+    );
+    if (!mounted) return;
+    setState(() => _locationAreaLabel = area);
   }
 
   Future<void> _addWish() async {
@@ -314,6 +323,7 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
           wishlist: _buildWishlistPayload(),
           locationLat: _locationLat!,
           locationLng: _locationLng!,
+          locationArea: _locationAreaLabel,
         ),
       ),
     );
@@ -423,8 +433,7 @@ class _AddBelongingDetailsPageState extends State<AddBelongingDetailsPage> {
                       child: _LocationPickerField(
                         hasLocation:
                             _locationLat != null && _locationLng != null,
-                        latitude: _locationLat,
-                        longitude: _locationLng,
+                        areaLabel: _locationAreaLabel,
                         onTap: _pickLocation,
                       ),
                     ),
@@ -815,31 +824,33 @@ class _OwnershipDocumentsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F4F8),
+    return Material(
+      color: const Color(0xFFF5F4F8),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: () => onChanged(!value),
         borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Ownership documents available',
-              style: AppTypography.style(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF111111),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Ownership documents available',
+                  style: AppTypography.style(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF111111),
+                  ),
+                ),
               ),
-            ),
+              SettingsToggleSwitch(
+                value: value,
+                enabled: true,
+              ),
+            ],
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: const Color(0xFFC3B649),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -847,19 +858,25 @@ class _OwnershipDocumentsRow extends StatelessWidget {
 
 class _LocationPickerField extends StatelessWidget {
   final bool hasLocation;
-  final double? latitude;
-  final double? longitude;
+  final String? areaLabel;
   final VoidCallback onTap;
 
   const _LocationPickerField({
     required this.hasLocation,
-    required this.latitude,
-    required this.longitude,
+    required this.areaLabel,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final label = () {
+      if (!hasLocation) return 'Tap to pick location on map';
+      if (areaLabel != null && areaLabel!.trim().isNotEmpty) {
+        return areaLabel!.trim();
+      }
+      return 'Location selected';
+    }();
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -878,10 +895,9 @@ class _LocationPickerField extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                hasLocation
-                    ? 'Lat ${latitude!.toStringAsFixed(4)}, '
-                        'Lng ${longitude!.toStringAsFixed(4)}'
-                    : 'Tap to pick location on map',
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: AppTypography.style(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,

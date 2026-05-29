@@ -26,8 +26,14 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
 
   final _mapController = MapController();
   var _loading = true;
+  var _completing = false;
   String? _error;
   Map<String, dynamic>? _details;
+
+  bool get _isCompleted {
+    final status = (_details?['swap_status'] ?? '').toString().trim();
+    return status == 'COMPLETED';
+  }
 
   @override
   void initState() {
@@ -123,6 +129,25 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
     context.showAppSnackBar('Could not start a phone call');
   }
 
+  Future<void> _completeSwap() async {
+    if (_completing || _isCompleted) return;
+    setState(() => _completing = true);
+    try {
+      await context
+          .read<ApiService>()
+          .completeSwapRequest(widget.swapRequestId);
+      if (!mounted) return;
+      context.showAppSnackBar('Swap marked as completed.');
+      Navigator.of(context).pop(SwapBayTab.history);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _completing = false);
+      context.showAppSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,7 +184,49 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
             ),
           ),
           Expanded(child: _buildMapSection()),
+          if (!_loading && _error == null) _buildCompleteButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompleteButton() {
+    final completed = _isCompleted;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 12, 32, 16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: completed || _completing ? null : _completeSwap,
+            style: FilledButton.styleFrom(
+              backgroundColor: _accentGreen,
+              disabledBackgroundColor: _accentGreen.withValues(alpha: 0.45),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: _completing
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    completed ? 'Swap Completed' : 'Mark Swap Complete',
+                    style: AppTypography.style(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

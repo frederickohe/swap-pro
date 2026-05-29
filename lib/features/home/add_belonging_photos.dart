@@ -17,6 +17,7 @@ class AddBelongingPhotosPage extends StatefulWidget {
   final List<Map<String, dynamic>> wishlist;
   final double locationLat;
   final double locationLng;
+  final String? locationArea;
 
   const AddBelongingPhotosPage({
     super.key,
@@ -32,6 +33,7 @@ class AddBelongingPhotosPage extends StatefulWidget {
     this.wishlist = const [],
     required this.locationLat,
     required this.locationLng,
+    this.locationArea,
   });
 
   @override
@@ -125,6 +127,14 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
         specLabelUrl,
       ];
 
+      var locationArea = widget.locationArea?.trim();
+      if (locationArea == null || locationArea.isEmpty) {
+        locationArea = await GeocodingService().reverseGeocodeArea(
+          latitude: widget.locationLat,
+          longitude: widget.locationLng,
+        );
+      }
+
       await api.createBelongingListing(
         title: widget.title,
         description: widget.description,
@@ -139,6 +149,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
         wishlist: widget.wishlist,
         locationLat: widget.locationLat,
         locationLng: widget.locationLng,
+        locationArea: locationArea,
       );
 
       if (!mounted) return;

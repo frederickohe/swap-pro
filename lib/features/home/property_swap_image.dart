@@ -54,11 +54,6 @@ class _PropertySwapImagePageState extends State<PropertySwapImagePage> {
             left: 14,
             child: _buildBackButton(context),
           ),
-          Positioned(
-            left: 19,
-            bottom: bottomInset + 24,
-            child: _buildOwnerChip(),
-          ),
           if (urls.length > 1)
             Positioned(
               right: 18,
@@ -115,60 +110,6 @@ class _PropertySwapImagePageState extends State<PropertySwapImagePage> {
     );
   }
 
-  Widget _buildOwnerChip() {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.fromLTRB(8, 5, 16, 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              image: widget.data.ownerAvatarUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(widget.data.ownerAvatarUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-              color: widget.data.ownerAvatarUrl == null
-                  ? const Color(0xFFE8E8E8)
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: widget.data.ownerAvatarUrl == null
-                ? Text(
-                    widget.data.ownerName.isNotEmpty
-                        ? widget.data.ownerName[0].toUpperCase()
-                        : '?',
-                    style: AppTypography.style(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: PropertySwapImagePage._ink,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            widget.data.ownerName,
-            style: AppTypography.style(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: PropertySwapImagePage._ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ThumbnailTile extends StatelessWidget {

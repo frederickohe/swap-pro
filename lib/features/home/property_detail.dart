@@ -67,7 +67,7 @@ class PropertyDetailPage extends StatelessWidget {
                       style: _text(size: 16, color: Colors.black, height: 1.35),
                     ),
                     const SizedBox(height: 38),
-                    _buildOwnerRow(),
+                    _buildLocationRow(),
                     const SizedBox(height: 38),
                     _buildWishlistSection(),
                     const SizedBox(height: 38),
@@ -140,36 +140,18 @@ class PropertyDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildOwnerRow() {
+  Widget _buildLocationRow() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text('Owner :', style: _text(size: 18, weight: FontWeight.w500)),
+        Text('Location :', style: _text(size: 18, weight: FontWeight.w500)),
         const SizedBox(width: 19),
+        const Icon(Icons.location_on_outlined, size: 24, color: _gold),
+        const SizedBox(width: 10),
         Expanded(
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: const Color(0xFFE8E8E8),
-                backgroundImage: data.ownerAvatarUrl != null
-                    ? NetworkImage(data.ownerAvatarUrl!)
-                    : null,
-                child: data.ownerAvatarUrl == null
-                    ? Text(
-                        data.ownerName.isNotEmpty
-                            ? data.ownerName[0].toUpperCase()
-                            : '?',
-                        style: _text(size: 18, weight: FontWeight.w600),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                data.ownerName,
-                style: _text(size: 16, weight: FontWeight.w500),
-              ),
-            ],
+          child: Text(
+            data.locationArea,
+            style: _text(size: 16, weight: FontWeight.w500),
           ),
         ),
       ],
@@ -388,6 +370,7 @@ class PropertyDetailData {
     required this.imageUrls,
     required this.ownerName,
     this.ownerAvatarUrl,
+    required this.locationArea,
     required this.wishlistItems,
     required this.price,
     required this.date,
@@ -402,6 +385,7 @@ class PropertyDetailData {
   final List<String> imageUrls;
   final String ownerName;
   final String? ownerAvatarUrl;
+  final String locationArea;
   final List<String> wishlistItems;
   final String price;
   final String date;
@@ -480,6 +464,7 @@ class PropertyDetailData {
       imageUrls: imageUrls,
       ownerName: resolvedOwnerName,
       ownerAvatarUrl: resolvedOwnerAvatar,
+      locationArea: listingDisplayLocation(json),
       wishlistItems: wishlistItems,
       price: price,
       date: date,
@@ -510,6 +495,7 @@ class PropertyDetailData {
       ownerName: 'Jeff Anderson',
       ownerAvatarUrl:
           'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80',
+      locationArea: location ?? 'Accra, Ghana',
       wishlistItems: const [
         'Car spare parts',
         'Turbo Washing Machine',

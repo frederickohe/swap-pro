@@ -127,6 +127,19 @@ class _DashListingsPageState extends State<DashListingsPage> {
     }
   }
 
+  void _showListingActions(_DashListing listing) {
+    final json = listing.listingJson;
+    if (json == null) {
+      context.showAppSnackBar('Unable to manage this listing.');
+      return;
+    }
+    ListingActions.showSheet(
+      context: context,
+      listing: json,
+      onChanged: _loadListings,
+    );
+  }
+
   TextStyle _text({
     double size = 14,
     FontWeight weight = FontWeight.w400,
@@ -207,6 +220,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
                                   return _ListingRow(
                                     data: item,
                                     onView: () => _openDetail(item),
+                                    onMore: () => _showListingActions(item),
                                   );
                                 },
                               ),
@@ -371,10 +385,15 @@ class _DashListing {
 }
 
 class _ListingRow extends StatelessWidget {
-  const _ListingRow({required this.data, required this.onView});
+  const _ListingRow({
+    required this.data,
+    required this.onView,
+    required this.onMore,
+  });
 
   final _DashListing data;
   final VoidCallback onView;
+  final VoidCallback onMore;
 
   static const Color _titleInk = Color(0xFF121111);
   static const Color _subtitle = Color(0xFF787676);
@@ -433,7 +452,11 @@ class _ListingRow extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const _MoreMenuIcon(),
+                  GestureDetector(
+                    onTap: onMore,
+                    behavior: HitTestBehavior.opaque,
+                    child: const _MoreMenuIcon(),
+                  ),
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: onView,

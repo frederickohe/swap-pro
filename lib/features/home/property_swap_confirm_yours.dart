@@ -88,7 +88,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return AppScreenTopBar(
       title: 'Swapping',
-      lightScreen: false,
+      lightScreen: true,
       titleStyle: AppTypography.style(
         fontSize: 24,
         fontWeight: FontWeight.w600,
@@ -113,47 +113,26 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
             child: SizedBox(
               height: 217,
               width: 155,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFFE8E8E8),
-                      child: const Icon(Icons.image_outlined, color: _inkSoft),
-                    ),
-                  ),
-                  Positioned(
-                    top: 14,
-                    right: 14,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        color: _heartBg,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE8E8E8),
+                  child: const Icon(Icons.image_outlined, color: _inkSoft),
+                ),
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(5, 8, 5, 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   yourProperty.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -165,6 +144,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
                   yourProperty.category,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(fontSize: 12, color: _inkSoft),
                 ),
                 const SizedBox(height: 12),
@@ -172,6 +152,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
                   yourProperty.price,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -241,6 +222,7 @@ PropertyDetailData propertyDetailFromBelonging({
     description: '',
     imageUrls: imageUrl != null && imageUrl.isNotEmpty ? [imageUrl] : const [],
     ownerName: '',
+    locationArea: subtitle.trim().isNotEmpty ? subtitle : 'Location unavailable',
     wishlistItems: const [],
     price: price,
     date: '',

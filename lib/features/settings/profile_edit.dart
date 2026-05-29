@@ -44,10 +44,6 @@ class _ProfileEditState extends State<ProfileEdit> {
   bool _uploadingPhoto = false;
   String? _error;
 
-  late final ApiService _apiService = ApiService(
-    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
-  );
-
   @override
   void initState() {
     super.initState();
@@ -56,7 +52,7 @@ class _ProfileEditState extends State<ProfileEdit> {
 
   Future<void> _loadProfile() async {
     try {
-      final user = await _apiService.getUserProfile();
+      final user = await context.read<ApiService>().getUserProfile();
       if (!mounted) return;
 
       _userProfileRaw = Map<String, dynamic>.from(user as Map);
@@ -279,7 +275,7 @@ class _ProfileEditState extends State<ProfileEdit> {
       _error = null;
     });
     try {
-      await _apiService.updateUserProfile(
+      await context.read<ApiService>().updateUserProfile(
         fullname: fullnameController.text.trim(),
         phone: phoneController.text.trim(),
         ghanaCard: ghanaCardController.text.trim().isEmpty
@@ -368,24 +364,34 @@ class _ProfileEditState extends State<ProfileEdit> {
       maxWidth: 1400,
     );
     if (picked == null) return;
+    if (!mounted) return;
 
     setState(() => _uploadingPhoto = true);
+    final api = context.read<ApiService>();
     try {
-      final url = await _apiService.uploadFile(
+      final uploadResult = await api.uploadMyStorageFile(
+        folder: ApiService.profileImagesStorageFolder,
         file: File(picked.path),
-        filename: picked.name,
+        filename: picked.name.trim().isEmpty ? 'profile.jpg' : picked.name,
       );
+      final url = (uploadResult['file_url'] ?? '').toString().trim();
+      if (url.isEmpty) {
+        throw Exception('Upload succeeded but no file URL was returned');
+      }
 
-      await _apiService.patchMyProfileImage(profilePictureUrl: url);
+      await api.patchMyProfileImage(profilePictureUrl: url);
       // Keep local cached user in sync (used by AuthBloc on next session check)
       try {
-        final updated = await _apiService.getUserProfile();
+        final updated = await api.getUserProfile();
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(updated));
       } catch (_) {}
       if (!mounted) return;
 
-      setState(() => _profilePictureUrl = url);
+      setState(() {
+        _profilePictureUrl = url;
+        _userProfileRaw?['profile_picture_url'] = url;
+      });
       context.showAppSnackBar('Profile photo updated');
     } catch (e) {
       if (!mounted) return;
@@ -458,7 +464,7 @@ class _ProfileEditState extends State<ProfileEdit> {
       body: SafeArea(
         child: Column(
           children: [
-            const SettingsScreenHeader(title: 'Edit Details'),
+            const SettingsScreenHeader(title: 'Edit Profile'),
             if (_loading)
               const Expanded(
                 child: Center(child: SwapproLoadingIndicator()),
@@ -643,13 +649,30 @@ class _ProfileEditState extends State<ProfileEdit> {
                               ),
                             ),
                             Center(
-                              child: AppButton(
-                                onPressed: _saving
-                                    ? () {}
-                                    : () => _saveProfile(),
-                                buttonText: _saving
-                                    ? 'Saving...'
-                                    : 'Save Changes',
+                              child: SizedBox(
+                                width: 270,
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: _saving ? null : _saveProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: SettingsScreenStyle.gold,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor: SettingsScreenStyle
+                                        .gold
+                                        .withValues(alpha: 0.55),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _saving ? 'Saving...' : 'Save Changes',
+                                    style: AppTypography.style(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),

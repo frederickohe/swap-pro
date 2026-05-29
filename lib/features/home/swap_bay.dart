@@ -1,6 +1,6 @@
 import 'package:swappro/barrel.dart';
 
-enum SwapBayTab { sent, received, accepted, readySwaps }
+enum SwapBayTab { sent, received, accepted, readySwaps, history }
 
 /// Swap requests inbox — Figma "Swap Bay" (node 1:656).
 class SwapBayPage extends StatelessWidget {
@@ -113,6 +113,12 @@ class _SwapBayViewState extends State<_SwapBayView> {
             selectedBackgroundColor: const Color(0xFF1A8118),
             onTap: () => setState(() => _tab = SwapBayTab.readySwaps),
           ),
+          const SizedBox(width: 20),
+          _TabChip(
+            label: 'History',
+            selected: _tab == SwapBayTab.history,
+            onTap: () => setState(() => _tab = SwapBayTab.history),
+          ),
         ],
       ),
     );
@@ -172,6 +178,9 @@ class _SwapBayViewState extends State<_SwapBayView> {
               item: item,
               onGoForSwap: () => _goForSwap(item),
             );
+          }
+          if (_tab == SwapBayTab.history) {
+            return _SwapRequestHistoryTile(item: item);
           }
           return _SwapRequestSentTile(
             item: item,
@@ -236,7 +245,8 @@ class _SwapBayViewState extends State<_SwapBayView> {
   }
 
   void _goForSwap(SwapBayItem item) {
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push<SwapBayTab>(
       PageTransition(
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
@@ -246,7 +256,14 @@ class _SwapBayViewState extends State<_SwapBayView> {
           propertyTitle: item.title,
         ),
       ),
-    );
+    )
+        .then((result) {
+      if (!mounted) return;
+      if (result == SwapBayTab.history) {
+        setState(() => _tab = SwapBayTab.history);
+        context.read<SwapBayCubit>().refresh();
+      }
+    });
   }
 
   void _payTransaction(SwapBayItem item) {
@@ -267,6 +284,7 @@ class _SwapBayViewState extends State<_SwapBayView> {
       SwapBayTab.received => 'Received',
       SwapBayTab.accepted => 'Accepted',
       SwapBayTab.readySwaps => 'Ready Swap',
+      SwapBayTab.history => 'History',
     };
   }
 }
@@ -692,6 +710,107 @@ class _SwapRequestReceivedTile extends StatelessWidget {
     );
   }
 
+}
+
+/// History tab row — completed swaps.
+class _SwapRequestHistoryTile extends StatelessWidget {
+  const _SwapRequestHistoryTile({required this.item});
+
+  final SwapBayItem item;
+
+  static const Color _inkTitle = Color(0xFF121111);
+  static const Color _subtitle = Color(0xFF787676);
+  static const Color _price = Color(0xFF292526);
+  static const Color _completedGreen = Color(0xFF1A8118);
+
+  @override
+  Widget build(BuildContext context) {
+    const thumb = 70.0;
+    return SizedBox(
+      height: 71,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: SizedBox(
+              width: thumb,
+              height: thumb,
+              child: _listingThumb(item.imageUrl),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.style(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: _inkTitle,
+                          height: 18 / 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.subtitle,
+                        style: AppTypography.style(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: _subtitle,
+                          height: 13 / 12,
+                        ),
+                      ),
+                      if (item.price.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          item.price,
+                          style: AppTypography.style(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: _price,
+                            height: 18 / 14,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 88,
+                  height: 27,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _completedGreen.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _completedGreen),
+                  ),
+                  child: Text(
+                    'Completed',
+                    style: AppTypography.style(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _completedGreen,
+                      height: 17 / 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Accepted tab row — pay transaction fee before Ready Swap.

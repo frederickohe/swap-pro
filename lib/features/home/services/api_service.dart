@@ -1706,6 +1706,8 @@ class ApiService {
   Future<Map<String, dynamic>> searchListings({
     String? keyword,
     String? category,
+    String? condition,
+    String? location,
     double? minValue,
     double? maxValue,
     double? lat,
@@ -1726,6 +1728,8 @@ class ApiService {
 
     add('keyword', keyword);
     add('category', category);
+    add('condition', condition);
+    add('location', location);
     if (minValue != null) qp['min_value'] = '$minValue';
     if (maxValue != null) qp['max_value'] = '$maxValue';
     if (lat != null) qp['lat'] = '$lat';
@@ -1994,6 +1998,31 @@ class ApiService {
     );
   }
 
+  /// POST /api/v1/swaps/requests/{swapRequestId}/complete — mark swap as completed.
+  Future<Map<String, dynamic>> completeSwapRequest(String swapRequestId) async {
+    final id = swapRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('swapRequestId is required');
+    }
+    final uri = Uri.parse(
+      '$baseUrl/swaps/requests/${Uri.encodeComponent(id)}/complete',
+    );
+    final response = await httpClient.post(uri);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return {'data': data};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to complete swap (${response.statusCode})',
+    );
+  }
+
   /// POST /api/v1/swaps/requests/{swapRequestId}/cancel — initiator withdraws sent request.
   Future<Map<String, dynamic>> cancelSwapRequest(String swapRequestId) async {
     final id = swapRequestId.trim();
@@ -2034,6 +2063,7 @@ class ApiService {
     List<Map<String, dynamic>> wishlist = const [],
     double? locationLat,
     double? locationLng,
+    String? locationArea,
   }) async {
     final body = <String, dynamic>{
       'title': title.trim(),
@@ -2052,6 +2082,8 @@ class ApiService {
     if (build != null && build.isNotEmpty) body['build_version'] = build;
     if (locationLat != null) body['location_lat'] = locationLat;
     if (locationLng != null) body['location_lng'] = locationLng;
+    final area = locationArea?.trim();
+    if (area != null && area.isNotEmpty) body['location_area'] = area;
     return createListing(body);
   }
 
@@ -2077,6 +2109,107 @@ class ApiService {
       _httpDetailMessage(response.body) ??
           'Failed to create listing (${response.statusCode})',
     );
+  }
+
+  /// PUT /api/v1/listings/{listingId} — update a listing.
+  Future<Map<String, dynamic>> updateListing(
+    String listingId,
+    Map<String, dynamic> body,
+  ) async {
+    final id = listingId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('listingId is required');
+    }
+    final uri = Uri.parse('$baseUrl/listings/${Uri.encodeComponent(id)}');
+    final response = await httpClient.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    if (response.statusCode == 403) {
+      throw Exception('You can only edit your own listings');
+    }
+    if (response.statusCode == 404) {
+      throw Exception('Listing not found');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to update listing (${response.statusCode})',
+    );
+  }
+
+  /// DELETE /api/v1/listings/{listingId} — soft-delete a listing.
+  Future<void> deleteListing(String listingId) async {
+    final id = listingId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('listingId is required');
+    }
+    final uri = Uri.parse('$baseUrl/listings/${Uri.encodeComponent(id)}');
+    final response = await httpClient.delete(uri);
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 401) {
+      throw Exception('Session expired');
+    }
+    if (response.statusCode == 403) {
+      throw Exception('You can only delete your own listings');
+    }
+    if (response.statusCode == 404) {
+      throw Exception('Listing not found');
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to delete listing (${response.statusCode})',
+    );
+  }
+
+  /// PUT /api/v1/listings/{listingId} — update listing fields.
+  Future<Map<String, dynamic>> updateBelongingListing({
+    required String listingId,
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String primaryImageUrl,
+    required List<String> imageUrls,
+    required double estimatedValue,
+    String? serialNumber,
+    String? buildVersion,
+    bool? ownershipDocumentsAvailable,
+    List<Map<String, dynamic>>? wishlist,
+    double? locationLat,
+    double? locationLng,
+    String? locationArea,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title.trim(),
+      'description': description.trim(),
+      'category': category.trim(),
+      'condition': condition.trim(),
+      'primary_image_url': primaryImageUrl.trim(),
+      'image_urls': imageUrls.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+      'estimated_value': estimatedValue,
+    };
+    final serial = serialNumber?.trim();
+    if (serial != null && serial.isNotEmpty) body['serial_number'] = serial;
+    final build = buildVersion?.trim();
+    if (build != null && build.isNotEmpty) body['build_version'] = build;
+    if (ownershipDocumentsAvailable != null) {
+      body['ownership_documents_available'] = ownershipDocumentsAvailable;
+    }
+    if (wishlist != null) body['wishlist'] = wishlist;
+    if (locationLat != null) body['location_lat'] = locationLat;
+    if (locationLng != null) body['location_lng'] = locationLng;
+    final area = locationArea?.trim();
+    if (area != null && area.isNotEmpty) body['location_area'] = area;
+    return updateListing(listingId, body);
   }
 
   /// GET /api/v1/customers/list

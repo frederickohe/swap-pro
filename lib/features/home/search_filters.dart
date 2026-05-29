@@ -10,18 +10,26 @@ class SearchFiltersPage extends StatefulWidget {
 
 class SearchFiltersResult {
   const SearchFiltersResult({
-    required this.propertyType,
+    this.condition,
+    this.category,
     required this.minPrice,
     required this.maxPrice,
-    required this.currency,
     required this.location,
+    this.locationLat,
+    this.locationLng,
+    this.locationRadiusKm = 25,
   });
 
-  final String propertyType;
+  /// `null` when "All" is selected.
+  final String? condition;
+  /// `null` when "All" is selected.
+  final String? category;
   final double minPrice;
   final double maxPrice;
-  final String currency;
   final String location;
+  final double? locationLat;
+  final double? locationLng;
+  final double locationRadiusKm;
 }
 
 class _SearchFiltersPageState extends State<SearchFiltersPage> {
@@ -31,20 +39,93 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
   static const Color _trackInactive = Color(0xFFEEEEEE);
 
   static const double _minPriceBound = 0;
-  static const double _maxPriceBound = 1000;
+  static const double _maxPriceBound = 5000000;
 
-  static const _propertyTypes = ['All', 'New', 'Used', 'Swap'];
-  static const _currencies = ['\$ USD', '₵ GHS', '€ EUR'];
+  static const _conditions = ['All', 'New', 'Like New', 'Good', 'Fair', 'Poor'];
 
-  int _selectedTypeIndex = 0;
-  RangeValues _priceRange = const RangeValues(120, 680);
-  String _currency = _currencies.first;
+  /// Matches [AddBelongingPage] item categories (add_belonging.dart).
+  static const _categories = [
+    'All',
+    'Electronics',
+    'Home & Kitchen',
+    'kids',
+    'Books',
+    'Fashion',
+    'Sports',
+    'Tools',
+    'Fitness',
+    'Beauty Products',
+    'Vehicles',
+    'Vehicle Parts',
+    'Personal Care',
+    'Media',
+    'Video Games',
+  ];
+
+  int _selectedConditionIndex = 0;
+  int _selectedCategoryIndex = 0;
+  RangeValues _priceRange = const RangeValues(100000, 2000000);
+  late final TextEditingController _minPriceController;
+  late final TextEditingController _maxPriceController;
+  bool _syncingPriceInputs = false;
   final TextEditingController _locationController = TextEditingController();
+  final GeocodingService _geocoding = GeocodingService();
+  Timer? _autocompleteDebounce;
+  List<PlaceSuggestion> _suggestions = const [];
+  bool _loadingSuggestions = false;
+  double? _selectedLat;
+  double? _selectedLng;
+
+  @override
+  void initState() {
+    super.initState();
+    _minPriceController = TextEditingController(
+      text: _priceRange.start.round().toString(),
+    );
+    _maxPriceController = TextEditingController(
+      text: _priceRange.end.round().toString(),
+    );
+  }
 
   @override
   void dispose() {
+    _autocompleteDebounce?.cancel();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  void _onLocationChanged(String value) {
+    _selectedLat = null;
+    _selectedLng = null;
+    _autocompleteDebounce?.cancel();
+    if (value.trim().length < 2 || !AppConfig.hasGeoapifyApiKey) {
+      setState(() {
+        _suggestions = const [];
+        _loadingSuggestions = false;
+      });
+      return;
+    }
+    _autocompleteDebounce = Timer(const Duration(milliseconds: 350), () async {
+      setState(() => _loadingSuggestions = true);
+      final results = await _geocoding.autocomplete(value);
+      if (!mounted) return;
+      setState(() {
+        _suggestions = results;
+        _loadingSuggestions = false;
+      });
+    });
+  }
+
+  void _selectSuggestion(PlaceSuggestion suggestion) {
+    setState(() {
+      _locationController.text = suggestion.label;
+      _selectedLat = suggestion.latitude;
+      _selectedLng = suggestion.longitude;
+      _suggestions = const [];
+    });
+    FocusScope.of(context).unfocus();
   }
 
   TextStyle _textStyle({
@@ -60,19 +141,68 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
     );
   }
 
-  String _formatPrice(double value) {
-    return '\$${value.round()}';
+  double? _parsePrice(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.]'), '');
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
+
+  void _onMinPriceChanged(String value) {
+    if (_syncingPriceInputs) return;
+    final parsed = _parsePrice(value);
+    if (parsed == null) return;
+    final min = parsed.clamp(_minPriceBound, _maxPriceBound);
+    var max = _priceRange.end;
+    if (min > max) {
+      max = min;
+      _syncingPriceInputs = true;
+      _maxPriceController.text = max.round().toString();
+      _syncingPriceInputs = false;
+    }
+    setState(() => _priceRange = RangeValues(min, max));
+  }
+
+  void _onMaxPriceChanged(String value) {
+    if (_syncingPriceInputs) return;
+    final parsed = _parsePrice(value);
+    if (parsed == null) return;
+    final max = parsed.clamp(_minPriceBound, _maxPriceBound);
+    var min = _priceRange.start;
+    if (max < min) {
+      min = max;
+      _syncingPriceInputs = true;
+      _minPriceController.text = min.round().toString();
+      _syncingPriceInputs = false;
+    }
+    setState(() => _priceRange = RangeValues(min, max));
+  }
+
+  RangeValues _committedPriceRange() {
+    final minParsed =
+        _parsePrice(_minPriceController.text) ?? _priceRange.start;
+    final maxParsed =
+        _parsePrice(_maxPriceController.text) ?? _priceRange.end;
+    final min = minParsed.clamp(_minPriceBound, _maxPriceBound);
+    final max = maxParsed.clamp(_minPriceBound, _maxPriceBound);
+    return RangeValues(min <= max ? min : max, min <= max ? max : min);
   }
 
   void _apply() {
+    final range = _committedPriceRange();
     Navigator.pop(
       context,
       SearchFiltersResult(
-        propertyType: _propertyTypes[_selectedTypeIndex],
-        minPrice: _priceRange.start,
-        maxPrice: _priceRange.end,
-        currency: _currency,
+        condition: _selectedConditionIndex == 0
+            ? null
+            : _conditions[_selectedConditionIndex],
+        category: _selectedCategoryIndex == 0
+            ? null
+            : _categories[_selectedCategoryIndex],
+        minPrice: range.start,
+        maxPrice: range.end,
         location: _locationController.text.trim(),
+        locationLat: _selectedLat,
+        locationLng: _selectedLng,
       ),
     );
   }
@@ -110,7 +240,9 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPropertyTypeSection(),
+                    _buildConditionSection(),
+                    const SizedBox(height: 40),
+                    _buildCategorySection(),
                     const SizedBox(height: 60),
                     _buildPriceSection(),
                     const SizedBox(height: 66),
@@ -129,25 +261,27 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
     );
   }
 
-  Widget _buildPropertyTypeSection() {
+  Widget _buildChipSection({
+    required String title,
+    required List<String> options,
+    required int selectedIndex,
+    required ValueChanged<int> onSelected,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Property Type',
-          style: _textStyle(size: 18, weight: FontWeight.w600),
-        ),
+        Text(title, style: _textStyle(size: 18, weight: FontWeight.w600)),
         const SizedBox(height: 26),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (var i = 0; i < _propertyTypes.length; i++) ...[
+              for (var i = 0; i < options.length; i++) ...[
                 if (i > 0) const SizedBox(width: 10),
                 _CategoryChip(
-                  label: _propertyTypes[i],
-                  selected: _selectedTypeIndex == i,
-                  onTap: () => setState(() => _selectedTypeIndex = i),
+                  label: options[i],
+                  selected: selectedIndex == i,
+                  onTap: () => onSelected(i),
                 ),
               ],
             ],
@@ -157,54 +291,45 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
     );
   }
 
+  Widget _buildConditionSection() {
+    return _buildChipSection(
+      title: 'Condition',
+      options: _conditions,
+      selectedIndex: _selectedConditionIndex,
+      onSelected: (i) => setState(() => _selectedConditionIndex = i),
+    );
+  }
+
+  Widget _buildCategorySection() {
+    return _buildChipSection(
+      title: 'Category',
+      options: _categories,
+      selectedIndex: _selectedCategoryIndex,
+      onSelected: (i) => setState(() => _selectedCategoryIndex = i),
+    );
+  }
+
   Widget _buildPriceSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text('Price', style: _textStyle(size: 18, weight: FontWeight.w600)),
+        const SizedBox(height: 20),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Price', style: _textStyle(size: 18, weight: FontWeight.w600)),
-            const Spacer(),
-            Text(
-              '${_formatPrice(_priceRange.start)} - ${_formatPrice(_priceRange.end)}',
-              style: _textStyle(
-                size: 16,
-                weight: FontWeight.w500,
-                color: _gold,
-              ),
+            _PriceBoundField(
+              label: 'Minimum',
+              controller: _minPriceController,
+              onChanged: _onMinPriceChanged,
+            ),
+            const SizedBox(width: 12),
+            _PriceBoundField(
+              label: 'Maximum',
+              controller: _maxPriceController,
+              onChanged: _onMaxPriceChanged,
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: _CurrencyPicker(
-            value: _currency,
-            options: _currencies,
-            onChanged: (v) => setState(() => _currency = v),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 3,
-            rangeTrackShape: const RoundedRectRangeSliderTrackShape(),
-            rangeThumbShape: const RoundRangeSliderThumbShape(
-              enabledThumbRadius: 9,
-              elevation: 0,
-              pressedElevation: 0,
-            ),
-            overlayShape: SliderComponentShape.noOverlay,
-            inactiveTrackColor: _trackInactive,
-            activeTrackColor: _gold,
-            thumbColor: Colors.white,
-          ),
-          child: RangeSlider(
-            values: _priceRange,
-            min: _minPriceBound,
-            max: _maxPriceBound,
-            onChanged: (values) => setState(() => _priceRange = values),
-          ),
         ),
       ],
     );
@@ -215,7 +340,12 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Location', style: _textStyle(size: 18, weight: FontWeight.w600)),
-        const SizedBox(height: 33),
+        const SizedBox(height: 8),
+        Text(
+          'Search any city or neighbourhood worldwide',
+          style: _textStyle(size: 12, color: _ink.withValues(alpha: 0.55)),
+        ),
+        const SizedBox(height: 20),
         Container(
           height: 50,
           decoration: BoxDecoration(
@@ -230,9 +360,10 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
               Expanded(
                 child: TextField(
                   controller: _locationController,
+                  onChanged: _onLocationChanged,
                   style: _textStyle(size: 14, weight: FontWeight.w500),
                   decoration: InputDecoration(
-                    hintText: 'Location',
+                    hintText: 'City, suburb, or area',
                     hintStyle: _textStyle(
                       size: 14,
                       weight: FontWeight.w500,
@@ -244,9 +375,51 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
                   ),
                 ),
               ),
+              if (_loadingSuggestions)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
             ],
           ),
         ),
+        if (_suggestions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _trackInactive),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < _suggestions.length; i++)
+                  InkWell(
+                    onTap: () => _selectSuggestion(_suggestions[i]),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        border: i < _suggestions.length - 1
+                            ? Border(
+                                bottom: BorderSide(color: _trackInactive),
+                              )
+                            : null,
+                      ),
+                      child: Text(
+                        _suggestions[i].label,
+                        style: _textStyle(size: 13),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -272,6 +445,81 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
             color: Colors.white,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PriceBoundField extends StatelessWidget {
+  static const _pricePrefix = 'GH₵ ';
+
+  final String label;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  const _PriceBoundField({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  static const Color _ink = Color(0xFF111111);
+  static const Color _chipInactive = Color(0xFFF5F4F8);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.style(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: _ink.withValues(alpha: 0.55),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: _chipInactive,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.center,
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: AppTypography.style(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _ink,
+              ),
+              decoration: InputDecoration(
+                prefixText: _pricePrefix,
+                prefixStyle: AppTypography.style(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: _ink,
+                ),
+                hintText: '0',
+                hintStyle: AppTypography.style(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: _ink.withValues(alpha: 0.4),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -311,68 +559,6 @@ class _CategoryChip extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: selected ? Colors.white : _ink,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CurrencyPicker extends StatelessWidget {
-  final String value;
-  final List<String> options;
-  final ValueChanged<String> onChanged;
-
-  const _CurrencyPicker({
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
-  static const Color _ink = Color(0xFF111111);
-  static const Color _currencyBg = Color(0xFFF5F4F8);
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      onSelected: onChanged,
-      offset: const Offset(0, 28),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      itemBuilder: (context) => options
-          .map(
-            (c) => PopupMenuItem<String>(
-              value: c,
-              child: Text(
-                c,
-                style: AppTypography.style(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: _ink,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-      child: Container(
-        height: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: _currencyBg,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.keyboard_arrow_down, size: 16, color: _ink),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: AppTypography.style(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: _ink,
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/features/home/listing_location.dart';
 
 /// Listed properties hub — Figma "Listings" frame (node 162:622).
 /// Shows the signed-in user's listings with search and quick actions.
@@ -116,6 +117,7 @@ class _ListingsPageState extends State<ListingsPage> {
 
   Future<void> _openListingDetail(_ListingRow item) async {
     if (item.listingJson != null) {
+      await prefetchListingLocations([item.listingJson!]);
       if (!mounted) return;
       Navigator.push(
         context,
@@ -132,6 +134,7 @@ class _ListingsPageState extends State<ListingsPage> {
     try {
       final listing = await context.read<ApiService>().getListing(id);
       if (!mounted) return;
+      await prefetchListingLocations([listing]);
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -144,6 +147,19 @@ class _ListingsPageState extends State<ListingsPage> {
       if (!mounted) return;
       context.showAppSnackBar(e.toString());
     }
+  }
+
+  void _showListingActions(_ListingRow item) {
+    final json = item.listingJson;
+    if (json == null) {
+      context.showAppSnackBar('Unable to manage this listing.');
+      return;
+    }
+    ListingActions.showSheet(
+      context: context,
+      listing: json,
+      onChanged: _loadListings,
+    );
   }
 
   List<_ListingRow> get _visibleListings {
@@ -344,6 +360,7 @@ class _ListingsPageState extends State<ListingsPage> {
           onSelect: widget.swapSelectMode
               ? () => _selectListingForSwap(item)
               : null,
+          onMore: widget.swapSelectMode ? null : () => _showListingActions(item),
         );
       },
     );
@@ -398,6 +415,9 @@ class _ListingsPageState extends State<ListingsPage> {
           onTap: widget.swapSelectMode
               ? () => _selectListingForSwap(columnItems[i])
               : () => _openListingDetail(columnItems[i]),
+          onMore: widget.swapSelectMode
+              ? null
+              : () => _showListingActions(columnItems[i]),
         ),
       );
     }
@@ -502,6 +522,7 @@ class _ListingListTile extends StatelessWidget {
     required this.onTap,
     this.swapSelectMode = false,
     this.onSelect,
+    this.onMore,
   });
 
   final _ListingRow item;
@@ -509,6 +530,7 @@ class _ListingListTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool swapSelectMode;
   final VoidCallback? onSelect;
+  final VoidCallback? onMore;
 
   static const Color _inkTitle = Color(0xFF121111);
   static const Color _subtitle = Color(0xFF787676);
@@ -539,15 +561,35 @@ class _ListingListTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.style(
-                      fontSize: 14 * wScale,
-                      fontWeight: FontWeight.w600,
-                      color: _inkTitle,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.style(
+                            fontSize: 14 * wScale,
+                            fontWeight: FontWeight.w600,
+                            color: _inkTitle,
+                          ),
+                        ),
+                      ),
+                      if (onMore != null)
+                        GestureDetector(
+                          onTap: onMore,
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 4 * wScale),
+                            child: Icon(
+                              Icons.more_horiz_rounded,
+                              size: 20 * wScale,
+                              color: _price,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   SizedBox(height: 10 * wScale),
                   Text(
@@ -634,6 +676,7 @@ class _ListingGridCard extends StatelessWidget {
     required this.imageHeight,
     required this.onTap,
     this.swapSelectMode = false,
+    this.onMore,
   });
 
   final _ListingRow item;
@@ -641,6 +684,7 @@ class _ListingGridCard extends StatelessWidget {
   final double imageHeight;
   final VoidCallback onTap;
   final bool swapSelectMode;
+  final VoidCallback? onMore;
 
   static const Color _inkTitle = Color(0xFF121111);
   static const Color _subtitle = Color(0xFF787676);
@@ -659,7 +703,33 @@ class _ListingGridCard extends StatelessWidget {
             child: SizedBox(
               height: imageHeight,
               width: double.infinity,
-              child: _buildImage(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildImage(),
+                  if (onMore != null)
+                    Positioned(
+                      top: 8 * wScale,
+                      right: 8 * wScale,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onMore,
+                          child: Padding(
+                            padding: EdgeInsets.all(6 * wScale),
+                            child: Icon(
+                              Icons.more_horiz_rounded,
+                              size: 18 * wScale,
+                              color: _price,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           SizedBox(height: 8 * wScale),

@@ -7,6 +7,12 @@ import 'package:google_fonts/google_fonts.dart';
 abstract final class AppTypography {
   AppTypography._();
 
+  /// Brand ink — primary text and cursor.
+  static const Color brandInk = Color(0xFF111111);
+
+  /// Brand gold — accents, selection handles, chips.
+  static const Color brandGold = Color(0xFFC3B649);
+
   static TextTheme textTheme([TextTheme? base]) => _textTheme(base);
 
   static TextStyle style({
@@ -57,6 +63,15 @@ abstract final class AppTypography {
     return theme.copyWith(
       textTheme: themedText,
       primaryTextTheme: themedText,
+      colorScheme: theme.colorScheme.copyWith(
+        primary: brandInk,
+        secondary: brandGold,
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: brandInk,
+        selectionColor: brandGold.withValues(alpha: 0.35),
+        selectionHandleColor: brandGold,
+      ),
     );
   }
 

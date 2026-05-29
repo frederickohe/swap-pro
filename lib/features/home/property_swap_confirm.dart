@@ -52,7 +52,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return AppScreenTopBar(
       title: 'Swapping',
-      lightScreen: false,
+      lightScreen: true,
       titleStyle: AppTypography.style(
         fontSize: 24,
         fontWeight: FontWeight.w600,
@@ -77,47 +77,26 @@ class PropertySwapConfirmPage extends StatelessWidget {
             child: SizedBox(
               height: 251,
               width: 155,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    _imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFFE8E8E8),
-                      child: const Icon(Icons.image_outlined, color: _inkSoft),
-                    ),
-                  ),
-                  Positioned(
-                    top: 14,
-                    right: 14,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        color: _heartBg,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+              child: Image.network(
+                _imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE8E8E8),
+                  child: const Icon(Icons.image_outlined, color: _inkSoft),
+                ),
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(5, 8, 5, 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   data.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -129,6 +108,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
                   data.category,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(fontSize: 12, color: _inkSoft),
                 ),
                 const SizedBox(height: 12),
@@ -136,6 +116,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
                   data.price,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

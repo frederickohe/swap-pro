@@ -118,7 +118,10 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
               top: 0,
               child: FadeTransition(
                 opacity: _headerOpacity,
-                child: UserAvatar(size: SettingsScreenStyle.chromeButtonSize * wScale),
+                child: UserAvatar(
+                  size: SettingsScreenStyle.chromeButtonSize * wScale,
+                  onLightBackground: true,
+                ),
               ),
             ),
             Positioned(
@@ -146,15 +149,21 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
                 opacity: _imageOpacity,
                 child: ScaleTransition(
                   scale: _imageScale,
-                  child: Image.asset(
-                    'assets/icons/success.png',
-                    width: 200 * wScale,
-                    height: 263 * wScale,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.celebration_outlined,
-                      size: 120 * wScale,
-                      color: Colors.white.withValues(alpha: 0.9),
+                  child: ColorFiltered(
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                    child: Image.asset(
+                      'assets/icons/success.png',
+                      width: 200 * wScale,
+                      height: 263 * wScale,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.check_circle_outline,
+                        size: 120 * wScale,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
                     ),
                   ),
                 ),

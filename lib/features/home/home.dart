@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:swappro/barrel.dart';
+import 'package:swappro/features/home/listing_location.dart';
 
 // Figma Dashboard palette
 const _kBg = Color(0xFFFFFFFF);
@@ -57,20 +58,16 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int _navIndex = 0;
   Future<int>? _unreadCountFuture;
-  Future<List<_ProductCardData>>? _featuredListingsFuture;
+  Future<List<_ProductCardData>>? _recentPostsFuture;
   final TextEditingController _searchController = TextEditingController();
   bool _onboardingChecked = false;
+  bool _isRefreshingPosts = false;
 
-  // Bottom-nav icons (match Figma Iconify IDs exactly).
-  //
-  // Note: iconify_flutter ships icon packs as embedded SVG strings. The
-  // "prefix:name" IDs from Figma won't render unless that icon pack is bundled.
-  // These are the closest bundled matches to keep icons visible.
   static const _navIcons = <String>[
-    Ion.home_outline,
-    Ion.apps_outline,
+    Ph.house_line_duotone,
+    Entypo.list,
     Uil.exchange,
-    Ion.person_outline,
+    Ph.user,
   ];
 
   static const _categories = [
@@ -119,31 +116,50 @@ class _HomeState extends State<Home> {
     super.didChangeDependencies();
     final api = context.read<ApiService>();
     _unreadCountFuture ??= api.getUnreadNotificationCount();
-    _featuredListingsFuture ??= _loadFeaturedListings(api);
+    _recentPostsFuture ??= _loadRecentPosts(api);
   }
 
-  Future<List<_ProductCardData>> _loadFeaturedListings(ApiService api) async {
+  Future<List<_ProductCardData>> _loadRecentPosts(ApiService api) async {
     final result = await api.searchListings(page: 1, size: 20);
     final items = result['items'];
     if (items is! List || items.isEmpty) return const [];
 
+    final listings = <Map<String, dynamic>>[];
+    for (final raw in items) {
+      if (raw is Map) listings.add(Map<String, dynamic>.from(raw));
+    }
+    await prefetchListingLocations(listings);
+
     final cards = <_ProductCardData>[];
-    for (var i = 0; i < items.length; i++) {
-      final raw = items[i];
-      if (raw is! Map) continue;
-      final json = Map<String, dynamic>.from(raw);
+    for (var i = 0; i < listings.length; i++) {
       cards.add(
-        _ProductCardData.fromListing(json, imageHeight: i.isOdd ? 251 : 217),
+        _ProductCardData.fromListing(listings[i], imageHeight: i.isOdd ? 251 : 217),
       );
     }
     return cards;
   }
 
-  Future<void> _refreshFeaturedListings() async {
+  Future<void> _refreshRecentPosts() async {
+    await _onPullRefresh();
+  }
+
+  Future<void> _onPullRefresh() async {
+    setState(() => _isRefreshingPosts = true);
+    try {
+      await _refreshHome();
+    } finally {
+      if (mounted) setState(() => _isRefreshingPosts = false);
+    }
+  }
+
+  Future<void> _refreshHome() async {
+    final api = context.read<ApiService>();
+    final posts = await _loadRecentPosts(api);
+    final unread = await api.getUnreadNotificationCount();
+    if (!mounted) return;
     setState(() {
-      _featuredListingsFuture = _loadFeaturedListings(
-        context.read<ApiService>(),
-      );
+      _recentPostsFuture = Future.value(posts);
+      _unreadCountFuture = Future.value(unread);
     });
   }
 
@@ -199,8 +215,15 @@ class _HomeState extends State<Home> {
         children: [
           SafeArea(
             bottom: false,
-            child: CustomScrollView(
-              slivers: [
+            child: RefreshIndicator(
+              onRefresh: _onPullRefresh,
+              color: Colors.transparent,
+              backgroundColor: Colors.transparent,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
@@ -216,16 +239,17 @@ class _HomeState extends State<Home> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(23, 36, 23, 0),
-                    child: _buildFeaturedHeader(),
+                    child: _buildRecentPostsHeader(),
                   ),
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(20, 12, 20, 120 + bottomInset),
-                    child: _buildFeaturedListings(),
+                    child: _buildRecentPosts(),
                   ),
                 ),
               ],
+              ),
             ),
           ),
           Positioned(
@@ -299,16 +323,23 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildFeaturedHeader() {
+  Widget _buildRecentPostsHeader() {
     return Text(
-      'Top Swaps',
+      'Recent Posts',
       style: _textStyle(size: 22, weight: FontWeight.w600),
     );
   }
 
-  Widget _buildFeaturedListings() {
+  Widget _buildRecentPosts() {
+    if (_isRefreshingPosts) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return FutureBuilder<List<_ProductCardData>>(
-      future: _featuredListingsFuture,
+      future: _recentPostsFuture,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -320,12 +351,12 @@ class _HomeState extends State<Home> {
           return Column(
             children: [
               Text(
-                'Could not load listings.',
+                'Could not load recent posts.',
                 style: _textStyle(size: 14, color: _kInkSoft),
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: _refreshFeaturedListings,
+                onPressed: _refreshRecentPosts,
                 child: const Text('Retry'),
               ),
             ],
@@ -336,7 +367,7 @@ class _HomeState extends State<Home> {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Text(
-              'No listings available yet.',
+              'No posts yet.',
               style: _textStyle(size: 14, color: _kInkSoft),
             ),
           );
@@ -349,11 +380,13 @@ class _HomeState extends State<Home> {
   Future<void> _openPropertyDetail(_ProductCardData product) async {
     PropertyDetailData detail;
     if (product.listingJson != null) {
+      await prefetchListingLocations([product.listingJson!]);
       detail = PropertyDetailData.fromListing(product.listingJson!);
     } else {
       try {
         final listing = await context.read<ApiService>().getListing(product.id);
         if (!mounted) return;
+        await prefetchListingLocations([listing]);
         detail = PropertyDetailData.fromListing(listing);
       } catch (_) {
         if (!mounted) return;
@@ -372,7 +405,7 @@ class _HomeState extends State<Home> {
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: PropertyDetailPage(data: detail),
+        child: PropertyDetailPage(data: detail, showSwapThis: true),
       ),
     );
   }
@@ -581,11 +614,7 @@ class _ProductCardData {
   }) {
     final id = (json['id'] ?? '').toString();
     final title = (json['title'] ?? '').toString();
-    final category = (json['category'] ?? '').toString().trim();
-    final condition = (json['condition'] ?? '').toString().trim();
-    final location = category.isNotEmpty
-        ? category
-        : (condition.isNotEmpty ? condition : 'Listing');
+    final location = listingDisplayLocation(json);
 
     final value = json['estimated_value'];
     final price = value is num
@@ -641,49 +670,42 @@ class _LocationSearchBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const _FilledLocationPin(size: _iconSize),
-          const Spacer(),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 72, maxWidth: 140),
-                child: TextField(
-                  controller: controller,
-                  style: textStyle(
-                    size: _textSize,
-                    weight: FontWeight.w500,
-                    color: _kInk,
-                  ),
-                  textAlign: TextAlign.left,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => onSearch(),
-                  decoration: InputDecoration(
-                    hintText: 'Search ...',
-                    hintStyle: textStyle(
-                      size: _textSize,
-                      weight: FontWeight.w300,
-                      color: _kInk,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    isCollapsed: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: textStyle(
+                size: _textSize,
+                weight: FontWeight.w500,
+                color: _kInk,
               ),
-              const SizedBox(width: _clusterGap),
-              GestureDetector(
-                onTap: onSearch,
-                behavior: HitTestBehavior.opaque,
-                child: Icon(
-                  Icons.search,
-                  size: _searchIconSize,
+              textAlign: TextAlign.left,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => onSearch(),
+              decoration: InputDecoration(
+                hintText: 'Search ...',
+                hintStyle: textStyle(
+                  size: _textSize,
+                  weight: FontWeight.w300,
                   color: _kInk,
-                  weight: 600,
                 ),
+                border: InputBorder.none,
+                isDense: true,
+                isCollapsed: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
-            ],
+            ),
+          ),
+          const SizedBox(width: _clusterGap),
+          GestureDetector(
+            onTap: onSearch,
+            behavior: HitTestBehavior.opaque,
+            child: Icon(
+              Icons.search,
+              size: _searchIconSize,
+              color: _kInk,
+              weight: 600,
+            ),
           ),
         ],
       ),

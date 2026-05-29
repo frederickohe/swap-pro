@@ -69,6 +69,21 @@ class SwapBayState extends Equatable {
     return (req['status'] ?? '').toString();
   }
 
+  static String? _swapStatus(Map<String, dynamic> req) {
+    final direct = (req['swap_status'] ?? '').toString().trim();
+    if (direct.isNotEmpty) return direct;
+    final swap = req['swap'];
+    if (swap is Map) {
+      final status = (swap['status'] ?? '').toString().trim();
+      if (status.isNotEmpty) return status;
+    }
+    return null;
+  }
+
+  static bool _isCompletedSwap(Map<String, dynamic> req) {
+    return _swapStatus(req) == 'COMPLETED';
+  }
+
   static bool _matchesTab(
     Map<String, dynamic> req,
     SwapBayTab tab,
@@ -92,11 +107,14 @@ class SwapBayState extends Equatable {
         status == 'PENDING_INITIATOR_FEE' &&
         req['initiator_fee_paid'] != true,
       SwapBayTab.readySwaps => _isReadySwap(req, status),
+      SwapBayTab.history =>
+        (isInitiator || isOwner) && _isCompletedSwap(req),
     };
   }
 
   /// Ready Swap — both initiator and listing owner, after commitment fee is paid.
   static bool _isReadySwap(Map<String, dynamic> req, String status) {
+    if (_isCompletedSwap(req)) return false;
     if (status == 'PENDING_HUB_MEETING') return true;
     if (req['initiator_fee_paid'] == true && req['owner_approved'] == true) {
       return status == 'PENDING_INITIATOR_FEE' ||
@@ -289,6 +307,24 @@ class SwapBayCubit extends Cubit<SwapBayState> {
         state.copyWith(
           actionInProgress: false,
           error: e.toString(),
+        ),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> completeSwap(String swapRequestId) async {
+    emit(state.copyWith(actionInProgress: true, clearError: true));
+    try {
+      await _apiService.completeSwapRequest(swapRequestId);
+      await load();
+      emit(state.copyWith(actionInProgress: false, clearError: true));
+      return true;
+    } catch (e) {
+      emit(
+        state.copyWith(
+          actionInProgress: false,
+          error: _friendlyError(e),
         ),
       );
       return false;

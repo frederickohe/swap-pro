@@ -1,4 +1,5 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/features/home/listing_location.dart';
 
 /// User account hub — matches Figma "User Account" frame (node 162:829).
 class Profile extends StatefulWidget {
@@ -70,6 +71,7 @@ class _ProfileState extends State<Profile> {
 
   Future<void> _openListingDetail(_ListingItem item) async {
     if (item.listingJson != null) {
+      await prefetchListingLocations([item.listingJson!]);
       if (!mounted) return;
       Navigator.push(
         context,
@@ -86,6 +88,7 @@ class _ProfileState extends State<Profile> {
     try {
       final listing = await context.read<ApiService>().getListing(id);
       if (!mounted) return;
+      await prefetchListingLocations([listing]);
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -357,7 +360,7 @@ class _ProfileState extends State<Profile> {
   Widget _buildAccountOptions(double wScale, double hScale) {
     final items = <_AccountMenuItem>[
       _AccountMenuItem(
-        label: 'Edit Details',
+        label: 'Edit Profile',
         icon: Icons.edit_outlined,
         onTap: _openEdit,
       ),
