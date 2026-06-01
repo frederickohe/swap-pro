@@ -35,30 +35,6 @@ class LogorSign extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 24 * hScale,
-            right: 24 * wScale,
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  PageTransition(
-                    type: PageTransitionType.fade,
-                    duration: const Duration(milliseconds: 400),
-                    child: const AdminSignIn(),
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
-              child: Text(
-                'Admin',
-                style: AppTypography.style(
-                  fontSize: 14 * wScale,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
             top: logoTop,
             left: 0,
             right: 0,
@@ -115,7 +91,7 @@ class _BottomPanel extends StatelessWidget {
 
     TextStyle titleStyle() => AppTypography.style(
       fontSize: 26 * wScale,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w300,
       color: LogorSign._textBlack,
       height: 40 / 32,
     );
