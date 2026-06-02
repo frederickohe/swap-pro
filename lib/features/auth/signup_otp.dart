@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
+import 'package:swappro/common_design/widgets/success_reveal_route.dart';
 
 class SignupOtp extends StatefulWidget {
   final String phone;
@@ -31,15 +32,12 @@ class _SignupOtpState extends State<SignupOtp> {
               context.read<SuccessBloc>().add(
                     ShowSuccessEvent(
                       message: 'Account verified successfully!',
-                      nextScreen: 'welcome',
+                      nextScreen: 'login',
                     ),
                   );
               Navigator.of(context).pushReplacement(
-                PageTransition(
-                  type: PageTransitionType.rightToLeftWithFade,
-                  duration: const Duration(milliseconds: 1000),
-                  reverseDuration: const Duration(milliseconds: 600),
-                  child: const Success(),
+                SuccessRevealRoute(
+                  child: const Success(delayEntrance: true),
                 ),
               );
             }

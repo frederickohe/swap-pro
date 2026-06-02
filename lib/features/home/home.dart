@@ -61,7 +61,6 @@ class _HomeState extends State<Home> {
   Future<List<_ProductCardData>>? _recentPostsFuture;
   final TextEditingController _searchController = TextEditingController();
   bool _onboardingChecked = false;
-  bool _isRefreshingPosts = false;
 
   static const _navIcons = <String>[
     Ph.house_line_duotone,
@@ -94,7 +93,19 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowOnboarding());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowOnboarding();
+      _loadInitialData();
+    });
+  }
+
+  void _loadInitialData() {
+    if (!mounted) return;
+    final api = context.read<ApiService>();
+    setState(() {
+      _unreadCountFuture = api.getUnreadNotificationCount();
+      _recentPostsFuture = _loadRecentPosts(api);
+    });
   }
 
   Future<void> _maybeShowOnboarding() async {
@@ -109,14 +120,6 @@ class _HomeState extends State<Home> {
     } catch (_) {
       // Onboarding is best-effort; never block Home.
     }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final api = context.read<ApiService>();
-    _unreadCountFuture ??= api.getUnreadNotificationCount();
-    _recentPostsFuture ??= _loadRecentPosts(api);
   }
 
   Future<List<_ProductCardData>> _loadRecentPosts(ApiService api) async {
@@ -139,18 +142,7 @@ class _HomeState extends State<Home> {
     return cards;
   }
 
-  Future<void> _refreshRecentPosts() async {
-    await _onPullRefresh();
-  }
-
-  Future<void> _onPullRefresh() async {
-    setState(() => _isRefreshingPosts = true);
-    try {
-      await _refreshHome();
-    } finally {
-      if (mounted) setState(() => _isRefreshingPosts = false);
-    }
-  }
+  Future<void> _onPullRefresh() => _refreshHome();
 
   Future<void> _refreshHome() async {
     final api = context.read<ApiService>();
@@ -215,41 +207,20 @@ class _HomeState extends State<Home> {
         children: [
           SafeArea(
             bottom: false,
-            child: RefreshIndicator(
-              onRefresh: _onPullRefresh,
-              color: Colors.transparent,
-              backgroundColor: Colors.transparent,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                  child: _buildHeader(),
                 ),
-                slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-                    child: _buildHeader(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 36),
-                    child: _buildCategoryStrip(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(23, 36, 23, 0),
-                    child: _buildRecentPostsHeader(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(20, 12, 20, 120 + bottomInset),
-                    child: _buildRecentPosts(),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _onPullRefresh,
+                    child: _buildRecentPostsFeed(120 + bottomInset),
                   ),
                 ),
               ],
-              ),
             ),
           ),
           Positioned(
@@ -330,25 +301,25 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildRecentPosts() {
-    if (_isRefreshingPosts) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+  static const _feedScrollPhysics = AlwaysScrollableScrollPhysics(
+    parent: BouncingScrollPhysics(),
+  );
 
+  /// Scrollable feed below the fixed header: categories, title, and listings.
+  /// Pull-to-refresh reloads listings only; the search bar stays fixed above.
+  Widget _buildRecentPostsFeed(double bottomPadding) {
     return FutureBuilder<List<_ProductCardData>>(
       future: _recentPostsFuture,
       builder: (context, snap) {
+        late final Widget listingsBody;
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Padding(
+          listingsBody = const Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(child: CircularProgressIndicator()),
           );
-        }
-        if (snap.hasError) {
-          return Column(
+        } else if (snap.hasError) {
+          listingsBody = Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'Could not load recent posts.',
@@ -356,23 +327,42 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: _refreshRecentPosts,
+                onPressed: _refreshHome,
                 child: const Text('Retry'),
               ),
             ],
           );
+        } else {
+          final products = snap.data ?? const [];
+          if (products.isEmpty) {
+            listingsBody = Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'No posts yet.',
+                style: _textStyle(size: 14, color: _kInkSoft),
+              ),
+            );
+          } else {
+            listingsBody = _buildProductGrid(products);
+          }
         }
-        final products = snap.data ?? const [];
-        if (products.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              'No posts yet.',
-              style: _textStyle(size: 14, color: _kInkSoft),
+
+        return ListView(
+          physics: _feedScrollPhysics,
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          children: [
+            const SizedBox(height: 36),
+            _buildCategoryStrip(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(23, 36, 23, 0),
+              child: _buildRecentPostsHeader(),
             ),
-          );
-        }
-        return _buildProductGrid(products);
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: listingsBody,
+            ),
+          ],
+        );
       },
     );
   }

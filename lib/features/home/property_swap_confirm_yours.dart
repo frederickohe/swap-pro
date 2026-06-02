@@ -199,7 +199,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
           'Confirm Your Property',
           style: AppTypography.style(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
         ),
@@ -222,7 +222,9 @@ PropertyDetailData propertyDetailFromBelonging({
     description: '',
     imageUrls: imageUrl != null && imageUrl.isNotEmpty ? [imageUrl] : const [],
     ownerName: '',
-    locationArea: subtitle.trim().isNotEmpty ? subtitle : 'Location unavailable',
+    locationArea: subtitle.trim().isNotEmpty
+        ? subtitle
+        : 'Location unavailable',
     wishlistItems: const [],
     price: price,
     date: '',

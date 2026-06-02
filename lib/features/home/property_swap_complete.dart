@@ -2,7 +2,10 @@ import 'package:swappro/barrel.dart';
 
 /// Swap flow — request sent success (Figma "Complete", node 1:524).
 class PropertySwapCompletePage extends StatefulWidget {
-  const PropertySwapCompletePage({super.key});
+  const PropertySwapCompletePage({super.key, this.delayEntrance = false});
+
+  /// When true, content entrance waits until the route reveal animation finishes.
+  final bool delayEntrance;
 
   @override
   State<PropertySwapCompletePage> createState() =>
@@ -64,7 +67,33 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
       curve: const Interval(0.45, 0.9, curve: Curves.easeOut),
     );
 
-    _entrance.forward();
+    if (widget.delayEntrance) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startEntranceWhenReady());
+    } else {
+      _entrance.forward();
+    }
+  }
+
+  void _startEntranceWhenReady() {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    final routeAnim = route?.animation;
+    if (routeAnim == null) {
+      _entrance.forward();
+      return;
+    }
+    void onStatus(AnimationStatus status) {
+      if (status == AnimationStatus.completed) {
+        routeAnim.removeStatusListener(onStatus);
+        if (mounted) _entrance.forward();
+      }
+    }
+
+    routeAnim.addStatusListener(onStatus);
+    if (routeAnim.isCompleted) {
+      routeAnim.removeStatusListener(onStatus);
+      _entrance.forward();
+    }
   }
 
   @override
@@ -73,14 +102,15 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
     super.dispose();
   }
 
-  void _goToSwapBay(BuildContext context) {
-    Navigator.of(context).pushReplacement(
+  void _goHome(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(
       PageTransition(
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: const SwapBayPage(initialTab: SwapBayTab.sent),
+        child: const Home(),
       ),
+      (route) => false,
     );
   }
 
@@ -181,7 +211,7 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _goToSwapBay(context),
+                        onTap: () => _goHome(context),
                         borderRadius: BorderRadius.circular(10 * wScale),
                         child: Ink(
                           width: 277 * wScale,

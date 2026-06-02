@@ -156,7 +156,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
           'Confirm',
           style: AppTypography.style(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
         ),

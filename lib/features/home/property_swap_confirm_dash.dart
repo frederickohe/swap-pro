@@ -1,6 +1,8 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/common_design/widgets/slide_to_confirm_swap_button.dart';
+import 'package:swappro/features/home/swap_success_reveal_route.dart';
 
-/// Final swap review — side-by-side comparison (Figma "Swap Dash 3", node 1:177).
+/// Final swap review — side-by-side comparison (Figma "Swap Dash 4", node 1:252).
 class PropertySwapConfirmDashPage extends StatelessWidget {
   const PropertySwapConfirmDashPage({super.key});
 
@@ -63,14 +65,20 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
   String? get _yourHeroImage =>
       yourProperty.imageUrls.isNotEmpty ? yourProperty.imageUrls.first : null;
 
-  String? get _otherHeroImage => otherProperty.imageUrls.isNotEmpty
-      ? otherProperty.imageUrls.first
-      : null;
+  String? get _otherHeroImage =>
+      otherProperty.imageUrls.isNotEmpty ? otherProperty.imageUrls.first : null;
 
   double? get _yourAmount => _parsePrice(yourProperty.price);
   double? get _otherAmount => _parsePrice(otherProperty.price);
 
   bool get _yoursLower => _amountIsLower(_yourAmount, _otherAmount);
+
+  bool get _pricesMatch {
+    final yours = _yourAmount;
+    final other = _otherAmount;
+    if (yours == null || other == null) return false;
+    return (yours - other).abs() <= 0.01;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,17 +93,23 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(15, 8, 15, 0),
-              child: AppScreenTopBar(title: 'Confirm Swap'),
+              child: AppScreenTopBar(title: 'Confirm Swap', centerTitle: true),
             ),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: 16),
                     _buildHeroSplit(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 28),
+                    _buildPropertyIconsRow(),
+                    const SizedBox(height: 24),
+                    _buildTitlesRow(),
+                    const SizedBox(height: 34),
                     _buildPricesRow(),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 44),
+                    _buildComparisonDetails(),
                     if (error != null) ...[
                       const SizedBox(height: 16),
                       Padding(
@@ -126,92 +140,95 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
 
   Widget _buildHeroSplit() {
     const height = 278.0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: height,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: _HeroImage(url: _yourHeroImage)),
-                  Expanded(child: _HeroImage(url: _otherHeroImage)),
-                ],
-              ),
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.swap_calls,
-                  size: 32,
-                  color: _gold,
-                ),
-              ),
-            ],
-          ),
+    return SizedBox(
+      height: height,
+      child: Row(
+        children: [
+          Expanded(child: _HeroImage(url: _yourHeroImage)),
+          Expanded(child: _HeroImage(url: _otherHeroImage)),
+        ],
+      ),
+    );
+  }
+
+  static const String _yourPropertyIconAsset =
+      'assets/img/yourpropertyicon.png';
+  static const String _otherPropertyIconAsset =
+      'assets/img/otherpropertyicon.png';
+
+  Widget _buildPropertyIconsRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 31),
+      child: SizedBox(
+        height: 88,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _PropertyIconAsset(path: _yourPropertyIconAsset),
+                const Spacer(),
+                _PropertyIconAsset(path: _otherPropertyIconAsset),
+              ],
+            ),
+            Transform.rotate(
+              angle: 1.5708,
+              child: const Icon(Icons.swap_calls, size: 42, color: _gold),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 31),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  yourProperty.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.style(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                    height: 1.15,
-                  ),
-                ),
+      ),
+    );
+  }
+
+  Widget _buildTitlesRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 31),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              yourProperty.title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.style(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+                height: 1.15,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  otherProperty.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: AppTypography.style(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                    height: 1.15,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 24),
+          Expanded(
+            child: Text(
+              otherProperty.title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: AppTypography.style(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+                height: 1.15,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPricesRow() {
-    const barWidth = 22.0;
-    const maxBarHeight = 72.0;
-    const minBarHeight = 24.0;
+    const barHeight = 8.0;
+    const minFillFraction = 0.18;
 
     final yourAmount = _yourAmount;
     final otherAmount = _otherAmount;
     final yoursLower = _yoursLower;
+    final pricesMatch = _pricesMatch;
 
     final lowerColor = _priceLower;
     final higherColor = _priceHigher;
@@ -221,40 +238,134 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
       return yourAmount > otherAmount ? yourAmount : otherAmount;
     }();
 
-    double barHeight(double? value) {
-      if (value == null || max == null || max <= 0) return 48.0;
+    double fillFraction(double? value) {
+      if (pricesMatch) return 1.0;
+      if (value == null || max == null || max <= 0) return minFillFraction;
       final ratio = (value / max).clamp(0.0, 1.0);
-      return minBarHeight + (maxBarHeight - minBarHeight) * ratio;
+      return minFillFraction + (1 - minFillFraction) * ratio;
     }
 
+    final yourColor = pricesMatch
+        ? higherColor
+        : (yoursLower ? lowerColor : higherColor);
+    final otherColor = pricesMatch
+        ? higherColor
+        : (yoursLower ? higherColor : lowerColor);
+
+    final yourPrice = _formatDisplayPrice(yourProperty.price);
+    final otherPrice = _formatDisplayPrice(otherProperty.price);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 27),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      padding: const EdgeInsets.symmetric(horizontal: 31),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: _PriceBarColumn(
-              price: _formatDisplayPrice(yourProperty.price),
-              barHeight: barHeight(yourAmount),
-              barWidth: barWidth,
-              maxBarHeight: maxBarHeight,
-              color: yoursLower ? lowerColor : higherColor,
-              alignEnd: false,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _PriceLabel(
+                  price: yourPrice,
+                  color: yourColor,
+                  alignEnd: false,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _PriceLabel(
+                  price: otherPrice,
+                  color: otherColor,
+                  alignEnd: true,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _PriceBarColumn(
-              price: _formatDisplayPrice(otherProperty.price),
-              barHeight: barHeight(otherAmount),
-              barWidth: barWidth,
-              maxBarHeight: maxBarHeight,
-              color: yoursLower ? higherColor : lowerColor,
-              alignEnd: true,
-            ),
+          const SizedBox(height: 32),
+          _PriceTrack(
+            fillFraction: fillFraction(yourAmount),
+            barHeight: barHeight,
+            color: yourColor,
+          ),
+          const SizedBox(height: 14),
+          _PriceTrack(
+            fillFraction: fillFraction(otherAmount),
+            barHeight: barHeight,
+            color: otherColor,
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildComparisonDetails() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 31),
+      child: Column(
+        children: [
+          _detailRow(
+            label: 'Category',
+            icon: Icons.category_outlined,
+            left: yourProperty.category,
+            right: otherProperty.category,
+          ),
+          const SizedBox(height: 36),
+          _detailRow(
+            label: 'Location',
+            icon: Icons.location_on_outlined,
+            left: yourProperty.locationArea,
+            right: otherProperty.locationArea,
+          ),
+          const SizedBox(height: 36),
+          _detailRow(
+            label: 'Listed',
+            icon: Icons.calendar_today_outlined,
+            left: yourProperty.date,
+            right: otherProperty.date,
+          ),
+          const SizedBox(height: 36),
+          _detailRow(
+            label: 'Condition',
+            icon: Icons.verified_outlined,
+            left: yourProperty.status,
+            right: otherProperty.status,
+          ),
+          const SizedBox(height: 36),
+          _detailRow(
+            label: 'Receipts',
+            icon: Icons.receipt_long_outlined,
+            left: yourProperty.receipts,
+            right: otherProperty.receipts,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow({
+    required String label,
+    required IconData icon,
+    required String left,
+    required String right,
+  }) {
+    return _ComparisonDetailRow(
+      left: _SwapDetailCell(
+        icon: icon,
+        label: label,
+        value: _displayValue(left),
+      ),
+      right: _SwapDetailCell(
+        icon: icon,
+        label: label,
+        value: _displayValue(right),
+        alignEnd: true,
+      ),
+    );
+  }
+
+  static String _displayValue(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed == '—') return '—';
+    return trimmed;
   }
 
   Future<void> _submitSwap(BuildContext context) async {
@@ -266,15 +377,7 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
 
     if (created != null) {
       cubit.reset();
-      Navigator.pushReplacement(
-        context,
-        PageTransition(
-          type: PageTransitionType.rightToLeftWithFade,
-          duration: const Duration(milliseconds: 350),
-          reverseDuration: const Duration(milliseconds: 300),
-          child: const PropertySwapCompletePage(),
-        ),
-      );
+      Navigator.of(context).pushReplacement(SwapSuccessRevealRoute());
       return;
     }
 
@@ -285,54 +388,14 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
   }
 
   Widget _buildConfirmButton(BuildContext context) {
-    return GestureDetector(
-      onTap: submitting ? null : () => _submitSwap(context),
-      child: Opacity(
-        opacity: submitting ? 0.6 : 1,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: _ink,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Center(
-                  child: submitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Confirm Swap',
-                          style: AppTypography.style(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              if (!submitting)
-                const Icon(
-                  Icons.keyboard_backspace,
-                  color: Colors.white,
-                  size: 26,
-                  textDirection: TextDirection.rtl,
-                ),
-            ],
-          ),
-        ),
-      ),
+    return SlideToConfirmSwapButton(
+      loading: submitting,
+      enabled: !submitting,
+      trackColor: _ink,
+      height: 62,
+      onConfirm: () => _submitSwap(context),
     );
   }
-
 
   static double? _parsePrice(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^\d.]'), '');
@@ -346,72 +409,208 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
   }
 
   static String _formatDisplayPrice(String raw) {
-    final trimmed = raw.trim();
+    var trimmed = raw.trim();
     if (trimmed.isEmpty) return '—';
-    if (trimmed.startsWith('₵') ||
-        trimmed.startsWith('\$') ||
-        trimmed.startsWith('GH')) {
+    if (trimmed.startsWith('GH₵')) {
+      trimmed = '₵${trimmed.substring(3)}';
+    } else if (trimmed.startsWith('GH')) {
+      trimmed = trimmed.substring(2).trimLeft();
+    }
+    if (trimmed.startsWith('₵') || trimmed.startsWith('\$')) {
       return trimmed;
     }
     return '₵ $trimmed';
   }
 }
 
-class _PriceBarColumn extends StatelessWidget {
-  const _PriceBarColumn({
+class _ComparisonDetailRow extends StatelessWidget {
+  const _ComparisonDetailRow({required this.left, required this.right});
+
+  final Widget left;
+  final Widget right;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 24),
+        Expanded(child: right),
+      ],
+    );
+  }
+}
+
+class _SwapDetailCell extends StatelessWidget {
+  const _SwapDetailCell({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  static const Color _gold = Color(0xFFC3B649);
+
+  @override
+  Widget build(BuildContext context) {
+    final crossAlign = alignEnd
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
+    final textAlign = alignEnd ? TextAlign.right : TextAlign.left;
+
+    return Column(
+      crossAxisAlignment: crossAlign,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: alignEnd
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          children: [
+            Icon(icon, size: 24, color: _gold),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: textAlign,
+                style: AppTypography.style(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: textAlign,
+          style: AppTypography.style(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PropertyIconAsset extends StatelessWidget {
+  const _PropertyIconAsset({required this.path});
+
+  final String path;
+
+  static const double _width = 90;
+  static const double _height = 64;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _width,
+      height: _height,
+      child: Image.asset(
+        path,
+        fit: BoxFit.contain,
+        errorBuilder: (_, e, s) => const Icon(
+          Icons.image_not_supported_outlined,
+          size: 48,
+          color: Color(0xFFC3B649),
+        ),
+      ),
+    );
+  }
+}
+
+class _PriceLabel extends StatelessWidget {
+  const _PriceLabel({
     required this.price,
-    required this.barHeight,
-    required this.barWidth,
-    required this.maxBarHeight,
     required this.color,
     required this.alignEnd,
   });
 
   final String price;
-  final double barHeight;
-  final double barWidth;
-  final double maxBarHeight;
   final Color color;
   final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    final crossAlign =
-        alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Align(
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          price,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+          style: AppTypography.style(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: color,
+            height: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-    return Column(
-      crossAxisAlignment: crossAlign,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
-          child: Text(
-            price,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-            style: AppTypography.style(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: color,
-              height: 1.2,
-            ),
+class _PriceTrack extends StatelessWidget {
+  const _PriceTrack({
+    required this.fillFraction,
+    required this.barHeight,
+    required this.color,
+  });
+
+  final double fillFraction;
+  final double barHeight;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final trackWidth = constraints.maxWidth;
+        final fillWidth = trackWidth * fillFraction.clamp(0.0, 1.0);
+        final radius = BorderRadius.circular(barHeight / 2);
+
+        return SizedBox(
+          width: trackWidth,
+          height: barHeight,
+          child: Stack(
+            children: [
+              Container(
+                width: trackWidth,
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: radius,
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: fillWidth,
+                  height: barHeight,
+                  decoration: BoxDecoration(color: color, borderRadius: radius),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: maxBarHeight,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: barWidth,
-              height: barHeight,
-              color: color,
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -441,4 +640,3 @@ class _HeroImage extends StatelessWidget {
     );
   }
 }
-

@@ -13,9 +13,23 @@ class PropertySwapSettlementSheet extends StatelessWidget {
 
   static const Color _gold = Color(0xFFC3B649);
   static const Color _ink = Color(0xFF111111);
-  static const Color _bodyInk = Color(0xFF0F111D);
+  static const Color _inkSoft = Color(0xFF787676);
   static const Color _priceLower = Color(0xFF731A39);
   static const Color _priceHigher = Color(0xFF1A8118);
+
+  static final TextStyle _bodyTextStyle = AppTypography.style(
+    fontSize: 13,
+    fontWeight: FontWeight.w300,
+    color: _inkSoft,
+    height: 1.4,
+  );
+
+  static final TextStyle _titleTextStyle = AppTypography.style(
+    fontSize: 14,
+    fontWeight: FontWeight.w300,
+    color: _ink,
+    height: 1.2,
+  );
 
   static Future<void> show(
     BuildContext context, {
@@ -37,9 +51,8 @@ class PropertySwapSettlementSheet extends StatelessWidget {
   String? get _yourImage =>
       yourProperty.imageUrls.isNotEmpty ? yourProperty.imageUrls.first : null;
 
-  String? get _otherImage => otherProperty.imageUrls.isNotEmpty
-      ? otherProperty.imageUrls.first
-      : null;
+  String? get _otherImage =>
+      otherProperty.imageUrls.isNotEmpty ? otherProperty.imageUrls.first : null;
 
   double? get _yourAmount => _parsePrice(yourProperty.price);
   double? get _otherAmount => _parsePrice(otherProperty.price);
@@ -49,6 +62,16 @@ class PropertySwapSettlementSheet extends StatelessWidget {
     final other = _otherAmount;
     if (yours == null || other == null) return true;
     return (yours - other).abs() > 0.01;
+  }
+
+  String get _topUpPrompt {
+    if (!_hasPriceMismatch) return '';
+    final yoursLower = _amountIsLower(_yourAmount, _otherAmount);
+    if (yoursLower) {
+      return 'Do you agree to make a top-up payment for this transaction?';
+    }
+    return 'Do you want to ask the other party to make a top-up payment '
+        'for this transaction?';
   }
 
   @override
@@ -72,42 +95,28 @@ class PropertySwapSettlementSheet extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildSwapVisual(),
-                  const SizedBox(height: 8),
-                  _buildTitlesRow(),
-                  const SizedBox(height: 12),
-                  _buildPricesRow(yoursLower: yoursLower),
+                  _buildSwapItemsGroup(yoursLower: yoursLower),
                   if (_hasPriceMismatch) ...[
                     const SizedBox(height: 16),
                     Text(
                       'The transaction is not a perfect match because of '
                       'price difference',
                       textAlign: TextAlign.center,
-                      style: AppTypography.style(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: _bodyInk,
-                        height: 1.35,
-                      ),
+                      style: _bodyTextStyle,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
-                      'Do you agree to make topup payment for this transaction?',
+                      _topUpPrompt,
                       textAlign: TextAlign.center,
-                      style: AppTypography.style(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: _bodyInk,
-                        height: 1.35,
-                      ),
+                      style: _bodyTextStyle,
                     ),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   _buildAgreeButton(
                     context,
                     label: _hasPriceMismatch
                         ? 'Agree Difference Settlement'
-                        : 'Confirm Swap',
+                        : 'Confirm',
                   ),
                 ],
               ),
@@ -118,30 +127,43 @@ class PropertySwapSettlementSheet extends StatelessWidget {
     );
   }
 
+  Widget _buildSwapItemsGroup({required bool yoursLower}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSwapVisual(),
+        const SizedBox(height: 12),
+        _buildTitlesRow(),
+        const SizedBox(height: 8),
+        _buildPricesRow(yoursLower: yoursLower),
+      ],
+    );
+  }
+
   Widget _buildSwapVisual() {
+    const thumbWidth = 180.0;
+    const thumbHeight = 118.0;
+
     return SizedBox(
-      height: 150,
+      height: 130,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _PropertyThumb(
-                  imageUrl: _yourImage,
-                  width: 165,
-                  height: 125,
-                ),
+              _PropertyThumb(
+                imageUrl: _yourImage,
+                width: thumbWidth,
+                height: thumbHeight,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _PropertyThumb(
-                  imageUrl: _otherImage,
-                  width: 165,
-                  height: 125,
-                  alignEnd: true,
-                ),
+              const SizedBox(width: 10),
+              _PropertyThumb(
+                imageUrl: _otherImage,
+                width: thumbWidth,
+                height: thumbHeight,
               ),
             ],
           ),
@@ -159,11 +181,7 @@ class PropertySwapSettlementSheet extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.swap_calls,
-              size: 32,
-              color: _gold,
-            ),
+            child: const Icon(Icons.swap_calls, size: 32, color: _gold),
           ),
         ],
       ),
@@ -179,27 +197,17 @@ class PropertySwapSettlementSheet extends StatelessWidget {
             yourProperty.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.style(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-              height: 1.2,
-            ),
+            style: _titleTextStyle,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             otherProperty.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.right,
-            style: AppTypography.style(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-              height: 1.2,
-            ),
+            style: _titleTextStyle,
           ),
         ),
       ],
@@ -207,6 +215,13 @@ class PropertySwapSettlementSheet extends StatelessWidget {
   }
 
   Widget _buildPricesRow({required bool yoursLower}) {
+    final yourColor = !_hasPriceMismatch
+        ? _priceHigher
+        : (yoursLower ? _priceLower : _priceHigher);
+    final otherColor = !_hasPriceMismatch
+        ? _priceHigher
+        : (yoursLower ? _priceHigher : _priceLower);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -215,21 +230,21 @@ class PropertySwapSettlementSheet extends StatelessWidget {
             _formatDisplayPrice(yourProperty.price),
             style: AppTypography.style(
               fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: yoursLower ? _priceLower : _priceHigher,
+              fontWeight: FontWeight.w500,
+              color: yourColor,
               height: 1.2,
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             _formatDisplayPrice(otherProperty.price),
             textAlign: TextAlign.right,
             style: AppTypography.style(
               fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: yoursLower ? _priceHigher : _priceLower,
+              fontWeight: FontWeight.w500,
+              color: otherColor,
               height: 1.2,
             ),
           ),
@@ -257,22 +272,29 @@ class PropertySwapSettlementSheet extends StatelessWidget {
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: _ink,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
+            Flexible(
               child: Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: AppTypography.style(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
               ),
             ),
+            const SizedBox(width: 8),
             const Icon(
               Icons.keyboard_backspace,
               color: Colors.white,
@@ -313,17 +335,15 @@ class _PropertyThumb extends StatelessWidget {
     required this.imageUrl,
     required this.width,
     required this.height,
-    this.alignEnd = false,
   });
 
   final String? imageUrl;
   final double width;
   final double height;
-  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    final child = ClipRRect(
+    return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: SizedBox(
         width: width,
@@ -337,10 +357,6 @@ class _PropertyThumb extends StatelessWidget {
             : _placeholder(),
       ),
     );
-    if (alignEnd) {
-      return Align(alignment: Alignment.topRight, child: child);
-    }
-    return child;
   }
 
   Widget _placeholder() {
