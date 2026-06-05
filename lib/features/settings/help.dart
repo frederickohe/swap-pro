@@ -30,24 +30,22 @@ class HelpPage extends StatelessWidget {
       title: 'Help & Support',
       body: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
-        child: SettingsMenuCard(
-          child: Column(
-            children: [
-              SettingsMenuTile(
-                title: 'Email Support',
-                subtitle: 'support@useswappro.com',
-                icon: Icons.email_outlined,
-                onTap: _launchEmail,
-              ),
-              SettingsMenuTile(
-                title: 'Our Website',
-                subtitle: 'www.useswappro.com',
-                icon: Icons.language_outlined,
-                onTap: _launchWebsite,
-                showDivider: true,
-              ),
-            ],
-          ),
+        child: Column(
+          children: [
+            SettingsMenuTile(
+              title: 'Email Support',
+              subtitle: 'support@useswappro.com',
+              icon: Icons.email_outlined,
+              onTap: _launchEmail,
+            ),
+            SettingsMenuTile(
+              title: 'Our Website',
+              subtitle: 'www.useswappro.com',
+              icon: Icons.language_outlined,
+              onTap: _launchWebsite,
+              showDivider: true,
+            ),
+          ],
         ),
       ),
     );

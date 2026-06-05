@@ -1,4 +1,4 @@
-package com.lambdar.swappro
+package com.swappro.app
 
 import io.flutter.embedding.android.FlutterActivity
 

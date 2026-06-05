@@ -419,7 +419,7 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
             urlTemplate:
                 'https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey={apiKey}',
             additionalOptions: {'apiKey': AppConfig.geoapifyApiKey},
-            userAgentPackageName: 'com.lambdar.swappro',
+            userAgentPackageName: 'com.swappro.app',
             maxZoom: 20,
           ),
           if (markers.isNotEmpty) MarkerLayer(markers: markers),

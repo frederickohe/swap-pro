@@ -191,7 +191,7 @@ class _AddBelongingLocationPickerPageState
                         urlTemplate:
                             'https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey={apiKey}',
                         additionalOptions: {'apiKey': apiKey},
-                        userAgentPackageName: 'com.lambdar.swappro',
+                        userAgentPackageName: 'com.swappro.app',
                         maxZoom: 20,
                       ),
                       if (_selected != null)

@@ -627,7 +627,7 @@ class _ProductCardData {
   }
 }
 
-/// Figma "Location Search" (node 159:602) — pin left, compact search cluster right.
+/// Figma "Location Search" (node 159:602) — text field with search action on the right.
 class _LocationSearchBar extends StatelessWidget {
   const _LocationSearchBar({
     required this.controller,
@@ -641,7 +641,6 @@ class _LocationSearchBar extends StatelessWidget {
   textStyle;
 
   static const double _height = 50;
-  static const double _iconSize = 15;
   static const double _searchIconSize = 20;
   static const double _textSize = 12;
   static const double _clusterGap = 23;
@@ -659,8 +658,6 @@ class _LocationSearchBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const _FilledLocationPin(size: _iconSize),
-          const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: controller,
@@ -700,65 +697,6 @@ class _LocationSearchBar extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Filled black map pin with white center dot (Figma Icon / Location).
-class _FilledLocationPin extends StatelessWidget {
-  const _FilledLocationPin({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _FilledLocationPinPainter(color: _kInk),
-        size: Size(size, size),
-      ),
-    );
-  }
-}
-
-class _FilledLocationPinPainter extends CustomPainter {
-  _FilledLocationPinPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final pinPath = Path()
-      ..moveTo(w * 0.5, h * 0.92)
-      ..cubicTo(w * 0.22, h * 0.58, w * 0.08, h * 0.42, w * 0.08, h * 0.28)
-      ..arcToPoint(
-        Offset(w * 0.92, h * 0.28),
-        radius: Radius.circular(w * 0.42),
-        clockwise: true,
-      )
-      ..cubicTo(w * 0.92, h * 0.42, w * 0.78, h * 0.58, w * 0.5, h * 0.92)
-      ..close();
-
-    canvas.drawPath(pinPath, Paint()..color = color);
-
-    final dotCenter = Offset(w * 0.5, h * 0.30);
-    canvas.drawCircle(dotCenter, w * 0.14, Paint()..color = Colors.white);
-    canvas.drawCircle(
-      dotCenter,
-      w * 0.14,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.04,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _FilledLocationPinPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
 

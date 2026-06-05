@@ -73,6 +73,9 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Choose from gallery'),
+              subtitle: Text(
+                'Select up to ${_maxPhotos - _photos.length} photo(s)',
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
           ],
@@ -84,13 +87,31 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
 
     setState(() => _pickingImage = true);
     try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        imageQuality: 85,
-        maxWidth: 1400,
-      );
-      if (picked == null || !mounted) return;
-      setState(() => _photos.add(File(picked.path)));
+      final picker = ImagePicker();
+      final remaining = _maxPhotos - _photos.length;
+
+      if (source == ImageSource.gallery) {
+        final picked = await picker.pickMultiImage(
+          imageQuality: 85,
+          maxWidth: 1400,
+          limit: remaining,
+        );
+        if (picked.isEmpty || !mounted) return;
+        setState(() {
+          for (final item in picked) {
+            if (_photos.length >= _maxPhotos) break;
+            _photos.add(File(item.path));
+          }
+        });
+      } else {
+        final picked = await picker.pickImage(
+          source: source,
+          imageQuality: 85,
+          maxWidth: 1400,
+        );
+        if (picked == null || !mounted) return;
+        setState(() => _photos.add(File(picked.path)));
+      }
     } finally {
       if (mounted) setState(() => _pickingImage = false);
     }

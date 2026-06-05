@@ -590,6 +590,51 @@ class _LabeledField extends StatelessWidget {
   }
 }
 
+/// Light grey dropdown overlay — matches [_BelongingFormField] fill, no shadow.
+class _BelongingDropdownMenuTheme extends StatelessWidget {
+  final double menuRadius;
+  final Widget child;
+
+  const _BelongingDropdownMenuTheme({
+    required this.menuRadius,
+    required this.child,
+  });
+
+  static const Color fieldBg = Color(0xFFF5F4F8);
+
+  @override
+  Widget build(BuildContext context) {
+    final menuShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(menuRadius),
+    );
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: fieldBg,
+        highlightColor: fieldBg.withValues(alpha: 0.6),
+        splashColor: Colors.transparent,
+        menuTheme: MenuThemeData(
+          style: MenuStyle(
+            elevation: const WidgetStatePropertyAll(0),
+            shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+            backgroundColor: const WidgetStatePropertyAll(fieldBg),
+            shape: WidgetStatePropertyAll(menuShape),
+          ),
+        ),
+        dropdownMenuTheme: DropdownMenuThemeData(
+          menuStyle: MenuStyle(
+            elevation: const WidgetStatePropertyAll(0),
+            shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+            backgroundColor: const WidgetStatePropertyAll(fieldBg),
+            shape: WidgetStatePropertyAll(menuShape),
+          ),
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 class _BelongingFormField extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -744,32 +789,37 @@ class _PriceWithCurrencyFieldState extends State<_PriceWithCurrencyField> {
         children: [
           SizedBox(
             width: 96,
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: widget.currency,
-                isExpanded: true,
-                padding: const EdgeInsets.only(left: 12, right: 4),
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF111111),
-                  size: 22,
-                ),
-                items: widget.currencies
-                    .map(
-                      (code) => DropdownMenuItem<String>(
-                        value: code,
-                        child: Text(
-                          code,
-                          style: AppTypography.style(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF111111),
+            child: _BelongingDropdownMenuTheme(
+              menuRadius: widget.radius,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: widget.currency,
+                  isExpanded: true,
+                  dropdownColor: _BelongingDropdownMenuTheme.fieldBg,
+                  borderRadius: BorderRadius.circular(widget.radius),
+                  padding: const EdgeInsets.only(left: 12, right: 4),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF111111),
+                    size: 22,
+                  ),
+                  items: widget.currencies
+                      .map(
+                        (code) => DropdownMenuItem<String>(
+                          value: code,
+                          child: Text(
+                            code,
+                            style: AppTypography.style(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF111111),
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: widget.onCurrencyChanged,
+                      )
+                      .toList(),
+                  onChanged: widget.onCurrencyChanged,
+                ),
               ),
             ),
           ),
@@ -984,35 +1034,43 @@ class _BelongingDropdownField extends StatelessWidget {
         color: const Color(0xFFF5F4F8),
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          hint: Text(
-            hint,
-            style: AppTypography.style(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF111111),
+      child: _BelongingDropdownMenuTheme(
+        menuRadius: radius,
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            dropdownColor: _BelongingDropdownMenuTheme.fieldBg,
+            borderRadius: BorderRadius.circular(radius),
+            hint: Text(
+              hint,
+              style: AppTypography.style(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF111111),
+              ),
             ),
-          ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF111111)),
-          items: options
-              .map(
-                (option) => DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(
-                    option,
-                    style: AppTypography.style(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF111111),
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF111111),
+            ),
+            items: options
+                .map(
+                  (option) => DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: AppTypography.style(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF111111),
+                      ),
                     ),
                   ),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
+                )
+                .toList(),
+            onChanged: onChanged,
+          ),
         ),
       ),
     );
