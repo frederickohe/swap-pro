@@ -1,0 +1,382 @@
+================================================================================
+SWAP PRO — USSD FEATURE UPDATE
+Software Requirements Document (SRD)
+================================================================================
+Document: USSD Feature Innovation Analysis
+App: Swap Pro (com.lambdar.swappro)
+Date: June 2, 2026
+Status: Proposal / Discovery
+================================================================================
+
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+
+Swap Pro currently has no USSD integration. Payments flow through Paystack in a
+WebView, authentication uses SMS OTP, and the core user journey is:
+
+  Listing → Swap Request → Accept → Pay Fee → Meetup → Complete
+
+Given the Ghana market focus (GH₵ currency, Ghana Card verification, phone-based
+auth), USSD is a strong fit for extending reach, improving trust, and providing
+fallback paths when mobile data is unreliable.
+
+This document outlines innovative USSD feature ideas mapped to existing Swap Pro
+flows, technical feasibility, and a recommended MVP scope.
+
+
+2. CURRENT APP CONTEXT
+--------------------------------------------------------------------------------
+
+2.1 Existing Features (Relevant to USSD)
+  - Property listings and swap requests
+  - Swap Bay tabs: Sent, Received, Accepted, Ready Swap, History
+  - Price-difference settlement (PropertySwapSettlementSheet)
+  - Commitment / transaction fee payment via Paystack (SwapCommitmentPage)
+  - Meetup details and swap completion (GoForSwapPage)
+  - Phone-based signup with OTP verification
+  - Ghana Card field in user profile and signup
+  - Server-unreachable handling when backend is offline
+
+2.2 Current Payment Flow
+  - SwapCommitmentPage opens Paystack checkout WebView
+  - Backend endpoints:
+      POST /api/v1/swaps/requests — create swap (no payment at creation)
+      initializeInitiatorFeePayment — start Paystack payment
+      confirm-initiator-fee — verify Paystack payment
+  - On success: swap moves to "Ready Swap"; receiver details sent to phone
+
+2.3 Current Gaps USSD Can Address
+  - Payment requires internet + Paystack WebView
+  - Swap accept/reject only possible inside the app
+  - In-person handoff completion relies on app-based confirmation
+  - Users with unreliable data or feature phones are underserved
+
+
+3. HIGHEST-IMPACT USSD FEATURE IDEAS
+--------------------------------------------------------------------------------
+
+3.1 USSD Fallback for Commitment Fee & Top-Up Settlement
+--------------------------------------------------------------------------------
+Priority: HIGH
+
+Description:
+  After a swap is accepted, offer "Pay with MoMo USSD" alongside the existing
+  Paystack option on SwapCommitmentPage and PropertySwapSettlementSheet.
+
+User Flow:
+  1. User accepts swap or agrees to top-up settlement
+  2. App displays two payment options: Paystack (existing) and MoMo USSD (new)
+  3. User taps "Pay with MoMo USSD"
+  4. App opens device dialer with pre-filled USSD code, e.g.:
+       *170*7*MERCHANT_CODE*AMOUNT*REF#
+     (MTN MoMo merchant USSD format; codes vary by network)
+  5. User completes payment on phone keypad
+  6. Backend matches REF to swapRequestId via MoMo/Paystack webhook
+  7. Swap status updates to "Ready Swap"
+
+Why Innovative:
+  Provides a payment path that does not require the app or mobile data — only
+  cellular connectivity. Complements existing server-unreachable handling.
+
+Affected Components:
+  - SwapCommitmentPage
+  - PropertySwapSettlementSheet
+  - ApiService (new USSD payment init/confirm endpoints)
+  - Backend payment webhook handler
+
+
+3.2 Accept / Reject Swap Requests via USSD (Notification Bridge)
+--------------------------------------------------------------------------------
+Priority: HIGH
+
+Description:
+  Allow users to accept or decline incoming swap requests without opening the
+  app, triggered by SMS notification with embedded USSD short code.
+
+User Flow:
+  1. User receives swap request (Swap Bay → Received tab equivalent)
+  2. System sends SMS:
+       "Swap Pro: Kwame wants to swap 'BMW Forza' for your 'Honda Civic'.
+        Dial *920*48*123456*1# to Accept or *2# to Decline."
+  3. User dials USSD code from any phone
+  4. Backend maps short code + request ID to existing swap accept/reject APIs
+  5. Both parties receive SMS confirmation of status change
+
+Why Innovative:
+  Turns swap negotiation into instant action from any phone, including when the
+  app is closed or mobile data is unavailable.
+
+Affected Components:
+  - Swap Bay (Received tab)
+  - Backend swap request status APIs
+  - SMS + USSD gateway integration
+  - Notification service
+
+
+3.3 Dual-Party "Handoff Confirm" via USSD (Trust Layer)
+--------------------------------------------------------------------------------
+Priority: HIGH
+
+Description:
+  At the in-person meetup stage, require both parties to confirm handoff via
+  USSD before the swap is marked COMPLETED. Reduces fraud risk during P2P
+  physical exchanges.
+
+User Flow:
+  1. Swap reaches "Ready Swap" status; meetup details shown in GoForSwapPage
+  2. Each party receives a unique 4-digit handoff PIN via SMS
+  3. At meetup, both parties dial:
+       *920*48*SWAP_ID*PIN#
+  4. Backend validates both confirmations within a time window (e.g. 30 minutes)
+  5. Only when both confirm: swap status → COMPLETED; escrow/top-up finalizes
+
+Why Innovative:
+  USSD becomes a fraud-prevention handshake for P2P swaps — harder to fake than
+  a single device tapping "Complete."
+
+Affected Components:
+  - GoForSwapPage (completion flow)
+  - Backend swap completion API
+  - USSD gateway + PIN generation service
+
+
+3.4 USSD Swap Status Hotline (No Smartphone Required)
+--------------------------------------------------------------------------------
+Priority: MEDIUM
+
+Description:
+  A USSD menu accessible from any phone for checking swap status without the app.
+
+User Flow:
+  User dials *920*48# and sees menu:
+    1. Pending requests (count + listing names)
+    2. Ready swaps (meetup code; full address hidden until fee paid)
+    3. Last payment status
+
+Why Innovative:
+  Extends Swap Pro beyond the smartphone — useful for sellers who list through
+  a family member's phone or operate in low-connectivity areas.
+
+Affected Components:
+  - Backend USSD menu handler
+  - User phone number authentication on USSD session
+  - Swap status query APIs
+
+
+4. SECONDARY FEATURE IDEAS
+--------------------------------------------------------------------------------
+
+4.1 Listing Inquiry by Code
+  - Dial: *920*48*LISTING_ID#
+  - Returns: price, title, location summary
+  - Use case: quick check before sending swap from PropertyDetailPage
+
+4.2 Meetup Safe-Verify
+  - Before showing full counterparty phone in GoForSwapPage, require USSD
+    verification from registered phone number
+  - Adds identity confirmation before sensitive meetup data is exposed
+
+4.3 Price-Difference Escrow Release
+  - Top-up payer confirms receipt via USSD
+  - Receiver confirms item received via USSD
+  - Ties directly to PropertySwapSettlementSheet settlement logic
+
+4.4 Ghana Card–Linked High-Value Swap Gate
+  - Swaps above a configurable GH₵ threshold require USSD confirmation from
+    verified phone before meetup details unlock
+  - Leverages existing Ghana Card field in signup and profile
+
+
+5. TECHNICAL FEASIBILITY
+--------------------------------------------------------------------------------
+
+5.1 Approach Options
+
+  +-------------------------------------------------------------------------+
+  | Approach              | Pros                        | Cons              |
+  +-------------------------------------------------------------------------+
+  | App launches USSD     | Fast to ship                | User must tap     |
+  | dialer (url_launcher  | No telco contract needed    | "Call"; iOS       |
+  | → tel:*170#...)       | Works with existing MoMo    | support limited;  |
+  |                       | merchant codes              | codes vary by     |
+  |                       |                             | network           |
+  +-------------------------------------------------------------------------+
+  | Dedicated short code  | Full menus                  | Needs backend     |
+  | (*920*48#) via telco | Works on feature phones     | USSD gateway +    |
+  | /aggregator (Hubtel,  | SMS + USSD together         | commercial setup  |
+  | Africa's Talking)     | True offline-first UX       |                   |
+  +-------------------------------------------------------------------------+
+  | Hybrid (RECOMMENDED)  | App for rich UX             | Two channels to   |
+  |                       | USSD/SMS for payments,      | maintain          |
+  |                       | accept/reject, handoff      |                   |
+  +-------------------------------------------------------------------------+
+
+5.2 Platform Notes
+  - Android: can deep-link into MoMo USSD via tel: URI
+  - iOS: limited to opening the dialer; full USSD session support is restricted
+  - Server-driven short code (*920*48#) required for features 3.2–3.4 to work
+    on feature phones and without the app installed
+
+5.3 Flutter Implementation (App-Side)
+  - Use url_launcher package (already used in go_for_swap.dart) for USSD dialer
+  - New UI: payment method selector on SwapCommitmentPage
+  - New API calls: initializeUssdPayment, getUssdPaymentStatus
+  - Deep link handler optional: return user to app after payment confirmation SMS
+
+5.4 Backend Requirements (New)
+  - USSD gateway integration (Hubtel, Africa's Talking, or direct telco)
+  - Webhook handlers for MoMo payment confirmation
+  - USSD session state machine for menu navigation
+  - Short-code mapping: request ID ↔ USSD input
+  - Handoff PIN generation and dual-confirm validation
+  - SMS notification service for swap events
+
+
+6. RECOMMENDED MVP SCOPE
+--------------------------------------------------------------------------------
+
+Phase 1 — Smallest Valuable Slice:
+
+  1. USSD MoMo Pay for commitment fee
+     - Add to SwapCommitmentPage alongside existing Paystack option
+     - Backend: generate payment reference + USSD code string
+     - Webhook: confirm payment → move swap to Ready Swap
+
+  2. SMS + USSD Accept/Reject for received swap requests
+     - Trigger SMS on new swap request to receiver
+     - USSD short code maps to accept/reject API
+     - SMS confirmation on status change
+
+  3. Dual Confirm at Meetup
+     - Generate handoff PINs for both parties
+     - USSD confirm before GoForSwapPage completion
+     - Swap marked COMPLETED only after both confirmations
+
+Rationale:
+  This trio covers the three highest-friction points in the current flow:
+    - Pay without data
+    - Respond without opening the app
+    - Trust at in-person handoff
+
+  All three plug directly into existing flows without a full product redesign.
+
+
+7. ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+
+Sequence: USSD MoMo Payment for Commitment Fee
+
+  User
+    → Swap Pro App: Accept swap, tap "Pay via USSD"
+    → User device dialer: Opens *170*...*REF#
+    → Mobile Money network: User completes payment
+    → Swap Pro Backend: Receives payment webhook from MoMo/Paystack
+    → Swap Pro App: Swap moves to "Ready Swap" (poll or push notification)
+
+Sequence: USSD Accept/Reject
+
+  User
+    → USSD Gateway: Dials *920*48*REQ*1# (Accept)
+    → Swap Pro Backend: Updates swap status via accept/reject API
+    → User: Receives SMS confirmation
+
+Sequence: Dual Handoff Confirm
+
+  Party A + Party B (at meetup)
+    → USSD Gateway: Each dials *920*48*SWAP_ID*PIN#
+    → Swap Pro Backend: Validates both PINs within time window
+    → Swap Pro Backend: Marks swap COMPLETED; releases escrow if applicable
+    → Both parties: Receive SMS confirmation
+
+
+8. PROPOSED BACKEND API ENDPOINTS (NEW)
+--------------------------------------------------------------------------------
+
+  POST   /api/v1/payment/ussd/initiate
+         Body: { swap_request_id, amount, payment_type }
+         Returns: { ussd_code, reference, expires_at }
+
+  GET    /api/v1/payment/ussd/status/{reference}
+         Returns: { status: pending|confirmed|expired, swap_request_id }
+
+  POST   /api/v1/swaps/requests/{id}/ussd-respond
+         Body: { action: accept|reject, phone }
+         Called by USSD gateway on user input
+
+  POST   /api/v1/swaps/requests/{id}/handoff/initiate
+         Generates handoff PINs for both parties
+
+  POST   /api/v1/swaps/requests/{id}/handoff/confirm
+         Body: { pin, phone }
+         Called by USSD gateway; returns partial/full confirmation status
+
+  GET    /api/v1/ussd/menu
+         USSD gateway callback for status hotline menu navigation
+
+
+9. UI TOUCHPOINTS (FLUTTER)
+--------------------------------------------------------------------------------
+
+  SwapCommitmentPage
+    - Add "Pay with MoMo USSD" button below existing Paystack CTA
+    - Show generated USSD code string + "Tap to dial" action
+    - Poll payment status or listen for push/SMS confirmation
+
+  PropertySwapSettlementSheet
+    - Same USSD payment option for top-up settlement amounts
+
+  Swap Bay (Received tab)
+    - Info banner: "You can also respond via the SMS link sent to your phone"
+
+  GoForSwapPage
+    - Show handoff PIN and USSD dial instructions before "Complete" button
+    - Gate completion on dual USSD confirm status
+
+  Settings / Profile (optional)
+    - Toggle: "Send swap notifications via SMS + USSD"
+
+
+10. SUCCESS METRICS
+--------------------------------------------------------------------------------
+
+  - % of commitment fees paid via USSD vs Paystack
+  - Swap accept/reject response time (USSD vs in-app)
+  - Swap completion rate at meetup stage
+  - Fraud/dispute rate before vs after dual handoff confirm
+  - User adoption in low-connectivity regions (if geo data available)
+
+
+11. RISKS & MITIGATIONS
+--------------------------------------------------------------------------------
+
+  Risk: USSD codes differ across MTN, Vodafone, AirtelTigo
+  Mitigation: Detect network from phone prefix; show network-specific code
+
+  Risk: iOS USSD limitations
+  Mitigation: Prioritize SMS fallback on iOS; full USSD on Android + feature phones
+
+  Risk: User abandons USSD session mid-flow
+  Mitigation: Set payment/session expiry; send reminder SMS
+
+  Risk: Telco short code provisioning cost and timeline
+  Mitigation: Phase 1 uses MoMo merchant USSD (no short code); Phase 2 adds *920*48#
+
+  Risk: PIN sharing / social engineering at meetup
+  Mitigation: Time-limited PINs; require dial from registered phone number
+
+
+12. NEXT STEPS
+--------------------------------------------------------------------------------
+
+  1. Select USSD/MoMo aggregator (Hubtel, Africa's Talking, Paystack MoMo)
+  2. Provision short code (*920*48#) or confirm MoMo merchant USSD availability
+  3. Implement Phase 1: USSD MoMo pay on SwapCommitmentPage
+  4. Implement Phase 2: SMS + USSD accept/reject
+  5. Implement Phase 3: Dual handoff confirm on GoForSwapPage
+  6. User testing in Ghana with MTN/Vodafone SIMs across Android and feature phones
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================
