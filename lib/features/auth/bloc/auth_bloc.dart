@@ -535,6 +535,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else if (response.statusCode == 401) {
         // Refresh token is invalid or expired
         await tokenService.clearTokens();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('user');
         emit(
           SessionExpired(
             message: 'Your session has expired. Please login again.',
@@ -548,14 +550,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             errorMsg = errorData['detail'];
           }
         } catch (_) {}
+        if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         emit(TokenRefreshFailed(message: errorMsg));
       }
     } catch (e) {
       if (BackendConnectivity.isNetworkFailure(e)) {
+        if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         emit(const ServerUnreachable());
         return;
       }
+      if (await tokenService.hasPersistedSession()) {
+        await _emitCachedSession(emit);
+        return;
+      }
       emit(TokenRefreshFailed(message: 'Token refresh error: $e'));
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadCachedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user');
+    if (userString == null) return null;
+    final decoded = json.decode(userString);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    return null;
+  }
+
+  Future<void> _emitCachedSession(Emitter<AuthState> emit) async {
+    final cachedUser = await _loadCachedUser();
+    if (cachedUser != null) {
+      emit(Authenticated(user: cachedUser));
     }
   }
 
@@ -590,21 +621,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final reachable = await BackendConnectivity.isReachable();
-      if (!reachable) {
-        emit(const ServerUnreachable());
-        return;
-      }
-
       final token = await tokenService.getToken();
       if (token == null) {
         emit(const Unauthenticated());
         return;
       }
 
+      final cachedUser = await _loadCachedUser();
+      final refreshToken = token.refreshToken;
+      final hasRefreshToken = refreshToken.isNotEmpty;
+
       if (token.isExpired) {
-        final refreshToken = await tokenService.getRefreshToken();
-        if (refreshToken != null && refreshToken.isNotEmpty) {
+        if (hasRefreshToken) {
+          final reachable = await BackendConnectivity.isReachable();
+          if (!reachable) {
+            if (cachedUser != null) {
+              emit(Authenticated(user: cachedUser));
+              return;
+            }
+            emit(const ServerUnreachable());
+            return;
+          }
           add(const RefreshTokenEvent());
           return;
         }
@@ -615,15 +652,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      if (await tokenService.shouldRefreshToken()) {
-        add(const RefreshTokenEvent());
+      if (await tokenService.shouldRefreshToken() && hasRefreshToken) {
+        final reachable = await BackendConnectivity.isReachable();
+        if (reachable) {
+          add(const RefreshTokenEvent());
+          return;
+        }
+      }
+
+      if (cachedUser != null) {
+        emit(Authenticated(user: cachedUser));
         return;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      final userString = prefs.getString('user');
-      if (userString != null) {
-        emit(Authenticated(user: json.decode(userString)));
+      final reachable = await BackendConnectivity.isReachable();
+      if (!reachable) {
+        emit(const ServerUnreachable());
         return;
       }
 
@@ -633,6 +677,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       if (BackendConnectivity.isNetworkFailure(e)) {
+        if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         emit(const ServerUnreachable());
         return;
       }

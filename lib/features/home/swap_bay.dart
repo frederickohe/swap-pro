@@ -197,7 +197,10 @@ class _SwapBayViewState extends State<_SwapBayView> {
     final ok = await cubit.cancelSentRequest(item.swapRequestId);
     if (!mounted) return;
     if (ok) {
-      context.showAppSnackBar('Swap request cancelled.');
+      context.showAppSnackBar(
+        'Swap request cancelled.',
+        variant: AppSnackBarVariant.success,
+      );
     }
   }
 
@@ -206,7 +209,10 @@ class _SwapBayViewState extends State<_SwapBayView> {
     final ok = await cubit.approveOffer(item.swapRequestId);
     if (!mounted) return;
     if (ok) {
-      context.showAppSnackBar('Accepted swap offer for ${item.title}');
+      context.showAppSnackBar(
+        'Accepted swap offer for ${item.title}',
+        variant: AppSnackBarVariant.success,
+      );
       setState(() => _tab = SwapBayTab.accepted);
     }
   }
@@ -268,7 +274,10 @@ class _SwapBayViewState extends State<_SwapBayView> {
 
   void _payTransaction(SwapBayItem item) {
     if (item.yourCommitmentPaid) {
-      context.showAppSnackBar('Transaction fee already paid for ${item.title}');
+      context.showAppSnackBar(
+        'Transaction fee already paid for ${item.title}',
+        variant: AppSnackBarVariant.success,
+      );
       return;
     }
     if (!item.isInitiator) {

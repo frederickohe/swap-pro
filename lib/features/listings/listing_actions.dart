@@ -153,7 +153,10 @@ class ListingActions {
     try {
       await context.read<ApiService>().deleteListing(listingId);
       if (!context.mounted) return false;
-      context.showAppSnackBar('Listing deleted.');
+      context.showAppSnackBar(
+        'Listing deleted.',
+        variant: AppSnackBarVariant.success,
+      );
       return true;
     } catch (e) {
       if (!context.mounted) return false;

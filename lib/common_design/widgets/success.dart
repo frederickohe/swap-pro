@@ -207,6 +207,13 @@ class _SuccessState extends State<Success> with SingleTickerProviderStateMixin {
                                   );
                                   return;
                                 }
+                                if (nextScreen == 'home') {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    Home.routeFromWelcome(),
+                                    (_) => false,
+                                  );
+                                  return;
+                                }
                               },
                               borderRadius: BorderRadius.circular(10 * wScale),
                               child: Ink(

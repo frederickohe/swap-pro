@@ -136,6 +136,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
         successCount == 1
             ? 'Document uploaded and indexed.'
             : '$successCount documents uploaded and indexed.',
+        variant: AppSnackBarVariant.success,
       );
     } catch (e) {
       if (!mounted) return;
@@ -160,7 +161,10 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
       if (!mounted) return;
       await _loadRagPresence();
       if (!mounted) return;
-      context.showAppSnackBar('Website content scraped and indexed.');
+      context.showAppSnackBar(
+        'Website content scraped and indexed.',
+        variant: AppSnackBarVariant.success,
+      );
     } catch (e) {
       if (!mounted) return;
       context.showAppSnackBar(_uploadErrorMessage(e));
@@ -1098,7 +1102,10 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
           ..removeAt(index);
         _expandedIndex = null;
       });
-      context.showAppSnackBar('Deleted "$name"');
+      context.showAppSnackBar(
+        'Deleted "$name"',
+        variant: AppSnackBarVariant.success,
+      );
     } catch (e) {
       if (!mounted) return;
       context.showAppSnackBar(

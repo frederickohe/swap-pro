@@ -219,7 +219,7 @@ class _SwapCommitmentPageState extends State<SwapCommitmentPage> {
       if (authUrl.isEmpty || reference.isEmpty) {
         if (!context.mounted) return;
         context.showAppSnackBar(
-          'Could not open Paystack checkout. Refresh Swap Bay and try again.',
+          'Could not open payment checkout. Refresh Swap Bay and try again.',
         );
         return;
       }
@@ -246,6 +246,7 @@ class _SwapCommitmentPageState extends State<SwapCommitmentPage> {
       if (!context.mounted) return;
       context.showAppSnackBar(
         'Payment successful. Receiver details were sent to your phone.',
+        variant: AppSnackBarVariant.success,
       );
       Navigator.of(context).pop(SwapBayTab.readySwaps);
     } catch (e) {

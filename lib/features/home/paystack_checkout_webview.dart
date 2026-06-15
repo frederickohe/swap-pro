@@ -55,7 +55,7 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
 
     final url = widget.authorizationUrl.trim();
     if (url.isEmpty) {
-      _error = 'Missing Paystack checkout URL.';
+      _error = 'Missing payment checkout URL.';
       _loading = false;
     } else {
       _controller.loadRequest(Uri.parse(url));
@@ -140,7 +140,7 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
         foregroundColor: Colors.black,
         elevation: 0,
         title: Text(
-          'Paystack',
+          'Payment',
           style: AppTypography.style(
             fontSize: 18,
             fontWeight: FontWeight.w500,

@@ -4,11 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:swappro/common_design/app_typography.dart';
 import 'package:swappro/config/glob_navigator.dart';
 
-/// Figma "Item / Header - Error" — bottom banner used app-wide for feedback.
+enum AppSnackBarVariant { error, success }
+
+/// Figma bottom banner used app-wide for feedback (error + success variants).
 abstract final class AppSnackBar {
   AppSnackBar._();
 
-  static const Color background = Color(0xFF73193A);
+  static const Color errorBackground = Color(0xFF73193A);
+  static const Color successBackground = Color(0xFF1A8118);
+
+  /// @deprecated Use [errorBackground] or pass [AppSnackBarVariant].
+  static const Color background = errorBackground;
+
+  static Color backgroundFor(AppSnackBarVariant variant) => switch (variant) {
+        AppSnackBarVariant.error => errorBackground,
+        AppSnackBarVariant.success => successBackground,
+      };
 
   static const double _figmaW = 430;
   static const double _figmaH = 932;
@@ -27,7 +38,9 @@ abstract final class AppSnackBar {
     BuildContext context,
     String message, {
     Duration duration = const Duration(seconds: 4),
+    AppSnackBarVariant variant = AppSnackBarVariant.error,
   }) {
+    final background = backgroundFor(variant);
     hide();
 
     final overlay = Overlay.maybeOf(context, rootOverlay: true) ??
@@ -123,7 +136,11 @@ abstract final class AppSnackBar {
 }
 
 extension AppSnackBarContext on BuildContext {
-  void showAppSnackBar(String message, {Duration duration = const Duration(seconds: 4)}) {
-    AppSnackBar.show(this, message, duration: duration);
+  void showAppSnackBar(
+    String message, {
+    Duration duration = const Duration(seconds: 4),
+    AppSnackBarVariant variant = AppSnackBarVariant.error,
+  }) {
+    AppSnackBar.show(this, message, duration: duration, variant: variant);
   }
 }

@@ -290,7 +290,10 @@ class _EditListingPageState extends State<EditListingPage> {
       );
 
       if (!mounted) return;
-      context.showAppSnackBar('Listing updated.');
+      context.showAppSnackBar(
+        'Listing updated.',
+        variant: AppSnackBarVariant.success,
+      );
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;

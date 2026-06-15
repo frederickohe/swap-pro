@@ -42,7 +42,10 @@ class _SignupOtpState extends State<SignupOtp> {
               );
             }
             if (state is SignupOtpResent) {
-              context.showAppSnackBar(state.message);
+              context.showAppSnackBar(
+                state.message,
+                variant: AppSnackBarVariant.success,
+              );
             }
             if (state is AuthError &&
                 (state.source == 'signup_otp' ||

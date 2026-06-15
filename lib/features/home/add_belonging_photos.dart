@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:swappro/barrel.dart';
+import 'package:swappro/common_design/widgets/success_reveal_route.dart';
 
 /// Add belonging flow — step 4 gallery photos (Figma "Add 4", node 194:467).
 class AddBelongingPhotosPage extends StatefulWidget {
@@ -174,13 +175,15 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
       );
 
       if (!mounted) return;
+      context.read<SuccessBloc>().add(
+            const ShowSuccessEvent(
+              message: 'Belonging added successfully!',
+              nextScreen: 'home',
+            ),
+          );
       Navigator.of(context).pushAndRemoveUntil(
-        PageTransition(
-          type: PageTransitionType.fade,
-          duration: const Duration(milliseconds: 500),
-          reverseDuration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut,
-          child: const AddBelongingCompletePage(),
+        SuccessRevealRoute(
+          child: const Success(delayEntrance: true),
         ),
         (route) => route.isFirst,
       );

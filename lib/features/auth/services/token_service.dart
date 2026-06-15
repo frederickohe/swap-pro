@@ -73,10 +73,21 @@ class TokenService {
     }
   }
 
-  /// Update tokens after refresh
+  /// Update tokens after refresh.
+  /// The refresh endpoint only returns a new access token, so keep the
+  /// existing refresh token when the response omits one.
   Future<void> updateToken(TokenModel newToken) async {
     try {
-      await saveToken(newToken);
+      final existing = await getToken();
+      final merged = TokenModel(
+        accessToken: newToken.accessToken,
+        refreshToken: newToken.refreshToken.isNotEmpty
+            ? newToken.refreshToken
+            : (existing?.refreshToken ?? ''),
+        tokenType: newToken.tokenType,
+        expiresIn: newToken.expiresIn,
+      );
+      await saveToken(merged);
     } catch (e) {
       throw Exception('Failed to update token: $e');
     }
@@ -133,6 +144,19 @@ class TokenService {
       await _secureStorage.delete(key: _refreshTokenKey);
     } catch (e) {
       throw Exception('Failed to clear tokens: $e');
+    }
+  }
+
+  /// True when stored credentials can still restore a session (valid access
+  /// token or a non-empty refresh token).
+  Future<bool> hasPersistedSession() async {
+    try {
+      final token = await getToken();
+      if (token == null) return false;
+      if (!token.isExpired) return true;
+      return token.refreshToken.isNotEmpty;
+    } catch (e) {
+      return false;
     }
   }
 

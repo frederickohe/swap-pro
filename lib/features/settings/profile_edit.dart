@@ -318,7 +318,10 @@ class _ProfileEditState extends State<ProfileEdit> {
             : instagramUrlController.text.trim(),
       );
       if (!mounted) return;
-      context.showAppSnackBar('Profile updated');
+      context.showAppSnackBar(
+        'Profile updated',
+        variant: AppSnackBarVariant.success,
+      );
       await _loadProfile();
     } catch (e) {
       if (!mounted) return;
@@ -392,7 +395,10 @@ class _ProfileEditState extends State<ProfileEdit> {
         _profilePictureUrl = url;
         _userProfileRaw?['profile_picture_url'] = url;
       });
-      context.showAppSnackBar('Profile photo updated');
+      context.showAppSnackBar(
+        'Profile photo updated',
+        variant: AppSnackBarVariant.success,
+      );
     } catch (e) {
       if (!mounted) return;
       context.showAppSnackBar('Photo upload failed: $e');

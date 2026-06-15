@@ -137,7 +137,10 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
           .read<ApiService>()
           .completeSwapRequest(widget.swapRequestId);
       if (!mounted) return;
-      context.showAppSnackBar('Swap marked as completed.');
+      context.showAppSnackBar(
+        'Swap marked as completed.',
+        variant: AppSnackBarVariant.success,
+      );
       Navigator.of(context).pop(SwapBayTab.history);
     } catch (e) {
       if (!mounted) return;

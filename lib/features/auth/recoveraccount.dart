@@ -23,7 +23,10 @@ class _RecoverAccountState extends State<RecoverAccount> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is EmailExists) {
-          context.showAppSnackBar('Email verified. Sending reset code...');
+          context.showAppSnackBar(
+            'Email verified. Sending reset code...',
+            variant: AppSnackBarVariant.success,
+          );
           context.read<AuthBloc>().add(SendResetCodeEvent(email: state.email));
         } else if (state is ResetCodeSent) {
           Navigator.push(

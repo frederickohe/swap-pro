@@ -51,9 +51,7 @@ class _SplashWrapperState extends State<SplashWrapper> {
       listener: (context, state) {
         if (state is Authenticated || state is TokenRefreshed) {
           _goToHome();
-        } else if (state is Unauthenticated ||
-            state is SessionExpired ||
-            state is TokenRefreshFailed) {
+        } else if (state is Unauthenticated || state is SessionExpired) {
           _goToLogorSign();
         } else if (state is ServerUnreachable) {
           _goToServerError();
