@@ -53,9 +53,31 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
       ];
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_syncPageIndex);
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_syncPageIndex);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _syncPageIndex() {
+    if (!_controller.hasClients) return;
+    final page = _controller.page?.round();
+    if (page == null || page == _index || !mounted) return;
+    setState(() => _index = page);
+  }
+
+  int get _currentStepIndex {
+    if (_controller.hasClients) {
+      final page = _controller.page?.round();
+      if (page != null) return page.clamp(0, _steps.length - 1);
+    }
+    return _index.clamp(0, _steps.length - 1);
   }
 
   Future<void> _goToStepDestination(int stepIndex) async {
@@ -107,8 +129,13 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
   }
 
   Future<void> _next() async {
-    if (_index >= _steps.length - 1) return;
-    await _controller.nextPage(
+    final current = _currentStepIndex;
+    if (current >= _steps.length - 1) {
+      await _finish();
+      return;
+    }
+    await _controller.animateToPage(
+      current + 1,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );
@@ -121,6 +148,12 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
       await _service.markCompleted();
       if (!mounted) return;
       Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        context.showAppSnackBar(
+          'Could not save onboarding progress. Please try again.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -129,40 +162,27 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final step = _steps[_index];
-    final isLast = _index == _steps.length - 1;
+    final currentIndex = _currentStepIndex;
+    final step = _steps[currentIndex];
+    final isLast = currentIndex >= _steps.length - 1;
 
-    return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-              child: Row(
-                children: [
-                  Text(
-                    'Getting started',
-                    style: AppTypography.style(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: _ink,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _busy ? null : _finish,
-                    child: Text(
-                      'Skip',
-                      style: AppTypography.style(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _ink.withValues(alpha: _busy ? 0.4 : 1),
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Getting started',
+                style: AppTypography.style(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: _ink,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -170,7 +190,7 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: _ProgressDots(
                 count: _steps.length,
-                index: _index,
+                index: currentIndex,
                 active: _gold,
                 inactive: const Color(0xFFECECF3),
               ),
@@ -179,6 +199,7 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
             Expanded(
               child: PageView.builder(
                 controller: _controller,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: _steps.length,
                 onPageChanged: (i) => setState(() => _index = i),
                 itemBuilder: (context, i) {
@@ -202,7 +223,9 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
                   SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: _busy ? null : () => _goToStepDestination(_index),
+                      onPressed: _busy
+                          ? null
+                          : () => _goToStepDestination(currentIndex),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _ink,
                         foregroundColor: Colors.white,
@@ -257,6 +280,7 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
           ],
         ),
       ),
+    ),
     );
   }
 }

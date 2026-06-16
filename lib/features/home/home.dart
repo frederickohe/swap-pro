@@ -110,13 +110,19 @@ class _HomeState extends State<Home> {
 
   Future<void> _maybeShowOnboarding() async {
     if (!mounted || _onboardingChecked) return;
-    _onboardingChecked = true;
     try {
       final completed = await OnboardingService().isCompleted();
       if (!mounted || completed) return;
-      await Navigator.of(context).push(
+      _onboardingChecked = true;
+      final finished = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => const FtuOnboardingPage()),
       );
+      if (!mounted) return;
+      if (finished == true) return;
+      final stillIncomplete = !await OnboardingService().isCompleted();
+      if (!mounted || !stillIncomplete) return;
+      _onboardingChecked = false;
+      await _maybeShowOnboarding();
     } catch (_) {
       // Onboarding is best-effort; never block Home.
     }
