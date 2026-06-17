@@ -19,9 +19,8 @@ class SessionAwareHttpClient extends http.BaseClient {
   });
 
   void _reportUnreachableIfNeeded(Object error) {
-    if (BackendConnectivity.isNetworkFailure(error)) {
-      connectivityNotifier?.reportUnreachable();
-    }
+    // Network blips during normal API calls should not hijack navigation.
+    // Session/bootstrap flows emit [ServerUnreachable] via [AuthBloc] instead.
   }
 
   @override

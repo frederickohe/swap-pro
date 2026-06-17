@@ -60,7 +60,7 @@ class _HomeState extends State<Home> {
   Future<int>? _unreadCountFuture;
   Future<List<_ProductCardData>>? _recentPostsFuture;
   final TextEditingController _searchController = TextEditingController();
-  bool _onboardingChecked = false;
+  bool _showOnboardingFab = false;
 
   static const _navIcons = <String>[
     Ph.house_line_duotone,
@@ -94,9 +94,31 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeShowOnboarding();
+      _loadOnboardingFabVisibility();
       _loadInitialData();
     });
+  }
+
+  Future<void> _loadOnboardingFabVisibility() async {
+    try {
+      final completed = await OnboardingService().isCompleted();
+      if (!mounted) return;
+      setState(() => _showOnboardingFab = !completed);
+    } catch (_) {
+      // Best-effort; never block Home.
+    }
+  }
+
+  Future<void> _openOnboarding() async {
+    final finished = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const FtuOnboardingPage()),
+    );
+    if (!mounted) return;
+    final completed =
+        finished == true || await OnboardingService().isCompleted();
+    if (completed) {
+      setState(() => _showOnboardingFab = false);
+    }
   }
 
   void _loadInitialData() {
@@ -106,26 +128,6 @@ class _HomeState extends State<Home> {
       _unreadCountFuture = api.getUnreadNotificationCount();
       _recentPostsFuture = _loadRecentPosts(api);
     });
-  }
-
-  Future<void> _maybeShowOnboarding() async {
-    if (!mounted || _onboardingChecked) return;
-    try {
-      final completed = await OnboardingService().isCompleted();
-      if (!mounted || completed) return;
-      _onboardingChecked = true;
-      final finished = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(builder: (_) => const FtuOnboardingPage()),
-      );
-      if (!mounted) return;
-      if (finished == true) return;
-      final stillIncomplete = !await OnboardingService().isCompleted();
-      if (!mounted || !stillIncomplete) return;
-      _onboardingChecked = false;
-      await _maybeShowOnboarding();
-    } catch (_) {
-      // Onboarding is best-effort; never block Home.
-    }
   }
 
   Future<List<_ProductCardData>> _loadRecentPosts(ApiService api) async {
@@ -444,14 +446,26 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildFabColumn() {
-    return _FabCircle(
-      icon: Icons.add_rounded,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AddBelongingPage()),
-        );
-      },
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_showOnboardingFab) ...[
+          _FabCircle(
+            icon: Icons.school_outlined,
+            onTap: _openOnboarding,
+          ),
+          const SizedBox(height: 12),
+        ],
+        _FabCircle(
+          icon: Icons.add_rounded,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddBelongingPage()),
+            );
+          },
+        ),
+      ],
     );
   }
 

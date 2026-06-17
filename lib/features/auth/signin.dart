@@ -84,11 +84,15 @@ class _SigninState extends State<Signin> {
         listener: (context, state) {
           if (state is Authenticated) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const AuthWrapper()),
+              MaterialPageRoute(builder: (_) => const Home()),
               (route) => false,
             );
           } else if (state is AuthError && state.source == 'login') {
             context.showAppSnackBar(state.message);
+          } else if (state is ServerUnreachable) {
+            context.showAppSnackBar(
+              'Cannot reach the server. Check your connection and try again.',
+            );
           }
         },
         builder: (context, state) {

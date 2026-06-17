@@ -20,6 +20,10 @@ class BackendConnectivity {
       return false;
     } on http.ClientException {
       return false;
+    } on HandshakeException {
+      return false;
+    } on TlsException {
+      return false;
     } catch (_) {
       return false;
     }
@@ -28,6 +32,8 @@ class BackendConnectivity {
   static bool isNetworkFailure(Object error) {
     return error is SocketException ||
         error is TimeoutException ||
-        error is http.ClientException;
+        error is http.ClientException ||
+        error is HandshakeException ||
+        error is TlsException;
   }
 }

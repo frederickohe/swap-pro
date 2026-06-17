@@ -587,7 +587,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final cachedUser = await _loadCachedUser();
     if (cachedUser != null) {
       emit(Authenticated(user: cachedUser));
+      return;
     }
+
+    // Tokens exist but profile cache is missing — still allow the user in.
+    if (await tokenService.hasValidSession()) {
+      emit(const Authenticated(user: <String, dynamic>{}));
+      return;
+    }
+
+    emit(const ServerUnreachable());
   }
 
   Future<bool> _restoreUserProfile(Emitter<AuthState> emit) async {
@@ -673,6 +682,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       final restored = await _restoreUserProfile(emit);
       if (!restored) {
+        if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         emit(const Unauthenticated());
       }
     } catch (e) {

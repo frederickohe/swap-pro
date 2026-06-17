@@ -18,6 +18,10 @@ void _onConnectivityChanged() {
     final currentRoute = ModalRoute.of(nav.context)?.settings.name;
     if (currentRoute == 'ServerErrorPage') return;
 
+    // Only interrupt cold start / splash — not an active in-app session.
+    final authState = _authBloc.state;
+    if (authState is Authenticated || authState is TokenRefreshed) return;
+
     nav.pushAndRemoveUntil(
       MaterialPageRoute(
         settings: const RouteSettings(name: 'ServerErrorPage'),

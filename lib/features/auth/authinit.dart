@@ -11,7 +11,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    context.read<AuthBloc>().add(const CheckSessionEvent());
+    final current = context.read<AuthBloc>().state;
+    if (current is! Authenticated && current is! TokenRefreshed) {
+      context.read<AuthBloc>().add(const CheckSessionEvent());
+    }
   }
 
   @override
@@ -26,8 +29,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           );
         } else if (state is TokenRefreshFailed) {
           context.showAppSnackBar('Session error: ${state.message}');
-        } else if (state is ServerUnreachable) {
-          appConnectivityNotifier.reportUnreachable();
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -67,10 +68,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
             print('✗ Token Refresh Failed: ${state.message} - showing Signin');
             return const Signin();
           } else if (state is ServerUnreachable) {
-            return const Scaffold(
-              body: Center(
-                child: SwapproLoadingIndicator(size: 50, showLabel: true),
-              ),
+            return ServerErrorPage(
+              onRetry: () async {
+                context.read<AuthBloc>().add(const CheckSessionEvent());
+              },
             );
           } else {
             print('⏳ Unhandled auth state: $state');
