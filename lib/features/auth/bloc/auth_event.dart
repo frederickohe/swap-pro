@@ -22,16 +22,14 @@ class SignupEvent extends AuthEvent {
   final String phone;
   final String email;
   final String password;
-  final String company;
-  final String ghanaCard;
+  final String? company;
 
   const SignupEvent({
     required this.email,
     required this.password,
     required this.username,
     required this.phone,
-    required this.company,
-    required this.ghanaCard,
+    this.company,
   });
 
   @override
@@ -40,8 +38,7 @@ class SignupEvent extends AuthEvent {
     phone,
     email,
     password,
-    company,
-    ghanaCard,
+    company ?? '',
   ];
 }
 
@@ -80,11 +77,12 @@ class RequestPasswordResetEvent extends AuthEvent {
 // Add these alongside your existing events
 class CheckEmailExistsEvent extends AuthEvent {
   final String email;
+  final String phone;
 
-  const CheckEmailExistsEvent({required this.email});
+  const CheckEmailExistsEvent({this.email = '', this.phone = ''});
 
   @override
-  List<Object> get props => [email];
+  List<Object> get props => [email, phone];
 }
 
 class SendResetCodeEvent extends AuthEvent {

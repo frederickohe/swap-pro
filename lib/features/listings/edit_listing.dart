@@ -297,17 +297,11 @@ class _EditListingPageState extends State<EditListingPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
+      if (ApiErrorHandler.isSessionExpired(e)) {
+        context.read<AuthBloc>().add(const SessionExpiredEvent());
         return;
       }
-      context.showAppSnackBar(message);
+      context.showAppSnackBar('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -317,7 +311,7 @@ class _EditListingPageState extends State<EditListingPage> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

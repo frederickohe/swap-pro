@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
 
 class SplashPge extends StatelessWidget {
@@ -13,14 +12,10 @@ class SplashPge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Scaffold(
-        backgroundColor: _splashBackground,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
+    return AppScaffold(
+      backgroundColor: _splashBackground,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
             final h = constraints.maxHeight;
             final w = constraints.maxWidth;
             final wScale = w / _figmaW;
@@ -100,7 +95,6 @@ class SplashPge extends StatelessWidget {
             );
           },
         ),
-      ),
     );
   }
 }

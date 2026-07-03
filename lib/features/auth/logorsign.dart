@@ -21,7 +21,7 @@ class LogorSign extends StatelessWidget {
     final logoTop = 218 * hScale;
     final panelHeight = 396 * hScale;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: Stack(
         fit: StackFit.expand,

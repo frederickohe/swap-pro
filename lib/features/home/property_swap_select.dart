@@ -15,13 +15,8 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _divider = Color(0xFFF6F6F6);
 
-  late final ApiService _apiService = ApiService(
-    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
-  );
-
   List<_SelectableListing> _listings = [];
   bool _loading = true;
-  String? _error;
   int? _selectedIndex;
 
   @override
@@ -33,10 +28,9 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
   Future<void> _loadListings() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
-      final products = await _apiService.listProducts();
+      final products = await context.read<ApiService>().listProducts();
       if (!mounted) return;
       final rows = products
           .map(_SelectableListing.fromProduct)
@@ -48,11 +42,11 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _listings = List.of(_demoListings);
-        _selectedIndex = 0;
-      });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadListings,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -94,7 +88,7 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
@@ -115,17 +109,6 @@ class _PropertySwapSelectPageState extends State<PropertySwapSelectPage> {
               ),
 
               const SizedBox(height: 20),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    _error!,
-                    style: AppTypography.style(
-                      fontSize: 12,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                ),
               Expanded(child: _buildListingsBody()),
               const SizedBox(height: 16),
               _buildProceedButton(),

@@ -43,7 +43,7 @@ class _PropertySwapImagePageState extends State<PropertySwapImagePage> {
     final topInset = MediaQuery.paddingOf(context).top;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: Stack(
         fit: StackFit.expand,

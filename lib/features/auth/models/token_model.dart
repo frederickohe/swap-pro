@@ -52,6 +52,22 @@ class TokenModel {
     }
   }
 
+  /// True when the long-lived refresh credential has expired.
+  bool get isRefreshTokenExpired {
+    if (refreshToken.isEmpty) return true;
+    try {
+      return JwtDecoder.isExpired(refreshToken);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Session can be restored while the refresh token is still valid.
+  bool get hasRestorableSession {
+    if (refreshToken.isEmpty) return !isExpired;
+    return !isRefreshTokenExpired;
+  }
+
   /// Check if token should be refreshed (refresh if expiry is within 5 minutes)
   bool get shouldRefresh {
     try {

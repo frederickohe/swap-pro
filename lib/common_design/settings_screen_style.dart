@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:swappro/common_design/app_typography.dart';
+import 'package:swappro/common_design/widgets/app_scaffold.dart';
 
 /// Light account/settings screens — grey circle back button, gold chevron.
 class SettingsScreenStyle {
@@ -129,7 +130,7 @@ class SettingsScreenScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

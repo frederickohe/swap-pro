@@ -112,7 +112,7 @@ class _AddBelongingLocationPickerPageState
   @override
   Widget build(BuildContext context) {
     if (!AppConfig.hasGeoapifyApiKey) {
-      return Scaffold(
+      return AppScaffold(
         appBar: AppBar(
           title: const Text('Pick location'),
           backgroundColor: Colors.white,
@@ -150,7 +150,7 @@ class _AddBelongingLocationPickerPageState
 
     final apiKey = AppConfig.geoapifyApiKey;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

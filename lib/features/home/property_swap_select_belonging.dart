@@ -23,15 +23,10 @@ class _PropertySwapSelectBelongingPageState
   static const Color _searchBorder = Color(0xFFECECF3);
   static const Color _menuBorder = Color(0xFFDFDFDF);
 
-  late final ApiService _apiService = ApiService(
-    httpClient: SessionAwareHttpClient(tokenService: TokenService()),
-  );
-
   final TextEditingController _searchController = TextEditingController();
 
   List<_BelongingRow> _allListings = [];
   bool _loading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -49,10 +44,9 @@ class _PropertySwapSelectBelongingPageState
   Future<void> _loadListings() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
-      final products = await _apiService.listProducts();
+      final products = await context.read<ApiService>().listProducts();
       if (!mounted) return;
       final rows = products
           .map(_BelongingRow.fromProduct)
@@ -63,10 +57,11 @@ class _PropertySwapSelectBelongingPageState
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _allListings = List.of(_demoListings);
-      });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadListings,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -156,7 +151,7 @@ class _PropertySwapSelectBelongingPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -173,17 +168,6 @@ class _PropertySwapSelectBelongingPageState
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: _buildSearchHeader(),
             ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Text(
-                  _error!,
-                  style: AppTypography.style(
-                    fontSize: 12,
-                    color: Colors.red.shade700,
-                  ),
-                ),
-              ),
             Expanded(
               child: _loading
                   ? const Center(child: SwapproLoadingIndicator())

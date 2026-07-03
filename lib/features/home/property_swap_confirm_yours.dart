@@ -16,7 +16,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
       builder: (context, state) {
         final yourProperty = state.offer;
         if (yourProperty == null) {
-          return Scaffold(
+          return AppScaffold(
             backgroundColor: _gold,
             body: SafeArea(
               child: Center(
@@ -52,7 +52,7 @@ class PropertySwapConfirmYoursPage extends StatelessWidget {
             : '';
         final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-        return Scaffold(
+        return AppScaffold(
           backgroundColor: _gold,
           body: SafeArea(
             child: Padding(

@@ -51,31 +51,42 @@ class AuthError extends AuthState {
 // Add these alongside your existing states
 class EmailExists extends AuthState {
   final String email;
+  final String phone;
 
-  const EmailExists({required this.email});
+  const EmailExists({required this.email, this.phone = ''});
 
   @override
-  List<Object> get props => [email];
+  List<Object> get props => [email, phone];
 }
 
 class ResetCodeSent extends AuthState {
   final String email;
+  final String phone;
   final String message;
 
-  const ResetCodeSent({required this.email, required this.message});
+  const ResetCodeSent({
+    required this.email,
+    this.phone = '',
+    required this.message,
+  });
 
   @override
-  List<Object> get props => [email, message];
+  List<Object> get props => [email, phone, message];
 }
 
 class ResetCodeVerified extends AuthState {
   final String email;
+  final String phone;
   final String code;
 
-  const ResetCodeVerified({required this.email, required this.code});
+  const ResetCodeVerified({
+    required this.email,
+    this.phone = '',
+    required this.code,
+  });
 
   @override
-  List<Object> get props => [email, code];
+  List<Object> get props => [email, phone, code];
 }
 
 class PasswordResetSuccess extends AuthState {

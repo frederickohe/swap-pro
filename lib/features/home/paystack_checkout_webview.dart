@@ -133,7 +133,7 @@ class _PaystackCheckoutWebViewState extends State<PaystackCheckoutWebView> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,

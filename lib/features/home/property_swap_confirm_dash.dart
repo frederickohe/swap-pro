@@ -14,7 +14,7 @@ class PropertySwapConfirmDashPage extends StatelessWidget {
         final otherProperty = state.target;
 
         if (yourProperty == null || otherProperty == null) {
-          return Scaffold(
+          return AppScaffold(
             body: SafeArea(
               child: Center(
                 child: Column(
@@ -84,7 +84,7 @@ class _PropertySwapConfirmDashBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,

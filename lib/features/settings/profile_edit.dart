@@ -90,7 +90,12 @@ class _ProfileEditState extends State<ProfileEdit> {
       final g = (user['gender'] ?? '').toString().trim();
       _gender = g.isEmpty ? null : g;
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (!mounted) return;
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadProfile,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -465,7 +470,7 @@ class _ProfileEditState extends State<ProfileEdit> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

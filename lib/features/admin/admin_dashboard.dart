@@ -15,7 +15,7 @@ class AdminDashboard extends StatelessWidget {
           );
         }
       },
-      child: Scaffold(
+      child: AppScaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           title: Text(

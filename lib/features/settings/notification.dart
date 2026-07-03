@@ -12,7 +12,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   bool _loading = true;
   bool _saving = false;
-  String? _error;
 
   bool showNotifications = true;
   bool smsNotifications = true;
@@ -28,7 +27,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _loadSettings() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       final user = await _apiService.getUserProfile();
@@ -47,7 +45,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadSettings,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -94,20 +96,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: LinearProgressIndicator(minHeight: 2),
-                ),
-              if (_error != null && _error!.trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    _error!,
-                    style: AppTypography.style(
-                      color: Colors.red,
-                      fontSize: 12,
-                    ),
-                  ),
                 ),
               _PreferenceSwitchTile(
                 title: 'Show Notifications',

@@ -36,6 +36,7 @@ export 'package:swappro/features/initial_ui/initial.dart';
 export 'package:swappro/features/initial_ui/server_error_page.dart';
 export 'package:swappro/services/connectivity_notifier.dart';
 export 'package:swappro/services/backend_connectivity.dart';
+export 'package:swappro/services/api_error_handler.dart';
 export 'package:swappro/services/geocoding_service.dart';
 export 'package:swappro/features/home/listing_location.dart';
 export 'package:swappro/features/home/home.dart';
@@ -120,7 +121,9 @@ export 'package:swappro/icons/auth_icons.dart';
 
 // Design Imports
 export 'package:swappro/common_design/app_typography.dart';
+export 'package:swappro/common_design/app_system_ui.dart';
 export 'package:swappro/common_design/colors.dart';
+export 'package:swappro/common_design/widgets/app_scaffold.dart';
 export 'package:swappro/common_design/widgets/appbutton.dart';
 export 'package:swappro/common_design/widgets/swappro_loading_indicator.dart';
 export 'package:swappro/common_design/widgets/app_snackbar.dart';

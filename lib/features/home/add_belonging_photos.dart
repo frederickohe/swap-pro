@@ -189,17 +189,11 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
+      if (ApiErrorHandler.isSessionExpired(e)) {
+        context.read<AuthBloc>().add(const SessionExpiredEvent());
         return;
       }
-      context.showAppSnackBar(message);
+      context.showAppSnackBar('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -214,7 +208,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
     final addSize = 78 * wScale;
     final gap = 9 * wScale;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

@@ -67,11 +67,15 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _presenceError = e.toString();
         _presenceLoading = false;
         _hasRagDocuments = false;
         _ragFiles = const [];
       });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadRagPresence,
+      );
     }
   }
 
@@ -348,7 +352,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
@@ -1079,10 +1083,12 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loadError = e.toString();
-        _loading = false;
-      });
+      setState(() => _loading = false);
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadDocuments,
+      );
     }
   }
 
@@ -1116,7 +1122,7 @@ class _IntelligenceHistoryPageState extends State<IntelligenceHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,

@@ -51,13 +51,11 @@ class TokenService {
     }
   }
 
-  /// Returns a non-empty access token or throws when the user must sign in again.
+  /// Returns a non-empty access token or throws when no credentials exist.
+  /// Expiry is handled by [SessionAwareHttpClient] via proactive refresh.
   Future<String> requireAccessToken() async {
     final accessToken = await getAccessToken();
-    if (accessToken == null) {
-      throw Exception('Session expired. Please sign in again.');
-    }
-    if (!await isTokenValid()) {
+    if (accessToken == null || accessToken.isEmpty) {
       throw Exception('Session expired. Please sign in again.');
     }
     return accessToken;
@@ -148,13 +146,12 @@ class TokenService {
   }
 
   /// True when stored credentials can still restore a session (valid access
-  /// token or a non-empty refresh token).
+  /// token or a non-expired refresh token).
   Future<bool> hasPersistedSession() async {
     try {
       final token = await getToken();
       if (token == null) return false;
-      if (!token.isExpired) return true;
-      return token.refreshToken.isNotEmpty;
+      return token.hasRestorableSession;
     } catch (e) {
       return false;
     }

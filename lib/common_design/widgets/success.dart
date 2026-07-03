@@ -102,7 +102,7 @@ class _SuccessState extends State<Success> with SingleTickerProviderStateMixin {
     final hScale = size.height / _figmaH;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: _greenBg,
       body: BlocListener<SuccessBloc, SuccessState>(
         listener: (context, state) {

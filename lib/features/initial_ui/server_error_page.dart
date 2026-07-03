@@ -2,9 +2,20 @@ import 'package:swappro/barrel.dart';
 import 'package:swappro/services/backend_connectivity.dart';
 
 class ServerErrorPage extends StatefulWidget {
-  const ServerErrorPage({super.key, this.onRetry});
+  const ServerErrorPage({
+    super.key,
+    this.onRetry,
+    this.title,
+    this.message,
+    this.popAfterRetry = false,
+  });
 
   final Future<void> Function()? onRetry;
+  final String? title;
+  final String? message;
+
+  /// When true, pops this page after a successful retry (in-app error overlay).
+  final bool popAfterRetry;
 
   @override
   State<ServerErrorPage> createState() => _ServerErrorPageState();
@@ -23,6 +34,9 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
       appConnectivityNotifier.clear();
       if (widget.onRetry != null) {
         await widget.onRetry!();
+      }
+      if (widget.popAfterRetry && mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
     } finally {
       if (mounted) setState(() => _retrying = false);
@@ -53,7 +67,7 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) => _navigateFromAuthState(state),
-      child: Scaffold(
+      child: AppScaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
           child: Padding(
@@ -72,7 +86,7 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
                 ),
                 SizedBox(height: 24 * wScale),
                 Text(
-                  'Cannot reach server',
+                  widget.title ?? 'Cannot reach server',
                   textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 24 * wScale,
@@ -82,8 +96,9 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
                 ),
                 SizedBox(height: 12 * wScale),
                 Text(
-                  'Swap Pro could not connect to the backend. '
-                  'Check your internet connection and try again.',
+                  widget.message ??
+                      'Swap Pro could not connect to the backend. '
+                          'Check your internet connection and try again.',
                   textAlign: TextAlign.center,
                   style: AppTypography.style(
                     fontSize: 14 * wScale,

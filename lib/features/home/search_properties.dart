@@ -24,7 +24,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   SearchFiltersResult? _filters;
   List<_SearchProduct> _products = [];
   bool _loading = true;
-  String? _error;
   /// `false` = horizontal row cards; `true` = stacked masonry grid.
   bool _isGridView = true;
 
@@ -45,7 +44,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   Future<void> _fetchResults() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       final api = context.read<ApiService>();
@@ -109,20 +107,11 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
       setState(() => _products = cards);
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
-        return;
-      }
-      setState(() {
-        _error = message;
-        _products = [];
-      });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _fetchResults,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -178,7 +167,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
@@ -201,14 +190,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSearchHeader(),
                 ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: Text(
-                      _error!,
-                      style: _textStyle(size: 12, color: Colors.red.shade700),
-                    ),
-                  ),
                 Expanded(
                   child: _loading
                       ? const Center(child: SwapproLoadingIndicator())

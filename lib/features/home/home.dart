@@ -209,7 +209,7 @@ class _HomeState extends State<Home> {
     final navBottom = 12.0 + bottomInset;
     final fabBottom = navBottom + navHeight + 12.0;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: _kBg,
       body: Stack(
         children: [

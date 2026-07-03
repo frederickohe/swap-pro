@@ -171,7 +171,7 @@ class _EmbeddedPlatformWebViewState extends State<EmbeddedPlatformWebView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(

@@ -48,7 +48,7 @@ class _ResetPasswordState extends State<ResetPassword> {
   Widget build(BuildContext context) {
     final m = AuthScreenLayout.metrics(context);
 
-    return Scaffold(
+    return AppScaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: BlocConsumer<AuthBloc, AuthState>(

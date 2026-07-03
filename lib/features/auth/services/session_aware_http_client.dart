@@ -1,8 +1,10 @@
 import 'package:http/http.dart' as http;
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:swappro/barrel.dart';
 
 /// HTTP Client wrapper with automatic token injection and refresh
 /// This client automatically:
+/// - Proactively refreshes tokens before they expire
 /// - Injects Authorization headers with the current access token
 /// - Handles 401 responses by attempting token refresh
 /// - Retries the original request after successful token refresh
@@ -12,19 +14,49 @@ class SessionAwareHttpClient extends http.BaseClient {
   final ConnectivityNotifier? connectivityNotifier;
   final http.Client _innerClient = http.Client();
 
+  /// Called when refresh fails and the user must sign in again.
+  VoidCallback? onSessionExpired;
+
+  Future<bool>? _ongoingRefresh;
+
   SessionAwareHttpClient({
     required this.tokenService,
     this.baseUrl,
     this.connectivityNotifier,
   });
 
-  void _reportUnreachableIfNeeded(Object error) {
-    // Network blips during normal API calls should not hijack navigation.
-    // Session/bootstrap flows emit [ServerUnreachable] via [AuthBloc] instead.
+  Future<void> _ensureFreshAccessToken() async {
+    final token = await tokenService.getToken();
+    if (token == null) return;
+    if (token.isRefreshTokenExpired) return;
+
+    final needsRefresh = token.isExpired || token.shouldRefresh;
+    if (!needsRefresh) return;
+
+    final refreshToken = token.refreshToken;
+    if (refreshToken.isEmpty) return;
+
+    await _refreshToken(refreshToken);
+  }
+
+  Future<void> _handleRefreshFailure(String refreshToken) async {
+    try {
+      final stored = await tokenService.getToken();
+      final candidate = stored?.refreshToken ?? refreshToken;
+      if (candidate.isNotEmpty && !JwtDecoder.isExpired(candidate)) {
+        // Refresh token is still valid — keep the local session and retry later.
+        return;
+      }
+    } catch (_) {}
+
+    await tokenService.clearTokens();
+    onSessionExpired?.call();
   }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    await _ensureFreshAccessToken();
+
     // Get current access token and add to headers
     final accessToken = await tokenService.getAccessToken();
     if (accessToken != null && accessToken.isNotEmpty) {
@@ -35,14 +67,13 @@ class SessionAwareHttpClient extends http.BaseClient {
     try {
       response = await _innerClient.send(request);
     } catch (e) {
-      _reportUnreachableIfNeeded(e);
       rethrow;
     }
 
     // If we get a 401, attempt token refresh and retry
     if (response.statusCode == 401) {
       final refreshToken = await tokenService.getRefreshToken();
-      if (refreshToken != null) {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
         if (await _refreshToken(refreshToken)) {
           // Token was refreshed successfully, retry the original request
           final newAccessToken = await tokenService.getAccessToken();
@@ -53,11 +84,20 @@ class SessionAwareHttpClient extends http.BaseClient {
             try {
               response = await _innerClient.send(clonedRequest);
             } catch (e) {
-              _reportUnreachableIfNeeded(e);
               rethrow;
+            }
+            if (response.statusCode != 401) {
+              return response;
             }
           }
         }
+      }
+      final refreshTokenForFailure = refreshToken ?? '';
+      if (refreshTokenForFailure.isNotEmpty) {
+        await _handleRefreshFailure(refreshTokenForFailure);
+      } else {
+        await tokenService.clearTokens();
+        onSessionExpired?.call();
       }
     }
 
@@ -65,27 +105,49 @@ class SessionAwareHttpClient extends http.BaseClient {
   }
 
   /// Attempt to refresh the access token using the refresh token
-  Future<bool> _refreshToken(String refreshToken) async {
+  Future<bool> _refreshToken(String refreshToken) {
+    final inFlight = _ongoingRefresh;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _performRefresh(refreshToken);
+    _ongoingRefresh = future;
+    return future.whenComplete(() {
+      if (identical(_ongoingRefresh, future)) {
+        _ongoingRefresh = null;
+      }
+    });
+  }
+
+  Future<bool> _performRefresh(String refreshToken) async {
     try {
+      if (JwtDecoder.isExpired(refreshToken)) {
+        return false;
+      }
+
       final url = baseUrl != null
           ? Uri.parse('$baseUrl/api/v1/auth/refresh')
           : Uri.parse('${AppConfig.backendUrl}/api/v1/auth/refresh');
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'refresh_token': refreshToken}),
-      );
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'refresh_token': refreshToken}),
+          )
+          .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        // Update the token using TokenService
         await tokenService.updateToken(TokenModel.fromJson(data));
         return true;
       }
       return false;
     } catch (e) {
-      print('Error refreshing token: $e');
+      if (BackendConnectivity.isNetworkFailure(e)) {
+        return false;
+      }
       return false;
     }
   }
@@ -116,35 +178,4 @@ class SessionAwareHttpClient extends http.BaseClient {
 
     return clonedRequest;
   }
-}
-
-/// Internal TokenModel for HTTP client use
-class _TokenModel {
-  final String accessToken;
-  final String refreshToken;
-  final String tokenType;
-  final int expiresIn;
-
-  _TokenModel({
-    required this.accessToken,
-    required this.refreshToken,
-    required this.tokenType,
-    required this.expiresIn,
-  });
-
-  factory _TokenModel.fromJson(Map<String, dynamic> json) {
-    return _TokenModel(
-      accessToken: json['access_token'] ?? '',
-      refreshToken: json['refresh_token'] ?? '',
-      tokenType: json['token_type'] ?? 'bearer',
-      expiresIn: json['expires_in'] ?? 1800,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'access_token': accessToken,
-    'refresh_token': refreshToken,
-    'token_type': tokenType,
-    'expires_in': expiresIn,
-  };
 }

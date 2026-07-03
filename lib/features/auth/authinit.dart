@@ -59,7 +59,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               state is AuthInitial ||
               state is AuthLoading) {
             print('⏳ Auth loading: ${state.runtimeType}');
-            return const Scaffold(
+            return AppScaffold(
               body: Center(
                 child: SwapproLoadingIndicator(size: 50, showLabel: true),
               ),

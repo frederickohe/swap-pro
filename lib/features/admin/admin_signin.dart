@@ -92,7 +92,7 @@ class _AdminSignInState extends State<AdminSignIn> {
 
     final titleFontSize = (67 / 1024 * h).clamp(28.0, 48.0);
 
-    return Scaffold(
+    return AppScaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: BlocConsumer<AuthBloc, AuthState>(

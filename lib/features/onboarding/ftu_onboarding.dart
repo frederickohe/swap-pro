@@ -168,7 +168,7 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
 
     return PopScope(
       canPop: false,
-      child: Scaffold(
+      child: AppScaffold(
         backgroundColor: _bg,
         body: SafeArea(
           child: Column(

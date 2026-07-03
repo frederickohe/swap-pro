@@ -2,8 +2,13 @@ import 'package:swappro/barrel.dart';
 
 class VerifyCode extends StatefulWidget {
   final String email;
+  final String phone;
 
-  const VerifyCode({super.key, required this.email});
+  const VerifyCode({
+    super.key,
+    this.email = '',
+    this.phone = '',
+  });
 
   @override
   State<VerifyCode> createState() => _VerifyCodeState();
@@ -11,6 +16,11 @@ class VerifyCode extends StatefulWidget {
 
 class _VerifyCodeState extends State<VerifyCode> {
   final TextEditingController codeController = TextEditingController();
+
+  String get _destinationLabel {
+    if (widget.phone.isNotEmpty) return 'phone';
+    return 'email';
+  }
 
   @override
   void dispose() {
@@ -38,7 +48,7 @@ class _VerifyCodeState extends State<VerifyCode> {
           context.showAppSnackBar(state.message);
         }
       },
-      child: Scaffold(
+      child: AppScaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         body: BlocBuilder<AuthBloc, AuthState>(
@@ -71,7 +81,7 @@ class _VerifyCodeState extends State<VerifyCode> {
                     ),
                     SizedBox(height: 20 * m.hScale),
                     Text(
-                      'Enter the verification code sent to your email',
+                      'Enter the verification code sent to your $_destinationLabel',
                       style: AppTypography.style(
                         fontSize: 14 * m.wScale,
                         fontWeight: FontWeight.w400,
@@ -95,7 +105,10 @@ class _VerifyCodeState extends State<VerifyCode> {
                           ? null
                           : () {
                               context.read<AuthBloc>().add(
-                                    SendResetCodeEvent(email: widget.email),
+                                    SendResetCodeEvent(
+                                      email: widget.email,
+                                      phone: widget.phone,
+                                    ),
                                   );
                             },
                       child: Text(
@@ -126,6 +139,7 @@ class _VerifyCodeState extends State<VerifyCode> {
                           context.read<AuthBloc>().add(
                                 VerifyResetCodeEvent(
                                   email: widget.email,
+                                  phone: widget.phone,
                                   code: codeController.text.trim(),
                                 ),
                               );

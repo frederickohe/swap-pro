@@ -55,7 +55,7 @@ class _SwapBayViewState extends State<_SwapBayView> {
         final items = state.itemsForTab(_tab);
         final busy = state.loading || state.actionInProgress;
 
-        return Scaffold(
+        return AppScaffold(
           backgroundColor: Colors.white,
           body: SafeArea(
             child: Column(

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:swappro/config/app_config.dart';
@@ -37,6 +38,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckSessionEvent>(_onCheckSession);
     on<VerifySignupOtpEvent>(_onVerifySignupOtp);
     on<ResendSignupOtpEvent>(_onResendSignupOtp);
+    on<SessionExpiredEvent>(_onSessionExpired);
+  }
+
+  Future<void> _onSessionExpired(
+    SessionExpiredEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    await tokenService.clearTokens();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user');
+    emit(const SessionExpired());
   }
 
   String _messageFromResponse(http.Response response, String fallback) {
@@ -135,18 +147,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignup(SignupEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+      final body = <String, dynamic>{
           // Backend DTO expects `fullname` (we collect it as username in UI).
           'fullname': event.username,
           'phone': normalizePhone(event.phone),
           'email': event.email,
           'password': event.password,
-          'company': event.company,
-          'ghana_card': event.ghanaCard,
-        }),
+        };
+      final company = event.company?.trim();
+      if (company != null && company.isNotEmpty) {
+        body['company'] = company;
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200) {
@@ -309,6 +325,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
     try {
+      final accessToken = await tokenService.getAccessToken();
+      if (accessToken != null && accessToken.isNotEmpty) {
+        try {
+          await http
+              .post(
+                Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signout'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $accessToken',
+                },
+              )
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {
+          // Local logout still proceeds if the server is unreachable.
+        }
+      }
       await tokenService.clearTokens();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user');
@@ -356,21 +388,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
+      final body = <String, String>{};
+      if (event.phone.isNotEmpty) {
+        body['phone'] = normalizePhone(event.phone);
+      } else if (event.email.isNotEmpty) {
+        body['email'] = event.email;
+      }
+
       final response = await http.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/verify-account'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': event.email}),
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200) {
-        emit(EmailExists(email: event.email));
+        final data = json.decode(response.body);
+        final email = (data is Map && data['email'] != null)
+            ? data['email'].toString()
+            : event.email;
+        final phone = (data is Map && data['phone'] != null)
+            ? data['phone'].toString()
+            : normalizePhone(event.phone);
+        emit(EmailExists(email: email, phone: phone));
       } else {
-        String errorMsg = 'Email check failed';
+        String errorMsg = 'Account check failed';
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
-          }
+          errorMsg = _extractApiError(errorData, errorMsg);
         } catch (_) {}
         emit(AuthError(message: errorMsg, source: 'check_email'));
       }
@@ -387,10 +431,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
+      final body = <String, String>{};
+      if (event.phone.isNotEmpty) {
+        body['phone'] = normalizePhone(event.phone);
+      } else if (event.email.isNotEmpty) {
+        body['email'] = event.email;
+      }
+
       final response = await http.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/send'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': event.email, 'phone': event.phone}),
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200) {
@@ -398,6 +449,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(
           ResetCodeSent(
             email: event.email,
+            phone: event.phone.isNotEmpty ? normalizePhone(event.phone) : '',
             message: data['message'] ?? 'Reset code sent successfully',
           ),
         );
@@ -405,9 +457,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         String errorMsg = 'Failed to send reset code';
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
-          }
+          errorMsg = _extractApiError(errorData, errorMsg);
         } catch (_) {}
         emit(AuthError(message: errorMsg, source: 'send_reset_code'));
       }
@@ -422,25 +472,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
+      final body = <String, String>{'otp': event.code};
+      if (event.phone.isNotEmpty) {
+        body['phone'] = normalizePhone(event.phone);
+      } else if (event.email.isNotEmpty) {
+        body['email'] = event.email;
+      }
+
       final response = await http.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/verify'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': event.email,
-          'phone': event.phone,
-          'otp': event.code,
-        }),
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200) {
-        emit(ResetCodeVerified(email: event.email, code: event.code));
+        emit(
+          ResetCodeVerified(
+            email: event.email,
+            phone: event.phone.isNotEmpty ? normalizePhone(event.phone) : '',
+            code: event.code,
+          ),
+        );
       } else {
         String errorMsg = 'Invalid verification code';
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
-          }
+          errorMsg = _extractApiError(errorData, errorMsg);
         } catch (_) {}
         emit(AuthError(message: errorMsg, source: 'verify_code'));
       }
@@ -525,6 +582,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user', json.encode(userData));
           emit(Authenticated(user: userData));
+        } else if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
         } else {
           emit(
             TokenRefreshFailed(
@@ -533,6 +592,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           );
         }
       } else if (response.statusCode == 401) {
+        if (!_isRefreshTokenExpired(refreshToken) &&
+            await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         // Refresh token is invalid or expired
         await tokenService.clearTokens();
         final prefs = await SharedPreferences.getInstance();
@@ -591,12 +655,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     // Tokens exist but profile cache is missing — still allow the user in.
-    if (await tokenService.hasValidSession()) {
+    if (await tokenService.hasPersistedSession()) {
       emit(const Authenticated(user: <String, dynamic>{}));
       return;
     }
 
     emit(const ServerUnreachable());
+  }
+
+  bool _isRefreshTokenExpired(String refreshToken) {
+    if (refreshToken.isEmpty) return true;
+    try {
+      return JwtDecoder.isExpired(refreshToken);
+    } catch (_) {
+      return true;
+    }
   }
 
   Future<bool> _restoreUserProfile(Emitter<AuthState> emit) async {
@@ -641,14 +714,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final hasRefreshToken = refreshToken.isNotEmpty;
 
       if (token.isExpired) {
-        if (hasRefreshToken) {
+        if (hasRefreshToken && !_isRefreshTokenExpired(refreshToken)) {
           final reachable = await BackendConnectivity.isReachable();
           if (!reachable) {
-            if (cachedUser != null) {
-              emit(Authenticated(user: cachedUser));
-              return;
-            }
-            emit(const ServerUnreachable());
+            await _emitCachedSession(emit);
             return;
           }
           add(const RefreshTokenEvent());
@@ -676,6 +745,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       final reachable = await BackendConnectivity.isReachable();
       if (!reachable) {
+        if (await tokenService.hasPersistedSession()) {
+          await _emitCachedSession(emit);
+          return;
+        }
         emit(const ServerUnreachable());
         return;
       }
@@ -701,5 +774,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         AuthError(message: 'Session check failed: $e', source: 'check_session'),
       );
     }
+  }
+
+  String _extractApiError(dynamic errorData, String fallback) {
+    if (errorData is! Map) return fallback;
+    final detail = errorData['detail'];
+    if (detail is String && detail.isNotEmpty) return detail;
+    if (detail is List && detail.isNotEmpty) {
+      final first = detail.first;
+      if (first is Map && first['msg'] != null) {
+        return first['msg'].toString();
+      }
+    }
+    return fallback;
   }
 }

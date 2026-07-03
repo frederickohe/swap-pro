@@ -55,7 +55,7 @@ class _SignupOtpState extends State<SignupOtp> {
           },
         ),
       ],
-      child: Scaffold(
+      child: AppScaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         body: BlocBuilder<AuthBloc, AuthState>(

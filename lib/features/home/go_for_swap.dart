@@ -27,7 +27,6 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
   final _mapController = MapController();
   var _loading = true;
   var _completing = false;
-  String? _error;
   Map<String, dynamic>? _details;
 
   bool get _isCompleted {
@@ -56,15 +55,12 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
       setState(() {
         _details = data;
         _loading = false;
-        _error = null;
       });
       _fitMapToMarkers();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
+      setState(() => _loading = false);
+      await ApiErrorHandler.handle(context, e, onRetry: _load);
     }
   }
 
@@ -145,15 +141,17 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _completing = false);
-      context.showAppSnackBar(
-        e.toString().replaceFirst('Exception: ', ''),
-      );
+      if (ApiErrorHandler.isSessionExpired(e)) {
+        context.read<AuthBloc>().add(const SessionExpiredEvent());
+        return;
+      }
+      context.showAppSnackBar('Something went wrong. Please try again.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,22 +170,14 @@ class _GoForSwapPageState extends State<GoForSwapPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: _loading
                       ? const Center(child: SwapproLoadingIndicator())
-                      : _error != null
-                          ? Text(
-                              _error!,
-                              style: AppTypography.style(
-                                fontSize: 14,
-                                color: Colors.red,
-                              ),
-                            )
-                          : _buildDetailsSection(),
+                      : _buildDetailsSection(),
                 ),
                 const SizedBox(height: 24),
               ],
             ),
           ),
           Expanded(child: _buildMapSection()),
-          if (!_loading && _error == null) _buildCompleteButton(),
+          if (!_loading && _details != null) _buildCompleteButton(),
         ],
       ),
     );

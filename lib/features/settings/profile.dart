@@ -25,7 +25,6 @@ class _ProfileState extends State<Profile> {
   String? _profilePictureUrl;
   bool _isVerified = false;
   bool _loading = true;
-  String? _error;
 
   List<_ListingItem> _previewListings = [];
 
@@ -38,7 +37,6 @@ class _ProfileState extends State<Profile> {
   Future<void> _loadProfile() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       final api = context.read<ApiService>();
@@ -63,7 +61,12 @@ class _ProfileState extends State<Profile> {
         _previewListings = preview;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (!mounted) return;
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadProfile,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -194,7 +197,7 @@ class _ProfileState extends State<Profile> {
           context.showAppSnackBar(state.message);
         }
       },
-      child: Scaffold(
+      child: AppScaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
           child: _loading
@@ -202,17 +205,6 @@ class _ProfileState extends State<Profile> {
               : Column(
                   children: [
                     _buildTopBar(wScale, hScale),
-                    if (_error != null)
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 26 * wScale),
-                        child: Text(
-                          _error!,
-                          style: AppTypography.style(
-                            color: Colors.red,
-                            fontSize: 12 * wScale,
-                          ),
-                        ),
-                      ),
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: _loadProfile,

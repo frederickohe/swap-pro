@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
 import 'package:swappro/features/initial_ui/server_error_page.dart';
 import 'package:swappro/services/connectivity_notifier.dart';
@@ -38,6 +39,7 @@ void _onConnectivityChanged() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   print('=== APP STARTING ===');
 
@@ -60,6 +62,9 @@ void main() async {
     tokenService: _tokenService,
     successBloc: successBloc,
   );
+  _httpClient.onSessionExpired = () {
+    _authBloc.add(const SessionExpiredEvent());
+  };
   print('✓ BLoCs created');
 
   runApp(
@@ -88,21 +93,67 @@ SessionAwareHttpClient get appHttpClient => _httpClient;
 ApiService get apiService => _apiService;
 TokenService get tokenService => _tokenService;
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+
+    final authState = _authBloc.state;
+    if (authState is! Authenticated && authState is! TokenRefreshed) return;
+
+    _authBloc.add(const CheckSessionEvent());
+  }
+
+  void _onAuthStateChanged(BuildContext context, AuthState state) {
+    if (state is! SessionExpired) return;
+
+    context.showAppSnackBar(state.message);
+
+    final nav = NavigationService.navigatorKey.currentState;
+    if (nav == null) return;
+
+    nav.pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => const LogorSign(),
+      ),
+      (route) => false,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ThemeBloc, ThemeState>(
-      builder: (context, state) {
-        return MaterialApp(
-          navigatorKey: NavigationService.navigatorKey,
-          debugShowCheckedModeBanner: false,
-          title: 'Swap Pro',
-          theme: state.themeData,
-          home: const SplashWrapper(),
-        );
-      },
+    return BlocListener<AuthBloc, AuthState>(
+      listener: _onAuthStateChanged,
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, state) {
+          return MaterialApp(
+            navigatorKey: NavigationService.navigatorKey,
+            debugShowCheckedModeBanner: false,
+            title: 'Swap Pro',
+            theme: state.themeData,
+            home: const SplashWrapper(),
+          );
+        },
+      ),
     );
   }
 }

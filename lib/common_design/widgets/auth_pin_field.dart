@@ -125,6 +125,16 @@ class _AuthPinFieldState extends State<AuthPinField> {
     widget.onChanged?.call();
   }
 
+  void _focusPinCell(int index) {
+    if (!widget.enabled) return;
+    final controller = widget.controllers[index];
+    final focusNode = widget.focusNodes[index];
+    focusNode.requestFocus();
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+  }
+
   KeyEventResult _handleBackspaceKey(int index, TextEditingController controller) {
     if (controller.text.isEmpty && index > 0) {
       _focusPreviousAndClear(index);
@@ -162,67 +172,69 @@ class _AuthPinFieldState extends State<AuthPinField> {
                       )
                     : null,
               ),
-              child: Center(
-                child: Focus(
-                  onKeyEvent: (node, event) {
-                    if (event is! KeyDownEvent) {
-                      return KeyEventResult.ignored;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.backspace) {
-                      return _handleBackspaceKey(index, controller);
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enabled: widget.enabled,
-                    textAlign: TextAlign.center,
-                    textAlignVertical: TextAlignVertical.center,
-                    keyboardType: TextInputType.number,
-                    obscureText: widget.obscureText,
-                    style: AppTypography.style(
-                      fontSize: AuthFormField.inputFontSize,
-                      fontWeight: FontWeight.w500,
-                      color: AuthFormField.dark,
-                      height: 1,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(1),
-                      _PinBackspaceFormatter(
-                        index: index,
-                        controllers: widget.controllers,
-                        focusNodes: widget.focusNodes,
-                      ),
-                    ],
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      counterText: '',
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
-                      isCollapsed: true,
-                    ),
-                    onChanged: (value) {
-                      if (value.isNotEmpty) {
-                        if (index < 3) {
-                          widget.focusNodes[index + 1].requestFocus();
-                        } else {
-                          focusNode.unfocus();
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _focusPinCell(index),
+                child: SizedBox.expand(
+                  child: Center(
+                    child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent) {
+                          return KeyEventResult.ignored;
                         }
-                      }
-                      widget.onChanged?.call();
-                    },
-                    onTap: () {
-                      controller.selection = TextSelection.collapsed(
-                        offset: controller.text.length,
-                      );
-                    },
-                    onSubmitted: (_) {
-                      if (index < 3) {
-                        widget.focusNodes[index + 1].requestFocus();
-                      }
-                    },
+                        if (event.logicalKey == LogicalKeyboardKey.backspace) {
+                          return _handleBackspaceKey(index, controller);
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        enabled: widget.enabled,
+                        textAlign: TextAlign.center,
+                        textAlignVertical: TextAlignVertical.center,
+                        keyboardType: TextInputType.number,
+                        obscureText: widget.obscureText,
+                        style: AppTypography.style(
+                          fontSize: AuthFormField.inputFontSize,
+                          fontWeight: FontWeight.w500,
+                          color: AuthFormField.dark,
+                          height: 1,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(1),
+                          _PinBackspaceFormatter(
+                            index: index,
+                            controllers: widget.controllers,
+                            focusNodes: widget.focusNodes,
+                          ),
+                        ],
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          counterText: '',
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                          isCollapsed: true,
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            if (index < 3) {
+                              widget.focusNodes[index + 1].requestFocus();
+                            } else {
+                              focusNode.unfocus();
+                            }
+                          }
+                          widget.onChanged?.call();
+                        },
+                        onTap: () => _focusPinCell(index),
+                        onSubmitted: (_) {
+                          if (index < 3) {
+                            widget.focusNodes[index + 1].requestFocus();
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),

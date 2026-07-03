@@ -121,7 +121,7 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
     final hScale = size.height / _figmaH;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: _greenBg,
       body: SafeArea(
         bottom: false,

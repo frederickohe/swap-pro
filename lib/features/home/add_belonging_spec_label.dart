@@ -78,7 +78,7 @@ class _AddBelongingSpecLabelPageState extends State<AddBelongingSpecLabelPage> {
     final wScale = MediaQuery.sizeOf(context).width / _figmaW;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

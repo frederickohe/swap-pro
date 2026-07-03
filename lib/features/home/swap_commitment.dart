@@ -49,7 +49,7 @@ class _SwapCommitmentPageState extends State<SwapCommitmentPage> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

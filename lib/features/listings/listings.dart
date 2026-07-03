@@ -26,8 +26,8 @@ class _ListingsPageState extends State<ListingsPage> {
   final TextEditingController _searchController = TextEditingController();
 
   List<_ListingRow> _allListings = [];
+  SearchFiltersResult? _filters;
   bool _loading = true;
-  String? _error;
   /// `false` = horizontal row cards; `true` = stacked masonry grid (search-style).
   bool _isGridView = false;
 
@@ -47,7 +47,6 @@ class _ListingsPageState extends State<ListingsPage> {
   Future<void> _loadListings() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       final api = context.read<ApiService>();
@@ -61,20 +60,11 @@ class _ListingsPageState extends State<ListingsPage> {
       setState(() => _allListings = rows);
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
-        return;
-      }
-      setState(() {
-        _error = message;
-        _allListings = [];
-      });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadListings,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -162,24 +152,38 @@ class _ListingsPageState extends State<ListingsPage> {
     );
   }
 
+  Future<void> _openFilters() async {
+    final result = await Navigator.push<SearchFiltersResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
+    );
+    if (!mounted || result == null) return;
+    setState(() => _filters = result);
+  }
+
   List<_ListingRow> get _visibleListings {
-    final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return _allListings;
-    return _allListings
-        .where(
-          (item) =>
-              item.title.toLowerCase().contains(q) ||
-              item.subtitle.toLowerCase().contains(q) ||
-              item.price.toLowerCase().contains(q),
-        )
-        .toList();
+    final keyword = _searchController.text.trim();
+    if (_filters == null && keyword.isEmpty) return _allListings;
+
+    return _allListings.where((item) {
+      final json = item.listingJson;
+      if (_filters != null) {
+        if (json == null) return false;
+        return _filters!.matchesListing(json, keyword: keyword);
+      }
+
+      final q = keyword.toLowerCase();
+      return item.title.toLowerCase().contains(q) ||
+          item.subtitle.toLowerCase().contains(q) ||
+          item.price.toLowerCase().contains(q);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final wScale = MediaQuery.sizeOf(context).width / _figmaW;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
@@ -188,17 +192,6 @@ class _ListingsPageState extends State<ListingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildTopBar(wScale),
-                if (_error != null)
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20 * wScale),
-                    child: Text(
-                      _error!,
-                      style: AppTypography.style(
-                        color: Colors.red.shade700,
-                        fontSize: 12 * wScale,
-                      ),
-                    ),
-                  ),
                 if (widget.swapSelectMode)
                   Padding(
                     padding: EdgeInsets.fromLTRB(20 * wScale, 16 * wScale, 20 * wScale, 0),
@@ -325,7 +318,9 @@ class _ListingsPageState extends State<ListingsPage> {
           Text(
             _allListings.isEmpty
                 ? 'You have no listings yet.\nTap + to add your first item.'
-                : 'No listings match your search.',
+                : (_filters != null || _searchController.text.trim().isNotEmpty)
+                    ? 'No listings match your search or filters.'
+                    : 'No listings match your search.',
             textAlign: TextAlign.center,
             style: AppTypography.style(
               fontSize: 14 * wScale,
@@ -435,12 +430,7 @@ class _ListingsPageState extends State<ListingsPage> {
           size: 70 * wScale,
           height: 60 * wScale,
           icon: Icons.tune,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
-            );
-          },
+          onTap: _openFilters,
         ),
         SizedBox(height: 15 * wScale),
         _FabCircle(

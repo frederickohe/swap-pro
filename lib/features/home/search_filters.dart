@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:swappro/barrel.dart';
 
 /// Figma "Filters" frame (node 162:2029) — search & filter properties.
@@ -30,7 +32,89 @@ class SearchFiltersResult {
   final double? locationLat;
   final double? locationLng;
   final double locationRadiusKm;
+
+  /// Client-side filter for a listing map (e.g. on "Your listings").
+  bool matchesListing(
+    Map<String, dynamic> listing, {
+    String keyword = '',
+  }) {
+    final q = keyword.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      final title = (listing['title'] ?? '').toString().toLowerCase();
+      final categoryText = (listing['category'] ?? '').toString().toLowerCase();
+      final conditionText = (listing['condition'] ?? '').toString().toLowerCase();
+      final priceText = (listing['estimated_value']?.toString() ?? '').toLowerCase();
+      if (!title.contains(q) &&
+          !categoryText.contains(q) &&
+          !conditionText.contains(q) &&
+          !priceText.contains(q)) {
+        return false;
+      }
+    }
+
+    if (category != null) {
+      final listingCategory = (listing['category'] ?? '').toString().trim();
+      if (listingCategory != category) return false;
+    }
+
+    if (condition != null) {
+      final listingCondition = (listing['condition'] ?? '').toString().trim();
+      if (listingCondition != condition) return false;
+    }
+
+    if (minPrice > 0 || maxPrice > 0) {
+      final value = listing['estimated_value'];
+      double? price;
+      if (value is num) {
+        price = value.toDouble();
+      } else if (value != null) {
+        price = double.tryParse(
+          value.toString().replaceAll(RegExp(r'[^0-9.]'), ''),
+        );
+      }
+      if (price == null) return false;
+      if (minPrice > 0 && price < minPrice) return false;
+      if (maxPrice > 0 && price > maxPrice) return false;
+    }
+
+    final locationText = location.trim();
+    if (locationText.isNotEmpty || (locationLat != null && locationLng != null)) {
+      if (locationLat != null && locationLng != null) {
+        final lat = listing['location_lat'];
+        final lng = listing['location_lng'];
+        if (lat is! num || lng is! num) return false;
+        final dist = _haversineKm(
+          locationLat!,
+          locationLng!,
+          lat.toDouble(),
+          lng.toDouble(),
+        );
+        if (dist > locationRadiusKm) return false;
+      } else if (!listingDisplayLocation(listing)
+          .toLowerCase()
+          .contains(locationText.toLowerCase())) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }
+
+double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+  const earthRadiusKm = 6371.0;
+  final dLat = _degToRad(lat2 - lat1);
+  final dLon = _degToRad(lon2 - lon1);
+  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(_degToRad(lat1)) *
+          math.cos(_degToRad(lat2)) *
+          math.sin(dLon / 2) *
+          math.sin(dLon / 2);
+  final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+double _degToRad(double deg) => deg * math.pi / 180;
 
 class _SearchFiltersPageState extends State<SearchFiltersPage> {
   static const Color _ink = Color(0xFF111111);
@@ -64,7 +148,7 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
 
   int _selectedConditionIndex = 0;
   int _selectedCategoryIndex = 0;
-  RangeValues _priceRange = const RangeValues(100000, 2000000);
+  RangeValues _priceRange = const RangeValues(0, 0);
   late final TextEditingController _minPriceController;
   late final TextEditingController _maxPriceController;
   bool _syncingPriceInputs = false;
@@ -209,7 +293,7 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(

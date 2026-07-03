@@ -77,7 +77,7 @@ class _SigninState extends State<Signin> {
     final buttonHeight = 62 * hScale;
     final buttonRadius = 10 * wScale;
 
-    return Scaffold(
+    return AppScaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: BlocConsumer<AuthBloc, AuthState>(

@@ -105,7 +105,7 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
     final hScale = size.height / _figmaH;
     final canContinue = _selectedItemCategoryIndex != null;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: CustomScrollView(

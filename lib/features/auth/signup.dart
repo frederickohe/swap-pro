@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:swappro/barrel.dart';
 import 'package:swappro/utils/phone_utils.dart';
 
@@ -19,11 +18,6 @@ class _SignupState extends State<Signup> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController companyController = TextEditingController();
-  final TextEditingController ghanaCardTenController = TextEditingController();
-  final TextEditingController ghanaCardCheckController =
-      TextEditingController();
-  final FocusNode _ghanaCardTenFocusNode = FocusNode();
-  final FocusNode _ghanaCardCheckFocusNode = FocusNode();
 
   final List<TextEditingController> _pinControllers = List.generate(
     4,
@@ -31,78 +25,14 @@ class _SignupState extends State<Signup> {
   );
   final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
 
-  bool _ghanaCardFocused = false;
-
   String get _pin => AuthPinField.join(_pinControllers);
-
-  String get _ghanaCardValue {
-    final ten = ghanaCardTenController.text.trim();
-    final one = ghanaCardCheckController.text.trim();
-    if (ten.isEmpty && one.isEmpty) return '';
-    return 'GHA-$ten-$one';
-  }
-
-  static TextStyle _ghanaSegmentStyle() {
-    return AppTypography.style(
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-      color: _dark,
-    );
-  }
-
-  static TextStyle _ghanaHintStyle() {
-    return _ghanaSegmentStyle().copyWith(fontSize: AuthFormField.hintFontSize);
-  }
-
-  double _ghanaTenFieldWidth(BuildContext context, double wScale) {
-    final scaler = MediaQuery.textScalerOf(context);
-    final style = _ghanaSegmentStyle();
-    final digits = ghanaCardTenController.text;
-    final probe = digits.isEmpty ? '000' : digits;
-    final painter = TextPainter(
-      text: TextSpan(text: probe, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-    )..layout();
-    final maxPainter = TextPainter(
-      text: TextSpan(text: '8888888888', style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-    )..layout();
-    return (painter.width + 28 * wScale).clamp(52.0 * wScale, maxPainter.width + 36 * wScale);
-  }
-
-  void _onGhanaTenChanged() => setState(() {});
-
-  void _updateGhanaCardFocus() {
-    final focused =
-        _ghanaCardTenFocusNode.hasFocus || _ghanaCardCheckFocusNode.hasFocus;
-    if (focused != _ghanaCardFocused) {
-      setState(() => _ghanaCardFocused = focused);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    ghanaCardTenController.addListener(_onGhanaTenChanged);
-    _ghanaCardTenFocusNode.addListener(_updateGhanaCardFocus);
-    _ghanaCardCheckFocusNode.addListener(_updateGhanaCardFocus);
-  }
 
   @override
   void dispose() {
-    ghanaCardTenController.removeListener(_onGhanaTenChanged);
-    _ghanaCardTenFocusNode.removeListener(_updateGhanaCardFocus);
-    _ghanaCardCheckFocusNode.removeListener(_updateGhanaCardFocus);
     emailController.dispose();
     usernameController.dispose();
     phoneController.dispose();
     companyController.dispose();
-    ghanaCardTenController.dispose();
-    ghanaCardCheckController.dispose();
-    _ghanaCardTenFocusNode.dispose();
-    _ghanaCardCheckFocusNode.dispose();
     for (final c in _pinControllers) {
       c.dispose();
     }
@@ -117,93 +47,16 @@ class _SignupState extends State<Signup> {
       context.showAppSnackBar('Please enter a 4-digit PIN');
       return;
     }
+    final company = companyController.text.trim();
     context.read<AuthBloc>().add(
           SignupEvent(
             username: usernameController.text.trim(),
             phone: normalizePhone(phoneController.text.trim()),
             email: emailController.text.trim(),
             password: _pin,
-            company: companyController.text.trim(),
-            ghanaCard: _ghanaCardValue,
+            company: company.isEmpty ? null : company,
           ),
         );
-  }
-
-  Widget _buildGhanaCardField({
-    required double fieldHeight,
-    required double fieldRadius,
-    required bool enabled,
-    required double wScale,
-  }) {
-    return AuthFormFieldShell(
-      height: fieldHeight,
-      radius: fieldRadius,
-      icon: Icons.badge_outlined,
-      focused: _ghanaCardFocused,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 44 * wScale,
-            child: Text(
-              'GHA',
-              textAlign: TextAlign.center,
-              style: _ghanaSegmentStyle(),
-            ),
-          ),
-          Text('-', style: _ghanaSegmentStyle().copyWith(color: Colors.black54)),
-          SizedBox(
-            width: _ghanaTenFieldWidth(context, wScale),
-            child: TextField(
-              controller: ghanaCardTenController,
-              focusNode: _ghanaCardTenFocusNode,
-              enabled: enabled,
-              keyboardType: TextInputType.number,
-              style: _ghanaSegmentStyle(),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-              decoration: InputDecoration(
-                hintText: '0000000000',
-                hintStyle: _ghanaHintStyle(),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (value) {
-                if (value.length == 10) {
-                  _ghanaCardCheckFocusNode.requestFocus();
-                }
-              },
-            ),
-          ),
-          Text('-', style: _ghanaSegmentStyle().copyWith(color: Colors.black54)),
-          SizedBox(
-            width: 28 * wScale,
-            child: TextField(
-              controller: ghanaCardCheckController,
-              focusNode: _ghanaCardCheckFocusNode,
-              enabled: enabled,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: _ghanaSegmentStyle(),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(1),
-              ],
-              decoration: InputDecoration(
-                hintText: '0',
-                hintStyle: _ghanaHintStyle(),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -222,7 +75,7 @@ class _SignupState extends State<Signup> {
     final buttonHeight = 62 * hScale;
     final buttonRadius = 10 * wScale;
 
-    return Scaffold(
+    return AppScaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: MultiBlocListener(
@@ -325,18 +178,11 @@ class _SignupState extends State<Signup> {
                     SizedBox(height: formGap),
                     AuthFormField(
                       controller: companyController,
-                      hint: 'Company',
+                      hint: 'Company (optional)',
                       icon: Icons.business_outlined,
                       height: fieldHeight,
                       radius: fieldRadius,
                       enabled: !isLoading,
-                    ),
-                    SizedBox(height: formGap),
-                    _buildGhanaCardField(
-                      fieldHeight: fieldHeight,
-                      fieldRadius: fieldRadius,
-                      enabled: !isLoading,
-                      wScale: wScale,
                     ),
                     SizedBox(height: formGap),
                     AuthFormField(
@@ -347,6 +193,15 @@ class _SignupState extends State<Signup> {
                       radius: fieldRadius,
                       enabled: !isLoading,
                       keyboardType: TextInputType.emailAddress,
+                    ),
+                    SizedBox(height: formGap),
+                    Text(
+                      'Pin',
+                      style: AppTypography.style(
+                        fontSize: 14 * wScale,
+                        fontWeight: FontWeight.w400,
+                        color: _dark,
+                      ),
                     ),
                     SizedBox(height: formGap),
                     AuthPinField(

@@ -160,17 +160,13 @@ class ListingActions {
       return true;
     } catch (e) {
       if (!context.mounted) return false;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
+      if (ApiErrorHandler.isSessionExpired(e)) {
+        context.read<AuthBloc>().add(const SessionExpiredEvent());
         return false;
       }
-      context.showAppSnackBar(message);
+      context.showAppSnackBar(
+        'Something went wrong. Please try again.',
+      );
       return false;
     }
   }

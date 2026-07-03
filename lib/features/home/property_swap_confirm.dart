@@ -18,7 +18,7 @@ class PropertySwapConfirmPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: _gold,
       body: SafeArea(
         child: Padding(

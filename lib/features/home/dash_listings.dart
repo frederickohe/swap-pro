@@ -24,8 +24,8 @@ class _DashListingsPageState extends State<DashListingsPage> {
   String _query = '';
 
   List<_DashListing> _allListings = [];
+  SearchFiltersResult? _filters;
   bool _loading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -42,7 +42,6 @@ class _DashListingsPageState extends State<DashListingsPage> {
   Future<void> _loadListings() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       final api = context.read<ApiService>();
@@ -54,20 +53,11 @@ class _DashListingsPageState extends State<DashListingsPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      if (message.contains('Session expired') ||
-          message.toLowerCase().contains('invalid token')) {
-        context.showAppSnackBar('Session expired. Please sign in again.');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Signin()),
-          (route) => route.isFirst,
-        );
-        return;
-      }
-      setState(() {
-        _error = message;
-        _allListings = [];
-      });
+      await ApiErrorHandler.handle(
+        context,
+        e,
+        onRetry: _loadListings,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -78,16 +68,29 @@ class _DashListingsPageState extends State<DashListingsPage> {
     setState(() => _query = _searchController.text.trim());
   }
 
+  Future<void> _openFilters() async {
+    final result = await Navigator.push<SearchFiltersResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
+    );
+    if (!mounted || result == null) return;
+    setState(() => _filters = result);
+  }
+
   List<_DashListing> get _filteredListings {
-    if (_query.isEmpty) return _allListings;
-    final q = _query.toLowerCase();
-    return _allListings
-        .where(
-          (item) =>
-              item.title.toLowerCase().contains(q) ||
-              item.category.toLowerCase().contains(q),
-        )
-        .toList();
+    if (_filters == null && _query.isEmpty) return _allListings;
+
+    return _allListings.where((item) {
+      final json = item.listingJson;
+      if (_filters != null) {
+        if (json == null) return false;
+        return _filters!.matchesListing(json, keyword: _query);
+      }
+
+      final q = _query.toLowerCase();
+      return item.title.toLowerCase().contains(q) ||
+          item.category.toLowerCase().contains(q);
+    }).toList();
   }
 
   Future<void> _openDetail(_DashListing listing) async {
@@ -158,7 +161,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final filtered = _filteredListings;
 
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
@@ -178,14 +181,6 @@ class _DashListingsPageState extends State<DashListingsPage> {
                     ),
                   ),
                 ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      _error!,
-                      style: _text(size: 12, color: Colors.red.shade700),
-                    ),
-                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSearchRow(context),
@@ -276,12 +271,7 @@ class _DashListingsPageState extends State<DashListingsPage> {
         ),
         const SizedBox(width: 30),
         GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchFiltersPage()),
-            );
-          },
+          onTap: _openFilters,
           child: Container(
             width: 40,
             height: 40,
@@ -301,9 +291,11 @@ class _DashListingsPageState extends State<DashListingsPage> {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Text(
-          _query.isEmpty
+          _query.isEmpty && _filters == null
               ? 'No listings yet.\nTap + to add your first item.'
-              : 'No listings match "$_query"',
+              : (_filters != null || _query.isNotEmpty)
+                  ? 'No listings match your search or filters.'
+                  : 'No listings match "$_query"',
           textAlign: TextAlign.center,
           style: _text(size: 16, color: _subtitle),
         ),
