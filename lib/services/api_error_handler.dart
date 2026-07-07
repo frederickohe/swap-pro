@@ -7,8 +7,9 @@ class ApiErrorHandler {
   static bool isSessionExpired(Object error) {
     final message = error.toString().toLowerCase();
     return message.contains('session expired') ||
-        message.contains('invalid token') ||
-        message.contains('401');
+        message.contains('token expired') ||
+        message.contains('please log in again') ||
+        message.contains('please sign in again');
   }
 
   static bool isNetworkFailure(Object error) {

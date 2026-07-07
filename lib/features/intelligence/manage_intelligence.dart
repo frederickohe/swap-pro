@@ -205,7 +205,7 @@ class _ManageIntelligenceState extends State<ManageIntelligence> {
     if (raw.contains('403')) {
       return 'Upload blocked: you do not have permission to upload RAG documents.';
     }
-    if (raw.contains('Session expired') || raw.contains('401')) {
+    if (raw.contains('Session expired') || raw.contains('token expired')) {
       return 'Session expired. Please sign in again.';
     }
     return raw.replaceFirst('Exception: ', '');

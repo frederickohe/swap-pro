@@ -17,6 +17,14 @@ class ApiService {
           ? baseUrl!
           : '${AppConfig.backendUrl}/api/v1';
 
+  /// Throws only when credentials are truly gone; keeps session if refresh token remains.
+  Future<Never> _throwOnUnauthorized() async {
+    if (await httpClient.tokenService.hasPersistedSession()) {
+      throw Exception('Request unauthorized');
+    }
+    await _throwOnUnauthorized();
+  }
+
   /// Get current user profile
   Future<Map<String, dynamic>> getUserProfile() async {
     try {
@@ -25,7 +33,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else {
         throw Exception('Failed to fetch user profile: ${response.statusCode}');
       }
@@ -54,7 +62,7 @@ class ApiService {
         debugPrint('Data is not a map or does not contain rides key');
         return data is List ? data : [];
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired - unauthorized');
+        await _throwOnUnauthorized();
       } else {
         throw Exception(
           'Failed to fetch rides: ${response.statusCode} - ${response.body}',
@@ -76,7 +84,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else if (response.statusCode == 404) {
         throw Exception('Ride not found');
       } else {
@@ -109,7 +117,7 @@ class ApiService {
       if (response.statusCode == 201 || response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else if (response.statusCode == 400) {
         final error = json.decode(response.body);
         throw Exception(error['detail'] ?? 'Invalid booking details');
@@ -133,7 +141,7 @@ class ApiService {
         }
         return data is List ? data : [];
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else {
         throw Exception('Failed to fetch bookings: ${response.statusCode}');
       }
@@ -152,7 +160,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else if (response.statusCode == 404) {
         throw Exception('Booking not found');
       } else {
@@ -231,7 +239,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else if (response.statusCode == 400) {
         final error = json.decode(response.body);
         throw Exception(error['detail'] ?? 'Invalid profile data');
@@ -269,7 +277,7 @@ class ApiService {
           ? decoded
           : <String, dynamic>{'data': decoded};
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to update notification settings: ${response.statusCode} ${response.body}',
@@ -302,7 +310,7 @@ class ApiService {
           ? decoded
           : <String, dynamic>{'data': decoded};
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to update notification settings: ${response.statusCode} ${response.body}',
@@ -328,7 +336,7 @@ class ApiService {
           ? decoded
           : <String, dynamic>{'data': decoded};
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to update profile image: ${response.statusCode} ${response.body}',
@@ -354,7 +362,7 @@ class ApiService {
           ? decoded
           : <String, dynamic>{'data': decoded};
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to update profile image: ${response.statusCode} ${response.body}',
@@ -400,7 +408,7 @@ class ApiService {
     }
 
     if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -440,7 +448,7 @@ class ApiService {
     }
 
     if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -480,7 +488,7 @@ class ApiService {
       return const [];
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to list storage files: ${response.statusCode} ${response.body}',
@@ -515,7 +523,7 @@ class ApiService {
       return const [];
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to list my storage files: ${response.statusCode} ${response.body}',
@@ -552,7 +560,7 @@ class ApiService {
       return;
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to delete file: ${response.statusCode} ${response.body}',
@@ -595,7 +603,7 @@ class ApiService {
       throw Exception('Upload succeeded but response shape was unexpected');
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to upload file: ${response.statusCode} ${response.body}',
@@ -657,7 +665,7 @@ class ApiService {
       throw Exception('Upload succeeded but response shape was unexpected');
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to upload RAG document: ${response.statusCode} ${response.body}',
@@ -697,7 +705,7 @@ class ApiService {
       throw Exception('URL index started but response shape was unexpected');
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to index website: ${response.statusCode} ${response.body}',
@@ -725,7 +733,7 @@ class ApiService {
       throw Exception('Unexpected job status response shape');
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Indexing job not found');
@@ -771,7 +779,7 @@ class ApiService {
         }
         return data is List ? data : [];
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired');
+        await _throwOnUnauthorized();
       } else {
         throw Exception('Failed to search rides: ${response.statusCode}');
       }
@@ -827,7 +835,7 @@ class ApiService {
           .toList();
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     return [];
   }
@@ -854,7 +862,7 @@ class ApiService {
       if (data is List) return _decodeMapList(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     return [];
   }
@@ -1048,7 +1056,7 @@ class ApiService {
       }
       return const [];
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to fetch notifications: ${response.statusCode} ${response.body}',
@@ -1091,7 +1099,7 @@ class ApiService {
       }
       throw Exception('Invalid mark-as-read response');
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       'Failed to mark notification as read: ${response.statusCode} ${response.body}',
@@ -1125,7 +1133,7 @@ class ApiService {
       throw Exception('Invalid social connect response');
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1159,7 +1167,7 @@ class ApiService {
           .toList();
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1193,7 +1201,7 @@ class ApiService {
           .toList();
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1213,7 +1221,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Product not found');
@@ -1272,7 +1280,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1318,7 +1326,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1336,7 +1344,7 @@ class ApiService {
       return;
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Product not found');
@@ -1357,7 +1365,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Conversation not found');
@@ -1380,7 +1388,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('No conversation found for this order');
@@ -1418,7 +1426,7 @@ class ApiService {
       return {'success': true};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1443,7 +1451,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1461,7 +1469,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Order not found');
@@ -1501,7 +1509,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1529,7 +1537,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1558,7 +1566,7 @@ class ApiService {
       };
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1593,7 +1601,7 @@ class ApiService {
       return {'emails': <dynamic>[], 'total_returned': 0};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1608,7 +1616,7 @@ class ApiService {
     ).replace(queryParameters: {'page': '1', 'size': '${size.clamp(1, 100)}'});
     final response = await httpClient.get(uri);
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode != 200) {
       throw Exception(
@@ -1684,7 +1692,7 @@ class ApiService {
       return {'items': <dynamic>[], 'total': 0};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1748,7 +1756,7 @@ class ApiService {
       return {'items': <dynamic>[], 'total': 0, 'page': page, 'size': size};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1768,7 +1776,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 404) {
       throw Exception('Listing not found');
@@ -1795,7 +1803,7 @@ class ApiService {
       if (data is List) return _decodeMapList(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1836,7 +1844,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1862,7 +1870,7 @@ class ApiService {
       if (data is List) return _decodeMapList(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1887,7 +1895,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1914,7 +1922,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1941,7 +1949,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1965,7 +1973,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -1990,7 +1998,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2015,7 +2023,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2040,7 +2048,7 @@ class ApiService {
       return {'data': data};
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2103,7 +2111,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2132,7 +2140,7 @@ class ApiService {
       if (data is Map) return Map<String, dynamic>.from(data);
     }
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 403) {
       throw Exception('You can only edit your own listings');
@@ -2156,7 +2164,7 @@ class ApiService {
     final response = await httpClient.delete(uri);
     if (response.statusCode == 200) return;
     if (response.statusCode == 401) {
-      throw Exception('Session expired');
+      await _throwOnUnauthorized();
     }
     if (response.statusCode == 403) {
       throw Exception('You can only delete your own listings');
@@ -2225,7 +2233,7 @@ class ApiService {
       }
       return [];
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to load customers (${response.statusCode})',
@@ -2242,7 +2250,7 @@ class ApiService {
       if (data is Map<String, dynamic>) return data;
       if (data is Map) return Map<String, dynamic>.from(data);
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     if (response.statusCode == 404) throw Exception('Customer not found');
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2282,7 +2290,7 @@ class ApiService {
       if (data is Map<String, dynamic>) return data;
       if (data is Map) return Map<String, dynamic>.from(data);
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to add customer (${response.statusCode})',
@@ -2322,7 +2330,7 @@ class ApiService {
       if (data is Map<String, dynamic>) return data;
       if (data is Map) return Map<String, dynamic>.from(data);
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to update customer (${response.statusCode})',
@@ -2335,7 +2343,7 @@ class ApiService {
       Uri.parse('$baseUrl/customers/delete/$customerId'),
     );
     if (response.statusCode == 200) return;
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     if (response.statusCode == 404) throw Exception('Customer not found');
     throw Exception(
       _httpDetailMessage(response.body) ??
@@ -2361,7 +2369,7 @@ class ApiService {
       if (data is Map<String, dynamic>) return data;
       if (data is Map) return Map<String, dynamic>.from(data);
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to send SMS (${response.statusCode})',
@@ -2388,7 +2396,7 @@ class ApiService {
       if (data is Map<String, dynamic>) return data;
       if (data is Map) return Map<String, dynamic>.from(data);
     }
-    if (response.statusCode == 401) throw Exception('Session expired');
+    if (response.statusCode == 401) await _throwOnUnauthorized();
     throw Exception(
       _httpDetailMessage(response.body) ??
           'Failed to send email (${response.statusCode})',
