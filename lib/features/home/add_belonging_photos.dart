@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:swappro/barrel.dart';
-import 'package:swappro/common_design/widgets/success_reveal_route.dart';
 
 /// Add belonging flow — step 4 gallery photos (Figma "Add 4", node 194:467).
 class AddBelongingPhotosPage extends StatefulWidget {
@@ -51,9 +50,8 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
 
   final List<File> _photos = [];
   bool _pickingImage = false;
-  bool _submitting = false;
 
-  bool get _canProceed => _photos.isNotEmpty && !_submitting;
+  bool get _canProceed => _photos.isNotEmpty && !_pickingImage;
 
   Future<void> _pickPhoto() async {
     if (_pickingImage || _photos.length >= _maxPhotos) return;
@@ -122,81 +120,31 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
     setState(() => _photos.removeAt(index));
   }
 
-  Future<void> _submit() async {
+  void _goToAddonsStep() {
     if (!_canProceed) return;
 
-    setState(() => _submitting = true);
-    try {
-      final api = context.read<ApiService>();
-      final specLabelUrl = await api.uploadFile(
-        file: widget.specLabelImage,
-        storageFolder: ApiService.listingsStorageFolder,
-      );
-
-      final galleryUrls = <String>[];
-      for (final file in _photos) {
-        galleryUrls.add(
-          await api.uploadFile(
-            file: file,
-            storageFolder: ApiService.listingsStorageFolder,
-          ),
-        );
-      }
-
-      final primaryUrl = galleryUrls.first;
-      final imageUrls = <String>[
-        ...galleryUrls.skip(1),
-        specLabelUrl,
-      ];
-
-      var locationArea = widget.locationArea?.trim();
-      if (locationArea == null || locationArea.isEmpty) {
-        locationArea = await GeocodingService().reverseGeocodeArea(
-          latitude: widget.locationLat,
-          longitude: widget.locationLng,
-        );
-      }
-
-      await api.createBelongingListing(
-        title: widget.title,
-        description: widget.description,
-        category: widget.itemCategory,
-        condition: widget.condition,
-        primaryImageUrl: primaryUrl,
-        imageUrls: imageUrls,
-        estimatedValue: widget.estimatedValue,
-        serialNumber: widget.serialNumber,
-        buildVersion: widget.buildVersion,
-        ownershipDocumentsAvailable: widget.ownershipDocumentsAvailable,
-        wishlist: widget.wishlist,
-        locationLat: widget.locationLat,
-        locationLng: widget.locationLng,
-        locationArea: locationArea,
-      );
-
-      if (!mounted) return;
-      context.read<SuccessBloc>().add(
-            const ShowSuccessEvent(
-              message: 'Belonging added successfully!',
-              nextScreen: 'home',
-            ),
-          );
-      Navigator.of(context).pushAndRemoveUntil(
-        SuccessRevealRoute(
-          child: const Success(delayEntrance: true),
+    Navigator.push(
+      context,
+      PageTransition(
+        type: PageTransitionType.rightToLeftWithFade,
+        child: AddBelongingAddonsPage(
+          itemCategory: widget.itemCategory,
+          specLabelImage: widget.specLabelImage,
+          title: widget.title,
+          description: widget.description,
+          condition: widget.condition,
+          estimatedValue: widget.estimatedValue,
+          serialNumber: widget.serialNumber,
+          buildVersion: widget.buildVersion,
+          ownershipDocumentsAvailable: widget.ownershipDocumentsAvailable,
+          wishlist: widget.wishlist,
+          locationLat: widget.locationLat,
+          locationLng: widget.locationLng,
+          locationArea: widget.locationArea,
+          photos: List<File>.from(_photos),
         ),
-        (route) => route.isFirst,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      if (ApiErrorHandler.isSessionExpired(e)) {
-        context.read<AuthBloc>().add(const SessionExpiredEvent());
-        return;
-      }
-      context.showAppSnackBar('Something went wrong. Please try again.');
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
+      ),
+    );
   }
 
   @override
@@ -370,7 +318,7 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled ? _submit : null,
+        onTap: enabled ? _goToAddonsStep : null,
         borderRadius: BorderRadius.circular(15 * wScale),
         child: Ink(
           height: 48 * wScale,
@@ -387,23 +335,14 @@ class _AddBelongingPhotosPageState extends State<AddBelongingPhotosPage> {
             ],
           ),
           child: Center(
-            child: _submitting
-                ? SizedBox(
-                    width: 22 * wScale,
-                    height: 22 * wScale,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    'Next',
-                    style: AppTypography.style(
-                      fontSize: 18 * wScale,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
+            child: Text(
+              'Next',
+              style: AppTypography.style(
+                fontSize: 18 * wScale,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
       ),

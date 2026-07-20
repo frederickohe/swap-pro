@@ -22,14 +22,12 @@ class SignupEvent extends AuthEvent {
   final String phone;
   final String email;
   final String password;
-  final String? company;
 
   const SignupEvent({
     required this.email,
     required this.password,
     required this.username,
     required this.phone,
-    this.company,
   });
 
   @override
@@ -38,7 +36,6 @@ class SignupEvent extends AuthEvent {
     phone,
     email,
     password,
-    company ?? '',
   ];
 }
 

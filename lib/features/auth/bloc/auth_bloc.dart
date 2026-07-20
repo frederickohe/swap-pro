@@ -154,10 +154,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'email': event.email,
           'password': event.password,
         };
-      final company = event.company?.trim();
-      if (company != null && company.isNotEmpty) {
-        body['company'] = company;
-      }
 
       final response = await http.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signup'),

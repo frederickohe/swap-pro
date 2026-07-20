@@ -62,6 +62,7 @@ export 'package:swappro/features/home/add_belonging_spec_label.dart';
 export 'package:swappro/features/home/add_belonging_details.dart';
 export 'package:swappro/features/home/add_belonging_location_picker.dart';
 export 'package:swappro/features/home/add_belonging_photos.dart';
+export 'package:swappro/features/home/add_belonging_addons.dart';
 export 'package:swappro/features/auth/authinit.dart';
 export 'package:swappro/common_design/manage_screen_style.dart';
 export 'package:swappro/common_design/settings_screen_style.dart';

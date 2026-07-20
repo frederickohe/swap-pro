@@ -17,7 +17,6 @@ class _SignupState extends State<Signup> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController companyController = TextEditingController();
 
   final List<TextEditingController> _pinControllers = List.generate(
     4,
@@ -32,7 +31,6 @@ class _SignupState extends State<Signup> {
     emailController.dispose();
     usernameController.dispose();
     phoneController.dispose();
-    companyController.dispose();
     for (final c in _pinControllers) {
       c.dispose();
     }
@@ -47,14 +45,12 @@ class _SignupState extends State<Signup> {
       context.showAppSnackBar('Please enter a 4-digit PIN');
       return;
     }
-    final company = companyController.text.trim();
     context.read<AuthBloc>().add(
           SignupEvent(
             username: usernameController.text.trim(),
             phone: normalizePhone(phoneController.text.trim()),
             email: emailController.text.trim(),
             password: _pin,
-            company: company.isEmpty ? null : company,
           ),
         );
   }
@@ -174,15 +170,6 @@ class _SignupState extends State<Signup> {
                       radius: fieldRadius,
                       enabled: !isLoading,
                       keyboardType: TextInputType.phone,
-                    ),
-                    SizedBox(height: formGap),
-                    AuthFormField(
-                      controller: companyController,
-                      hint: 'Company (optional)',
-                      icon: Icons.business_outlined,
-                      height: fieldHeight,
-                      radius: fieldRadius,
-                      enabled: !isLoading,
                     ),
                     SizedBox(height: formGap),
                     AuthFormField(

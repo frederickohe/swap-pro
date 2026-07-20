@@ -2072,6 +2072,10 @@ class ApiService {
     double? locationLat,
     double? locationLng,
     String? locationArea,
+    bool wishFinding = false,
+    bool budgetNegotiation = false,
+    double? budgetAmount,
+    bool collectionAssistance = false,
   }) async {
     final body = <String, dynamic>{
       'title': title.trim(),
@@ -2083,6 +2087,9 @@ class ApiService {
       'ownership_documents_available': ownershipDocumentsAvailable,
       'estimated_value': estimatedValue,
       'wishlist': wishlist,
+      'wish_finding': wishFinding,
+      'budget_negotiation': budgetNegotiation,
+      'collection_assistance': collectionAssistance,
     };
     final serial = serialNumber?.trim();
     if (serial != null && serial.isNotEmpty) body['serial_number'] = serial;
@@ -2092,6 +2099,9 @@ class ApiService {
     if (locationLng != null) body['location_lng'] = locationLng;
     final area = locationArea?.trim();
     if (area != null && area.isNotEmpty) body['location_area'] = area;
+    if (budgetNegotiation && budgetAmount != null) {
+      body['budget_amount'] = budgetAmount;
+    }
     return createListing(body);
   }
 
