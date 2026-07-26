@@ -1,7 +1,6 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:swappro/barrel.dart';
-import 'package:swappro/features/home/listing_location.dart';
 
 // Figma Dashboard palette
 const _kBg = Color(0xFFFFFFFF);
@@ -13,13 +12,102 @@ const _kBadge = Color(0xFFFD5F4A);
 const _kNavBg = Color(0xFF111111);
 const _kHeartBg = Color(0xFF292526);
 
+/// Preloaded dashboard payload so Home can open without a skeleton wait.
+class _HomeBootstrapData {
+  const _HomeBootstrapData({
+    required this.recentPosts,
+    required this.unreadCount,
+  });
+
+  final List<_ProductCardData> recentPosts;
+  final int unreadCount;
+}
+
+/// Shows the Lottie loader until dashboard assets are ready, then opens [Home].
+class HomeEntry extends StatefulWidget {
+  const HomeEntry({super.key});
+
+  @override
+  State<HomeEntry> createState() => _HomeEntryState();
+}
+
+class _HomeEntryState extends State<HomeEntry> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openHome());
+  }
+
+  Future<void> _openHome() async {
+    _HomeBootstrapData? bootstrap;
+    try {
+      bootstrap = await Home._loadBootstrap(context.read<ApiService>());
+    } catch (_) {
+      bootstrap = null;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => Home(bootstrap: bootstrap)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SwapLottieLoadingPage();
+  }
+}
+
 class Home extends StatefulWidget {
-  const Home({super.key});
+  const Home({super.key, _HomeBootstrapData? bootstrap})
+      : _bootstrap = bootstrap;
+
+  final _HomeBootstrapData? _bootstrap;
+
+  static Future<_HomeBootstrapData> _loadBootstrap(ApiService api) async {
+    final results = await Future.wait<Object>([
+      _fetchRecentPosts(api),
+      api.getUnreadNotificationCount(),
+    ]);
+    return _HomeBootstrapData(
+      recentPosts: results[0] as List<_ProductCardData>,
+      unreadCount: results[1] as int,
+    );
+  }
+
+  static Future<List<_ProductCardData>> _fetchRecentPosts(ApiService api) async {
+    final result = await api.searchListings(page: 1, size: 100);
+    final items = result['items'];
+    if (items is! List || items.isEmpty) return const [];
+
+    final listings = <Map<String, dynamic>>[];
+    for (final raw in items) {
+      if (raw is Map) listings.add(Map<String, dynamic>.from(raw));
+    }
+    await prefetchListingLocations(listings);
+
+    // Newest first (API already orders by created_at desc; keep stable).
+    listings.sort((a, b) {
+      final aCreated = (a['created_at'] ?? '').toString();
+      final bCreated = (b['created_at'] ?? '').toString();
+      return bCreated.compareTo(aCreated);
+    });
+
+    final cards = <_ProductCardData>[];
+    for (var i = 0; i < listings.length; i++) {
+      cards.add(
+        _ProductCardData.fromListing(
+          listings[i],
+          imageHeight: i.isOdd ? 251 : 217,
+        ),
+      );
+    }
+    return cards;
+  }
 
   static Route<void> routeFromWelcome() {
     return PageRouteBuilder<void>(
       settings: const RouteSettings(name: 'Home'),
-      pageBuilder: (context, animation, secondaryAnimation) => const Home(),
+      pageBuilder: (context, animation, secondaryAnimation) => const HomeEntry(),
       transitionDuration: const Duration(milliseconds: 1600),
       reverseTransitionDuration: const Duration(milliseconds: 700),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -70,18 +158,12 @@ class _HomeState extends State<Home> {
   ];
 
   static const _categories = [
-    _CategoryItem('Phone', Icons.smartphone_outlined),
-    _CategoryItem('Laptop', Icons.laptop_mac_outlined),
-    _CategoryItem('Speakers', Icons.speaker_outlined),
-    _CategoryItem('Camera', Icons.camera_alt_outlined),
-    _CategoryItem('Clothes', Icons.checkroom_outlined),
-    _CategoryItem('Perfumes', Icons.spa_outlined),
-    _CategoryItem('Soap', Icons.soap_outlined),
-    _CategoryItem('Fan', Icons.mode_fan_off_outlined),
-    _CategoryItem('Carpet', Icons.home_outlined),
-    _CategoryItem('Light', Icons.lightbulb_outline),
-    _CategoryItem('Book', Icons.menu_book_outlined),
-    _CategoryItem('Utensils', Icons.restaurant_outlined),
+    _CategoryItem('Cryptos', 'assets/icons/categories/cryptos.png'),
+    _CategoryItem('Services', 'assets/icons/categories/services.png'),
+    _CategoryItem('Phones', 'assets/icons/categories/phones.png'),
+    _CategoryItem('Laptops', 'assets/icons/categories/laptops.png'),
+    _CategoryItem('Cars', 'assets/icons/categories/cars.png'),
+    _CategoryItem('Games', 'assets/icons/categories/games.png'),
   ];
 
   @override
@@ -93,9 +175,16 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    final bootstrap = widget._bootstrap;
+    if (bootstrap != null) {
+      _unreadCountFuture = Future.value(bootstrap.unreadCount);
+      _recentPostsFuture = Future.value(bootstrap.recentPosts);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadOnboardingFabVisibility();
-      _loadInitialData();
+      if (widget._bootstrap == null) {
+        _loadInitialData();
+      }
     });
   }
 
@@ -130,24 +219,8 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Future<List<_ProductCardData>> _loadRecentPosts(ApiService api) async {
-    final result = await api.searchListings(page: 1, size: 20);
-    final items = result['items'];
-    if (items is! List || items.isEmpty) return const [];
-
-    final listings = <Map<String, dynamic>>[];
-    for (final raw in items) {
-      if (raw is Map) listings.add(Map<String, dynamic>.from(raw));
-    }
-    await prefetchListingLocations(listings);
-
-    final cards = <_ProductCardData>[];
-    for (var i = 0; i < listings.length; i++) {
-      cards.add(
-        _ProductCardData.fromListing(listings[i], imageHeight: i.isOdd ? 251 : 217),
-      );
-    }
-    return cards;
+  Future<List<_ProductCardData>> _loadRecentPosts(ApiService api) {
+    return Home._fetchRecentPosts(api);
   }
 
   Future<void> _onPullRefresh() => _refreshHome();
@@ -177,7 +250,9 @@ class _HomeState extends State<Home> {
   void _openCategorySearch(String category) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => SearchPropertiesPage(query: category)),
+      MaterialPageRoute(
+        builder: (_) => SearchPropertiesPage(initialCategory: category),
+      ),
     );
   }
 
@@ -284,17 +359,17 @@ class _HomeState extends State<Home> {
 
   Widget _buildCategoryStrip() {
     return SizedBox(
-      height: 70,
+      height: 78,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 28),
+        separatorBuilder: (_, _) => const SizedBox(width: 20),
         itemBuilder: (context, index) {
           final cat = _categories[index];
           return _CategoryTile(
             label: cat.label,
-            icon: cat.icon,
+            iconAsset: cat.iconAsset,
             onTap: () => _openCategorySearch(cat.label),
           );
         },
@@ -594,9 +669,9 @@ class _GlassNavItem extends StatelessWidget {
 
 class _CategoryItem {
   final String label;
-  final IconData icon;
+  final String iconAsset;
 
-  const _CategoryItem(this.label, this.icon);
+  const _CategoryItem(this.label, this.iconAsset);
 }
 
 class _ProductCardData {
@@ -769,12 +844,12 @@ class _NotificationButton extends StatelessWidget {
 
 class _CategoryTile extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final String iconAsset;
   final VoidCallback onTap;
 
   const _CategoryTile({
     required this.label,
-    required this.icon,
+    required this.iconAsset,
     required this.onTap,
   });
 
@@ -784,18 +859,23 @@ class _CategoryTile extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 72,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 32, color: _kInk),
+            Image.asset(
+              iconAsset,
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(height: 4),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.style(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: _kInk,
               ),

@@ -37,7 +37,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
           if (state is Authenticated || state is TokenRefreshed) {
             print('✓ User is Authenticated');
-            return const Home();
+            return const HomeEntry();
           } else if (state is Unauthenticated) {
             print('✗ User is Unauthenticated - showing LogorSign');
             return const LogorSign();

@@ -47,7 +47,7 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
     if (!mounted) return;
     if (state is Authenticated || state is TokenRefreshed) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const Home()),
+        MaterialPageRoute(builder: (_) => const HomeEntry()),
         (route) => false,
       );
     } else if (state is Unauthenticated ||

@@ -84,7 +84,7 @@ class _SigninState extends State<Signin> {
         listener: (context, state) {
           if (state is Authenticated) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const Home()),
+              MaterialPageRoute(builder: (_) => const HomeEntry()),
               (route) => false,
             );
           } else if (state is AuthError && state.source == 'login') {

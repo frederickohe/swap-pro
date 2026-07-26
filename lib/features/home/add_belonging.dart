@@ -16,23 +16,14 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   static const double _figmaW = 428;
   static const double _figmaH = 932;
 
-  /// Figma frame 194:129 — chips flow horizontally and wrap when full.
+  /// Matches dashboard searchable domains (home.dart).
   static const List<String> _itemCategories = [
-    'Electronics',
-    'Home & Kitchen',
-    'kids',
-    'Books',
-    'Fashion',
-    'Sports',
-    'Tools',
-    'Fitness',
-    'Beauty Products',
-    'Vehicles',
-    'Vehicle Parts',
-    'Fitness',
-    'Personal Care',
-    'Media',
-    'Video Games',
+    'Cryptos',
+    'Services',
+    'Phones',
+    'Laptops',
+    'Cars',
+    'Games',
   ];
 
   static const List<String> _incomingCategories = [

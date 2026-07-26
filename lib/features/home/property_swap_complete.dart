@@ -108,7 +108,7 @@ class _PropertySwapCompletePageState extends State<PropertySwapCompletePage>
         type: PageTransitionType.rightToLeftWithFade,
         duration: const Duration(milliseconds: 350),
         reverseDuration: const Duration(milliseconds: 300),
-        child: const Home(),
+        child: const HomeEntry(),
       ),
       (route) => false,
     );

@@ -127,23 +127,15 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
 
   static const _conditions = ['All', 'New', 'Like New', 'Good', 'Fair', 'Poor'];
 
-  /// Matches [AddBelongingPage] item categories (add_belonging.dart).
+  /// Matches dashboard searchable domains (home.dart).
   static const _categories = [
     'All',
-    'Electronics',
-    'Home & Kitchen',
-    'kids',
-    'Books',
-    'Fashion',
-    'Sports',
-    'Tools',
-    'Fitness',
-    'Beauty Products',
-    'Vehicles',
-    'Vehicle Parts',
-    'Personal Care',
-    'Media',
-    'Video Games',
+    'Cryptos',
+    'Services',
+    'Phones',
+    'Laptops',
+    'Cars',
+    'Games',
   ];
 
   int _selectedConditionIndex = 0;

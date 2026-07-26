@@ -51,8 +51,9 @@ class _SplashWrapperState extends State<SplashWrapper> {
   }
 
   void _goToHome() {
+    // HomeEntry keeps the Lottie visible until dashboard assets are ready.
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const Home()),
+      MaterialPageRoute(builder: (_) => const HomeEntry()),
     );
   }
 

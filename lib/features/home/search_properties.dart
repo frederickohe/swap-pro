@@ -3,9 +3,14 @@ import 'package:swappro/features/home/listing_location.dart';
 
 /// Figma "Search" frame (node 162:1864) — search results grid.
 class SearchPropertiesPage extends StatefulWidget {
-  const SearchPropertiesPage({super.key, this.query});
+  const SearchPropertiesPage({
+    super.key,
+    this.query,
+    this.initialCategory,
+  });
 
   final String? query;
+  final String? initialCategory;
 
   @override
   State<SearchPropertiesPage> createState() => _SearchPropertiesPageState();
@@ -20,6 +25,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
 
   late final TextEditingController _searchController;
   late String _activeQuery;
+  late String? _activeCategory;
 
   SearchFiltersResult? _filters;
   List<_SearchProduct> _products = [];
@@ -31,6 +37,10 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   void initState() {
     super.initState();
     _activeQuery = widget.query?.trim() ?? '';
+    _activeCategory = widget.initialCategory?.trim();
+    if (_activeCategory != null && _activeCategory!.isEmpty) {
+      _activeCategory = null;
+    }
     _searchController = TextEditingController(text: _activeQuery);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchResults());
   }
@@ -53,10 +63,10 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
       double? lat;
       double? lng;
       double? radiusKm;
-      String? category;
+      String? category = _activeCategory;
       String? condition;
       if (_filters != null) {
-        category = _filters!.category;
+        category = _filters!.category ?? category;
         condition = _filters!.condition;
         if (_filters!.minPrice > 0) minValue = _filters!.minPrice;
         if (_filters!.maxPrice > 0) maxValue = _filters!.maxPrice;
@@ -81,7 +91,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
         lng: lng,
         radiusKm: radiusKm,
         page: 1,
-        size: 40,
+        size: 100,
       );
       if (!mounted) return;
 
@@ -331,7 +341,9 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   }
 
   Widget _buildEmptyState() {
-    final queryLabel = _activeQuery.isEmpty ? 'listings' : '"$_activeQuery"';
+    final queryLabel = _activeQuery.isNotEmpty
+        ? '"$_activeQuery"'
+        : (_activeCategory ?? 'listings');
     return Padding(
       padding: const EdgeInsets.only(top: 48),
       child: Center(

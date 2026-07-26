@@ -127,6 +127,7 @@ export 'package:swappro/common_design/colors.dart';
 export 'package:swappro/common_design/widgets/app_scaffold.dart';
 export 'package:swappro/common_design/widgets/appbutton.dart';
 export 'package:swappro/common_design/widgets/swappro_loading_indicator.dart';
+export 'package:swappro/common_design/widgets/swap_lottie_view.dart';
 export 'package:swappro/common_design/widgets/app_snackbar.dart';
 export 'package:swappro/common_design/widgets/auth_form_field.dart';
 export 'package:swappro/common_design/widgets/auth_screen_widgets.dart';
