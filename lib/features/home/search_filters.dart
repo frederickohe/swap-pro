@@ -127,15 +127,23 @@ class _SearchFiltersPageState extends State<SearchFiltersPage> {
 
   static const _conditions = ['All', 'New', 'Like New', 'Good', 'Fair', 'Poor'];
 
-  /// Matches dashboard searchable domains (home.dart).
+  /// Matches backend LISTING_ITEM_CATEGORIES / home category strip.
   static const _categories = [
     'All',
-    'Cryptos',
-    'Services',
-    'Phones',
-    'Laptops',
-    'Cars',
-    'Games',
+    'Electronics',
+    'Home & Kitchen',
+    'kids',
+    'Books',
+    'Fashion',
+    'Sports',
+    'Tools',
+    'Fitness',
+    'Beauty Products',
+    'Vehicles',
+    'Vehicle Parts',
+    'Personal Care',
+    'Media',
+    'Video Games',
   ];
 
   int _selectedConditionIndex = 0;

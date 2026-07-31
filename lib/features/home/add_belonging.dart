@@ -16,14 +16,22 @@ class _AddBelongingPageState extends State<AddBelongingPage> {
   static const double _figmaW = 428;
   static const double _figmaH = 932;
 
-  /// Matches dashboard searchable domains (home.dart).
+  /// Matches backend LISTING_ITEM_CATEGORIES / home category strip.
   static const List<String> _itemCategories = [
-    'Cryptos',
-    'Services',
-    'Phones',
-    'Laptops',
-    'Cars',
-    'Games',
+    'Electronics',
+    'Home & Kitchen',
+    'kids',
+    'Books',
+    'Fashion',
+    'Sports',
+    'Tools',
+    'Fitness',
+    'Beauty Products',
+    'Vehicles',
+    'Vehicle Parts',
+    'Personal Care',
+    'Media',
+    'Video Games',
   ];
 
   static const List<String> _incomingCategories = [
