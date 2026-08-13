@@ -26,6 +26,8 @@ export 'package:google_fonts/google_fonts.dart';
 
 // Screen Imports
 export 'package:swappro/features/auth/logorsign.dart';
+export 'package:swappro/features/auth/auth_sheet.dart';
+export 'package:swappro/features/auth/auth_gate.dart';
 export 'package:swappro/features/admin/admin_signin.dart';
 export 'package:swappro/features/admin/admin_dashboard.dart';
 export 'package:swappro/features/initial_ui/splash.dart';

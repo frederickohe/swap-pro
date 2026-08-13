@@ -248,7 +248,9 @@ class PropertyDetailPage extends StatelessWidget {
 
   Widget _buildSwapButton(BuildContext context) {
     return _SwapThisButton(
-      onTap: () {
+      onTap: () async {
+        if (!await ensureAuthenticated(context)) return;
+        if (!context.mounted) return;
         Navigator.push(
           context,
           PageTransition(

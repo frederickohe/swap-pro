@@ -53,8 +53,9 @@ class _ServerErrorPageState extends State<ServerErrorPage> {
     } else if (state is Unauthenticated ||
         state is SessionExpired ||
         state is TokenRefreshFailed) {
+      // Guests may browse without an account.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LogorSign()),
+        MaterialPageRoute(builder: (_) => const HomeEntry()),
         (route) => false,
       );
     }

@@ -131,12 +131,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final nav = NavigationService.navigatorKey.currentState;
     if (nav == null) return;
 
+    // Keep browsing available; prompt login via the auth sheet (web parity).
     nav.pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) => const LogorSign(),
+        builder: (_) => const HomeEntry(),
       ),
       (route) => false,
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Let HomeEntry finish replacing itself with Home.
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      final sheetContext = NavigationService.navigatorKey.currentContext;
+      if (sheetContext == null || !sheetContext.mounted) return;
+      if (isAuthenticated(sheetContext)) return;
+      await ensureAuthenticated(sheetContext, sessionExpired: true);
+    });
   }
 
   @override

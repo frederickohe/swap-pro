@@ -190,7 +190,7 @@ class _ProfileState extends State<Profile> {
       listener: (context, state) {
         if (state is Unauthenticated) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LogorSign()),
+            MaterialPageRoute(builder: (_) => const HomeEntry()),
             (route) => false,
           );
         } else if (state is AuthError && state.source == 'logout') {

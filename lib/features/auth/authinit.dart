@@ -24,7 +24,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (state is SessionExpired) {
           context.showAppSnackBar(state.message);
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const Signin()),
+            MaterialPageRoute(builder: (_) => const HomeEntry()),
             (route) => false,
           );
         } else if (state is TokenRefreshFailed) {
@@ -39,11 +39,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
             print('✓ User is Authenticated');
             return const HomeEntry();
           } else if (state is Unauthenticated) {
-            print('✗ User is Unauthenticated - showing LogorSign');
-            return const LogorSign();
+            print('✗ User is Unauthenticated - showing Home (guest browse)');
+            return const HomeEntry();
           } else if (state is SessionExpired) {
-            print('✗ Session Expired - showing LogorSign');
-            return const LogorSign();
+            print('✗ Session Expired - showing Home (guest browse)');
+            return const HomeEntry();
           } else if (state is AuthError) {
             print('✗ Auth Error: ${state.message}');
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -52,6 +52,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
             // Render relevant page based on error source
             if (state.source == 'signup') {
               return const Signup();
+            } else if (state.source == 'check_session') {
+              return const HomeEntry();
             } else {
               return const Signin();
             }
@@ -65,8 +67,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
               ),
             );
           } else if (state is TokenRefreshFailed) {
-            print('✗ Token Refresh Failed: ${state.message} - showing Signin');
-            return const Signin();
+            print('✗ Token Refresh Failed: ${state.message} - guest Home');
+            return const HomeEntry();
           } else if (state is ServerUnreachable) {
             return ServerErrorPage(
               onRetry: () async {
@@ -75,7 +77,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             );
           } else {
             print('⏳ Unhandled auth state: $state');
-            return const Signin();
+            return const HomeEntry();
           }
         },
       ),

@@ -6,6 +6,17 @@ class LogorSign extends StatelessWidget {
   static const Color _textBlack = Color(0xFF000000);
   static const Color _darkButton = Color(0xFF111111);
 
+  void _continueBrowsing(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const HomeEntry()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -35,6 +46,12 @@ class LogorSign extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Colors.white,
+            );
+
+            TextStyle browseStyle() => AppTypography.style(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF787676),
             );
 
             return Padding(
@@ -134,6 +151,14 @@ class LogorSign extends StatelessWidget {
                           'Create Account',
                           style: filledButtonStyle(),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => _continueBrowsing(context),
+                      child: Text(
+                        'Continue browsing',
+                        style: browseStyle(),
                       ),
                     ),
                   ],

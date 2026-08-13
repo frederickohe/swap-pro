@@ -57,12 +57,6 @@ class _SplashWrapperState extends State<SplashWrapper> {
     );
   }
 
-  void _goToLogorSign() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LogorSign()),
-    );
-  }
-
   void _goToServerError() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -77,16 +71,17 @@ class _SplashWrapperState extends State<SplashWrapper> {
   }
 
   void _handleAuthState(AuthState state) {
-    if (state is Authenticated || state is TokenRefreshed) {
-      _navigateOnce(_goToHome);
-    } else if (state is Unauthenticated ||
+    // Apple 5.1.1(v): guests browse freely. Login is only for account actions.
+    if (state is Authenticated ||
+        state is TokenRefreshed ||
+        state is Unauthenticated ||
         state is SessionExpired ||
         state is TokenRefreshFailed) {
-      _navigateOnce(_goToLogorSign);
+      _navigateOnce(_goToHome);
     } else if (state is ServerUnreachable) {
       _navigateOnce(_goToServerError);
     } else if (state is AuthError && state.source == 'check_session') {
-      _navigateOnce(_goToLogorSign);
+      _navigateOnce(_goToHome);
     }
   }
 

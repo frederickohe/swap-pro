@@ -41,7 +41,11 @@ class _HomeEntryState extends State<HomeEntry> {
   Future<void> _openHome() async {
     _HomeBootstrapData? bootstrap;
     try {
-      bootstrap = await Home._loadBootstrap(context.read<ApiService>());
+      final loggedIn = isAuthenticated(context);
+      bootstrap = await Home._loadBootstrap(
+        context.read<ApiService>(),
+        includeNotifications: loggedIn,
+      );
     } catch (_) {
       bootstrap = null;
     }
@@ -63,7 +67,16 @@ class Home extends StatefulWidget {
 
   final _HomeBootstrapData? _bootstrap;
 
-  static Future<_HomeBootstrapData> _loadBootstrap(ApiService api) async {
+  static Future<_HomeBootstrapData> _loadBootstrap(
+    ApiService api, {
+    bool includeNotifications = true,
+  }) async {
+    if (!includeNotifications) {
+      return _HomeBootstrapData(
+        recentPosts: await _fetchRecentPosts(api),
+        unreadCount: 0,
+      );
+    }
     final results = await Future.wait<Object>([
       _fetchRecentPosts(api),
       api.getUnreadNotificationCount(),
@@ -213,8 +226,10 @@ class _HomeState extends State<Home> {
   void _loadInitialData() {
     if (!mounted) return;
     final api = context.read<ApiService>();
+    final loggedIn = isAuthenticated(context);
     setState(() {
-      _unreadCountFuture = api.getUnreadNotificationCount();
+      _unreadCountFuture =
+          loggedIn ? api.getUnreadNotificationCount() : Future.value(0);
       _recentPostsFuture = _loadRecentPosts(api);
     });
   }
@@ -228,7 +243,8 @@ class _HomeState extends State<Home> {
   Future<void> _refreshHome() async {
     final api = context.read<ApiService>();
     final posts = await _loadRecentPosts(api);
-    final unread = await api.getUnreadNotificationCount();
+    final unread =
+        isAuthenticated(context) ? await api.getUnreadNotificationCount() : 0;
     if (!mounted) return;
     setState(() {
       _recentPostsFuture = Future.value(posts);
@@ -257,11 +273,21 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _refreshNotifications() async {
+    if (!isAuthenticated(context)) {
+      setState(() => _unreadCountFuture = Future.value(0));
+      return;
+    }
     setState(() {
       _unreadCountFuture = context
           .read<ApiService>()
           .getUnreadNotificationCount();
     });
+  }
+
+  Future<void> _openAccountFeature(Future<void> Function() open) async {
+    if (!await ensureAuthenticated(context)) return;
+    if (!mounted) return;
+    await open();
   }
 
   TextStyle _textStyle({
@@ -333,13 +359,15 @@ class _HomeState extends State<Home> {
             final unread = snap.data ?? 0;
             return GestureDetector(
               onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsInboxPage(),
-                  ),
-                );
-                await _refreshNotifications();
+                await _openAccountFeature(() async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsInboxPage(),
+                    ),
+                  );
+                  await _refreshNotifications();
+                });
               },
               child: _NotificationButton(showBadge: unread > 0),
             );
@@ -534,10 +562,12 @@ class _HomeState extends State<Home> {
         _FabCircle(
           icon: Icons.add_rounded,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddBelongingPage()),
-            );
+            _openAccountFeature(() async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddBelongingPage()),
+              );
+            });
           },
         ),
       ],
@@ -583,16 +613,17 @@ class _HomeState extends State<Home> {
                     icon: _navIcons[1],
                     selected: _navIndex == 1,
                     onTap: () {
-                      setState(() => _navIndex = 1);
-                      Navigator.push(
-                        context,
-                        PageTransition(
-                          type: PageTransitionType.rightToLeftWithFade,
-                          duration: const Duration(milliseconds: 350),
-                          reverseDuration: const Duration(milliseconds: 300),
-                          child: const ListingsPage(),
-                        ),
-                      ).then((_) {
+                      _openAccountFeature(() async {
+                        setState(() => _navIndex = 1);
+                        await Navigator.push(
+                          context,
+                          PageTransition(
+                            type: PageTransitionType.rightToLeftWithFade,
+                            duration: const Duration(milliseconds: 350),
+                            reverseDuration: const Duration(milliseconds: 300),
+                            child: const ListingsPage(),
+                          ),
+                        );
                         if (mounted) setState(() => _navIndex = 0);
                       });
                     },
@@ -601,16 +632,18 @@ class _HomeState extends State<Home> {
                     icon: _navIcons[2],
                     selected: _navIndex == 2,
                     onTap: () {
-                      setState(() => _navIndex = 2);
-                      Navigator.push(
-                        context,
-                        PageTransition(
-                          type: PageTransitionType.rightToLeftWithFade,
-                          duration: const Duration(milliseconds: 350),
-                          reverseDuration: const Duration(milliseconds: 300),
-                          child: const SwapBayPage(initialTab: SwapBayTab.sent),
-                        ),
-                      ).then((_) {
+                      _openAccountFeature(() async {
+                        setState(() => _navIndex = 2);
+                        await Navigator.push(
+                          context,
+                          PageTransition(
+                            type: PageTransitionType.rightToLeftWithFade,
+                            duration: const Duration(milliseconds: 350),
+                            reverseDuration: const Duration(milliseconds: 300),
+                            child:
+                                const SwapBayPage(initialTab: SwapBayTab.sent),
+                          ),
+                        );
                         if (mounted) setState(() => _navIndex = 0);
                       });
                     },
@@ -619,11 +652,12 @@ class _HomeState extends State<Home> {
                     icon: _navIcons[3],
                     selected: _navIndex == 3,
                     onTap: () {
-                      setState(() => _navIndex = 3);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Profile()),
-                      ).then((_) {
+                      _openAccountFeature(() async {
+                        setState(() => _navIndex = 3);
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Profile()),
+                        );
                         if (mounted) setState(() => _navIndex = 0);
                       });
                     },

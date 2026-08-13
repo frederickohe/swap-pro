@@ -86,6 +86,8 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
     try {
       switch (stepIndex) {
         case 0:
+          if (!await ensureAuthenticated(context)) break;
+          if (!mounted) break;
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const AddBelongingPage()),
           );
@@ -103,6 +105,8 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
           );
           break;
         case 3:
+          if (!await ensureAuthenticated(context)) break;
+          if (!mounted) break;
           await Navigator.of(context).push(
             PageTransition(
               type: PageTransitionType.rightToLeftWithFade,
@@ -113,6 +117,8 @@ class _FtuOnboardingPageState extends State<FtuOnboardingPage> {
           );
           break;
         case 4:
+          if (!await ensureAuthenticated(context)) break;
+          if (!mounted) break;
           await Navigator.of(context).push(
             PageTransition(
               type: PageTransitionType.rightToLeftWithFade,

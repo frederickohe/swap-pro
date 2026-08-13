@@ -1,7 +1,14 @@
 import 'package:swappro/barrel.dart';
 
 class Signin extends StatefulWidget {
-  const Signin({super.key});
+  const Signin({
+    super.key,
+    this.resumeCallerOnSuccess = false,
+  });
+
+  /// When true (auth sheet flow), pop with `true` so the caller can resume
+  /// instead of resetting the navigation stack to [HomeEntry].
+  final bool resumeCallerOnSuccess;
 
   @override
   State<Signin> createState() => _SigninState();
@@ -83,6 +90,10 @@ class _SigninState extends State<Signin> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
+            if (widget.resumeCallerOnSuccess) {
+              Navigator.of(context).pop(true);
+              return;
+            }
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const HomeEntry()),
               (route) => false,
