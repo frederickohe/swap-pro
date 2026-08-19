@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:swappro/common_design/widgets/app_scaffold.dart';
 
-/// White-canvas Lottie used on auth and bootstrap loading screens.
+/// White-canvas Lottie of two houses swapping, used on auth and bootstrap screens.
 class SwapLottieView extends StatelessWidget {
   const SwapLottieView({
     super.key,
