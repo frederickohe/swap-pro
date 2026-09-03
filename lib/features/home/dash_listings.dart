@@ -1,4 +1,5 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/utils/keyboard_dismiss.dart';
 
 /// Figma "Dash Listings" frame (node 162:1759).
 class DashListingsPage extends StatefulWidget {
@@ -250,7 +251,11 @@ class _DashListingsPageState extends State<DashListingsPage> {
               controller: _searchController,
               style: _text(size: 14, weight: FontWeight.w500),
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _applySearch(),
+              onTapOutside: (_) => dismissAppKeyboard(),
+              onSubmitted: (_) {
+                dismissAppKeyboard();
+                _applySearch();
+              },
               decoration: InputDecoration(
                 hintText: 'Search ...',
                 hintStyle: _text(

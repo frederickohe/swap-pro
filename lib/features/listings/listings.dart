@@ -1,5 +1,6 @@
 import 'package:swappro/barrel.dart';
 import 'package:swappro/features/home/listing_location.dart';
+import 'package:swappro/utils/keyboard_dismiss.dart';
 
 /// Listed properties hub — Figma "Listings" frame (node 162:622).
 /// Shows the signed-in user's listings with search and quick actions.
@@ -268,6 +269,9 @@ class _ListingsPageState extends State<ListingsPage> {
                 fontWeight: FontWeight.w400,
                 color: _ink,
               ),
+              textInputAction: TextInputAction.search,
+              onTapOutside: (_) => dismissAppKeyboard(),
+              onSubmitted: (_) => dismissAppKeyboard(),
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,

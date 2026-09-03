@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:swappro/barrel.dart';
+import 'package:swappro/utils/keyboard_dismiss.dart';
 
 // Figma Dashboard palette
 const _kBg = Color(0xFFFFFFFF);
@@ -161,6 +162,7 @@ class _HomeState extends State<Home> {
   Future<int>? _unreadCountFuture;
   Future<List<_ProductCardData>>? _recentPostsFuture;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   bool _showOnboardingFab = false;
 
   static const _navIcons = <String>[
@@ -182,6 +184,7 @@ class _HomeState extends State<Home> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -253,6 +256,7 @@ class _HomeState extends State<Home> {
   }
 
   void _openSearchResults() {
+    dismissAppKeyboard();
     final query = _searchController.text.trim();
     Navigator.push(
       context,
@@ -264,6 +268,7 @@ class _HomeState extends State<Home> {
   }
 
   void _openCategorySearch(String category) {
+    dismissAppKeyboard();
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -285,6 +290,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _openAccountFeature(Future<void> Function() open) async {
+    dismissAppKeyboard();
     if (!await ensureAuthenticated(context)) return;
     if (!mounted) return;
     await open();
@@ -380,6 +386,7 @@ class _HomeState extends State<Home> {
   Widget _buildLocationSearch() {
     return _LocationSearchBar(
       controller: _searchController,
+      focusNode: _searchFocus,
       onSearch: _openSearchResults,
       textStyle: _textStyle,
     );
@@ -460,6 +467,7 @@ class _HomeState extends State<Home> {
 
         return ListView(
           physics: _feedScrollPhysics,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.only(bottom: bottomPadding),
           children: [
             const SizedBox(height: 36),
@@ -479,6 +487,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _openPropertyDetail(_ProductCardData product) async {
+    dismissAppKeyboard();
     PropertyDetailData detail;
     if (product.listingJson != null) {
       await prefetchListingLocations([product.listingJson!]);
@@ -607,12 +616,16 @@ class _HomeState extends State<Home> {
                   _GlassNavItem(
                     icon: _navIcons[0],
                     selected: _navIndex == 0,
-                    onTap: () => setState(() => _navIndex = 0),
+                    onTap: () {
+                      dismissAppKeyboard();
+                      setState(() => _navIndex = 0);
+                    },
                   ),
                   _GlassNavItem(
                     icon: _navIcons[1],
                     selected: _navIndex == 1,
                     onTap: () {
+                      dismissAppKeyboard();
                       _openAccountFeature(() async {
                         setState(() => _navIndex = 1);
                         await Navigator.push(
@@ -632,6 +645,7 @@ class _HomeState extends State<Home> {
                     icon: _navIcons[2],
                     selected: _navIndex == 2,
                     onTap: () {
+                      dismissAppKeyboard();
                       _openAccountFeature(() async {
                         setState(() => _navIndex = 2);
                         await Navigator.push(
@@ -652,6 +666,7 @@ class _HomeState extends State<Home> {
                     icon: _navIcons[3],
                     selected: _navIndex == 3,
                     onTap: () {
+                      dismissAppKeyboard();
                       _openAccountFeature(() async {
                         setState(() => _navIndex = 3);
                         await Navigator.push(
@@ -760,11 +775,13 @@ class _ProductCardData {
 class _LocationSearchBar extends StatelessWidget {
   const _LocationSearchBar({
     required this.controller,
+    required this.focusNode,
     required this.onSearch,
     required this.textStyle,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final VoidCallback onSearch;
   final TextStyle Function({double size, FontWeight weight, Color color})
   textStyle;
@@ -790,6 +807,7 @@ class _LocationSearchBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               style: textStyle(
                 size: _textSize,
                 weight: FontWeight.w500,
@@ -797,7 +815,11 @@ class _LocationSearchBar extends StatelessWidget {
               ),
               textAlign: TextAlign.left,
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => onSearch(),
+              onTapOutside: (_) => dismissAppKeyboard(),
+              onSubmitted: (_) {
+                dismissAppKeyboard();
+                onSearch();
+              },
               decoration: InputDecoration(
                 hintText: 'Search ...',
                 hintStyle: textStyle(

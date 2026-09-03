@@ -157,6 +157,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: (context, state) {
           return MaterialApp(
             navigatorKey: NavigationService.navigatorKey,
+            navigatorObservers: [NavigationService.keyboardDismissObserver],
             debugShowCheckedModeBanner: false,
             title: 'Swap Pro',
             theme: state.themeData,

@@ -1,5 +1,6 @@
 import 'package:swappro/barrel.dart';
 import 'package:swappro/features/home/listing_location.dart';
+import 'package:swappro/utils/keyboard_dismiss.dart';
 
 /// Figma "Search" frame (node 162:1864) — search results grid.
 class SearchPropertiesPage extends StatefulWidget {
@@ -128,7 +129,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   }
 
   void _applySearch() {
-    FocusScope.of(context).unfocus();
+    dismissAppKeyboard();
     setState(() => _activeQuery = _searchController.text.trim());
     _fetchResults();
   }
@@ -248,7 +249,11 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
               controller: _searchController,
               style: _textStyle(size: 14, weight: FontWeight.w400),
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _applySearch(),
+              onTapOutside: (_) => dismissAppKeyboard(),
+              onSubmitted: (_) {
+                dismissAppKeyboard();
+                _applySearch();
+              },
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
