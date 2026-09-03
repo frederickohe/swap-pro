@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:swappro/services/geocoding_service.dart';
 
 final _locationCache = <String, String>{};
@@ -59,6 +61,8 @@ Future<void> prefetchListingLocations(
   }
 
   if (pending.isNotEmpty) {
-    await Future.wait(pending);
+    try {
+      await Future.wait(pending).timeout(const Duration(seconds: 8));
+    } catch (_) {}
   }
 }

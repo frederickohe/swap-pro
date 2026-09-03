@@ -45,7 +45,7 @@ class _HomeEntryState extends State<HomeEntry> {
       bootstrap = await Home._loadBootstrap(
         context.read<ApiService>(),
         includeNotifications: loggedIn,
-      );
+      ).timeout(const Duration(seconds: 12));
     } catch (_) {
       bootstrap = null;
     }

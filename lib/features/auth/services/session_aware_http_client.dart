@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:swappro/barrel.dart';
+import 'package:swappro/services/api_http_client.dart';
 
 /// HTTP Client wrapper with automatic token injection and refresh
 /// This client automatically:
@@ -12,7 +13,7 @@ class SessionAwareHttpClient extends http.BaseClient {
   final TokenService tokenService;
   final String? baseUrl;
   final ConnectivityNotifier? connectivityNotifier;
-  final http.Client _innerClient = http.Client();
+  final http.Client _innerClient = apiHttpClient;
 
   /// Called when refresh fails and the user must sign in again.
   VoidCallback? onSessionExpired;
@@ -65,10 +66,20 @@ class SessionAwareHttpClient extends http.BaseClient {
 
     http.StreamedResponse response;
     try {
-      response = await _innerClient.send(request);
+      response = await _innerClient
+          .send(request)
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      connectivityNotifier?.reportUnreachable();
+      rethrow;
     } catch (e) {
+      if (BackendConnectivity.isNetworkFailure(e)) {
+        connectivityNotifier?.reportUnreachable();
+      }
       rethrow;
     }
+
+    connectivityNotifier?.clear();
 
     // If we get a 401, attempt token refresh and retry
     if (response.statusCode == 401) {
@@ -87,6 +98,7 @@ class SessionAwareHttpClient extends http.BaseClient {
               rethrow;
             }
             if (response.statusCode != 401) {
+              connectivityNotifier?.clear();
               return response;
             }
           }
@@ -130,7 +142,7 @@ class SessionAwareHttpClient extends http.BaseClient {
           ? Uri.parse('$baseUrl/api/v1/auth/refresh')
           : Uri.parse('${AppConfig.backendUrl}/api/v1/auth/refresh');
 
-      final response = await http
+      final response = await apiHttpClient
           .post(
             url,
             headers: {'Content-Type': 'application/json'},

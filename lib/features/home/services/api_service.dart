@@ -22,7 +22,7 @@ class ApiService {
     if (await httpClient.tokenService.hasPersistedSession()) {
       throw Exception('Request unauthorized');
     }
-    await _throwOnUnauthorized();
+    throw Exception('Session expired. Please sign in again.');
   }
 
   /// Get current user profile

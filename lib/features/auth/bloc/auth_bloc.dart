@@ -5,6 +5,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:swappro/config/app_config.dart';
+import 'package:swappro/services/api_http_client.dart';
 import 'package:swappro/common_bloc/success_bloc.dart';
 import 'package:swappro/services/backend_connectivity.dart';
 import 'package:swappro/utils/phone_utils.dart';
@@ -83,7 +84,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogin(LoginEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signin'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -101,7 +102,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await tokenService.saveToken(tokenModel);
 
         // Fetch user data using access token
-        final userResponse = await http.get(
+        final userResponse = await apiHttpClient.get(
           Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
           headers: await _getAuthHeaders(),
         );
@@ -155,7 +156,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'password': event.password,
         };
 
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signup'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
@@ -166,7 +167,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _pendingSignupPassword = event.password;
 
         // Auto-login after signup so a token is available for OTP verification.
-        final loginResponse = await http.post(
+        final loginResponse = await apiHttpClient.post(
           Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signin'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'email': event.email, 'password': event.password}),
@@ -224,7 +225,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       final uri = Uri.parse('${AppConfig.backendUrl}/api/v1/auth/verify-otp');
-      final response = await http
+      final response = await apiHttpClient
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
@@ -281,7 +282,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
     try {
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/send'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'phone': phone}),
@@ -324,7 +325,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final accessToken = await tokenService.getAccessToken();
       if (accessToken != null && accessToken.isNotEmpty) {
         try {
-          await http
+          await apiHttpClient
               .post(
                 Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signout'),
                 headers: {
@@ -352,7 +353,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/no-auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -391,7 +392,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         body['email'] = event.email;
       }
 
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/verify-account'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
@@ -434,7 +435,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         body['email'] = event.email;
       }
 
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/send'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
@@ -475,7 +476,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         body['email'] = event.email;
       }
 
-      final response = await http.post(
+      final response = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/otp/verify'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
@@ -508,7 +509,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (email == null || password == null) return;
 
     try {
-      final loginResponse = await http.post(
+      final loginResponse = await apiHttpClient.post(
         Uri.parse('${AppConfig.backendUrl}/api/v1/auth/signin'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'password': password}),
@@ -518,7 +519,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final tokenModel = TokenModel.fromJson(json.decode(loginResponse.body));
         await tokenService.saveToken(tokenModel);
 
-        final userResponse = await http.get(
+        final userResponse = await apiHttpClient.get(
           Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
           headers: await _getAuthHeaders(),
         );
@@ -550,7 +551,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      final response = await http
+      final response = await apiHttpClient
           .post(
             Uri.parse('${AppConfig.backendUrl}/api/v1/auth/refresh'),
             headers: {'Content-Type': 'application/json'},
@@ -566,7 +567,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await tokenService.updateToken(newTokenModel);
 
         // Fetch updated user data
-        final userResponse = await http
+        final userResponse = await apiHttpClient
             .get(
               Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
               headers: await _getAuthHeaders(),
@@ -669,7 +670,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<bool> _restoreUserProfile(Emitter<AuthState> emit) async {
-    final userResponse = await http
+    final userResponse = await apiHttpClient
         .get(
           Uri.parse('${AppConfig.backendUrl}/api/v1/user/me'),
           headers: await _getAuthHeaders(),

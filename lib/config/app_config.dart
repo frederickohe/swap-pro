@@ -16,24 +16,32 @@ class AppConfig {
     }
 
     const defineBackendUrl = String.fromEnvironment('BACKEND_URL');
-    final envBackendUrl = dotenv.env['BACKEND_URL']?.trim();
+    final envBackendUrl = dotenv.env['BACKEND_URL'];
 
     if (defineBackendUrl.isNotEmpty) {
-      _backendUrl = defineBackendUrl;
-    } else if (envBackendUrl != null && envBackendUrl.isNotEmpty) {
-      _backendUrl = envBackendUrl;
+      _backendUrl = _sanitizeUrl(defineBackendUrl);
+    } else if (envBackendUrl != null && envBackendUrl.trim().isNotEmpty) {
+      _backendUrl = _sanitizeUrl(envBackendUrl);
     } else {
-      _backendUrl = kReleaseMode
-          ? productionBackendUrl
-          : 'http://localhost:8000';
+      // Never fall back to localhost — that is unreachable on a real phone.
+      _backendUrl = productionBackendUrl;
     }
+    debugPrint('AppConfig.backendUrl=$_backendUrl');
 
     const defineGeoKey = String.fromEnvironment('GEOAPIFY_API_KEY');
     _geoapifyApiKey = defineGeoKey.isNotEmpty
         ? defineGeoKey
-        : (dotenv.env['GEOAPIFY_API_KEY']?.trim() ??
-            dotenv.env['GOOGLE_MAPS_API_KEY']?.trim() ??
+        : (dotenv.env['GEOAPIFY_API_KEY']?.replaceAll('\r', '').trim() ??
+            dotenv.env['GOOGLE_MAPS_API_KEY']?.replaceAll('\r', '').trim() ??
             '');
+  }
+
+  static String _sanitizeUrl(String raw) {
+    var url = raw.replaceAll('\r', '').trim();
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
   }
 
   static String get backendUrl => _backendUrl;

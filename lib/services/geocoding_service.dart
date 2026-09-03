@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:swappro/config/app_config.dart';
+import 'package:swappro/services/api_http_client.dart';
 
 /// A place suggestion from Geoapify autocomplete.
 class PlaceSuggestion {
@@ -18,7 +19,7 @@ class PlaceSuggestion {
 
 /// Geoapify reverse geocoding + autocomplete — works globally without a fixed location list.
 class GeocodingService {
-  GeocodingService({http.Client? client}) : _client = client ?? http.Client();
+  GeocodingService({http.Client? client}) : _client = client ?? apiHttpClient;
 
   final http.Client _client;
 
@@ -49,7 +50,8 @@ class GeocodingService {
     );
 
     try {
-      final response = await _client.get(uri);
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return null;
       final payload = jsonDecode(response.body);
       if (payload is! Map) return null;
@@ -81,7 +83,8 @@ class GeocodingService {
     );
 
     try {
-      final response = await _client.get(uri);
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return const [];
       final payload = jsonDecode(response.body);
       if (payload is! Map) return const [];

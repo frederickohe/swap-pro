@@ -25,12 +25,19 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
   void _startWatchdog() {
     _watchdog?.cancel();
-    _watchdog = Timer(const Duration(seconds: 25), () {
+    _watchdog = Timer(const Duration(seconds: 25), () async {
       if (!mounted || _navigated) return;
       final state = context.read<AuthBloc>().state;
-      if (state is AuthLoading ||
-          state is TokenRefreshing ||
-          state is AuthInitial) {
+      if (state is! AuthLoading &&
+          state is! TokenRefreshing &&
+          state is! AuthInitial) {
+        return;
+      }
+      final reachable = await BackendConnectivity.isReachable();
+      if (!mounted || _navigated) return;
+      if (reachable) {
+        _navigateOnce(_goToHome);
+      } else {
         _goToServerError();
       }
     });
