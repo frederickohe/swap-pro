@@ -115,7 +115,6 @@ class _AuthPinFieldState extends State<AuthPinField> {
 
   void _rebuild() {
     if (mounted) setState(() {});
-    widget.onChanged?.call();
   }
 
   void _focusPreviousAndClear(int index) {

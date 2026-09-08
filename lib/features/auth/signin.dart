@@ -28,6 +28,7 @@ class _SigninState extends State<Signin> {
   final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
 
   String get _pin => AuthPinField.join(_pinControllers);
+  String? _autoSubmittedPin;
 
   @override
   void dispose() {
@@ -42,9 +43,13 @@ class _SigninState extends State<Signin> {
   }
 
   void _onPinChanged() {
-    if (_pin.length == 4) {
-      _submitLogin();
+    final pin = _pin;
+    if (pin.length != 4) {
+      _autoSubmittedPin = null;
+      return;
     }
+    if (pin == _autoSubmittedPin) return;
+    _submitLogin();
   }
 
   void _submitLogin() {
@@ -55,6 +60,7 @@ class _SigninState extends State<Signin> {
       return;
     }
 
+    _autoSubmittedPin = _pin;
     context.read<AuthBloc>().add(
           LoginEvent(
             email: _emailController.text.trim(),
@@ -187,7 +193,7 @@ class _SigninState extends State<Signin> {
                             AuthPinField(
                               controllers: _pinControllers,
                               focusNodes: _pinFocusNodes,
-                              enabled: !isLoading,
+                              enabled: true,
                               wScale: wScale,
                               hScale: hScale,
                               onChanged: _onPinChanged,
