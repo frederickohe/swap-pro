@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Swappro uses the camera so you can take photos for your profile and for items you list or edit. For example, you can photograph a bicycle you want to swap so other users can see the item and its condition.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Swappro uses your location only while you are using the app to place a listing on the map. For example, when you tap Use my location while creating a listing, we center the map on your current area so others know where the item is available. Swappro does not track your location in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Swappro uses your location only while you are using the app to place a listing on the map. For example, when you tap Use my location while creating a listing, we center the map on your current area so others know where the item is available. Swappro does not track your location in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Swappro uses your location only while you are using the app to place a listing on the map. For example, when you tap Use my location while creating a listing, we center the map on your current area so others know where the item is available.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
