@@ -116,68 +116,25 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> _handleDeleteAccount() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Delete account?',
-                  style: AppTypography.style(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This permanently deletes your SwapPro account, profile, listings, and personal data. You will not be able to sign in again. This cannot be undone.',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.style(
-                    fontSize: 13.5,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(dialogContext, false),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(dialogContext, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Delete'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final wantsDelete = await _showDeleteAccountDialog(
+      title: 'Delete account?',
+      body:
+          'This permanently deletes your SwapPro account. You will not be able to sign in again.',
+      bullets: const [
+        'Your profile and personal data',
+        'All of your listings',
+        'All swap records',
+      ],
+      confirmLabel: 'Continue',
     );
+    if (wantsDelete != true || !mounted) return;
 
+    final confirmed = await _showDeleteAccountDialog(
+      title: 'Are you sure?',
+      body:
+          'Confirm that you want to delete your account, including all listings and swap records. This cannot be undone.',
+      confirmLabel: 'Delete everything',
+    );
     if (confirmed != true || !mounted) return;
 
     setState(() => _deletingAccount = true);
@@ -213,6 +170,121 @@ class _ProfileState extends State<Profile> {
       }
       await ApiErrorHandler.handle(context, e);
     }
+  }
+
+  Future<bool?> _showDeleteAccountDialog({
+    required String title,
+    required String body,
+    required String confirmLabel,
+    List<String> bullets = const [],
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.style(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.style(
+                    fontSize: 13.5,
+                    color: Colors.black54,
+                  ),
+                ),
+                if (bullets.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final item in bullets)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.only(top: 6, right: 8),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    item,
+                                    style: AppTypography.style(
+                                      fontSize: 13.5,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'This cannot be undone.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.style(
+                      fontSize: 13.5,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(confirmLabel),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _handleLogout(BuildContext context) {
