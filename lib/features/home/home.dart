@@ -291,8 +291,15 @@ class _HomeState extends State<Home> {
 
   Future<void> _openAccountFeature(Future<void> Function() open) async {
     dismissAppKeyboard();
+    final alreadyLoggedIn = isAuthenticated(context);
     if (!await ensureAuthenticated(context)) return;
     if (!mounted) return;
+    // A fresh login should land on the dashboard. Resuming the tab that
+    // opened the auth sheet (often Your listings) skips Home entirely.
+    if (!alreadyLoggedIn) {
+      await _refreshHome();
+      return;
+    }
     await open();
   }
 
