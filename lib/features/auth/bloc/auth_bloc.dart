@@ -323,7 +323,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
     try {
       final accessToken = await tokenService.getAccessToken();
-      if (accessToken != null && accessToken.isNotEmpty) {
+      if (!event.skipServer && accessToken != null && accessToken.isNotEmpty) {
         try {
           await apiHttpClient
               .post(
@@ -341,7 +341,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await tokenService.clearTokens();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user');
-      emit(Unauthenticated());
+      emit(Unauthenticated(message: event.message, source: event.source));
     } catch (e) {
       emit(AuthError(message: 'Logout failed: $e', source: 'logout'));
     }

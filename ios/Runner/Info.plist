@@ -27,13 +27,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Swappro needs camera access so you can take a profile photo.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Swappro needs your location to show where your belonging is listed on the map when you create or edit a listing.</string>
+	<string>Swappro uses the camera so you can take photos for your profile and for items you list or edit. For example, you can photograph a bicycle you want to swap so other users can see the item and its condition.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Swappro needs your location to show where your belonging is listed on the map.</string>
+	<string>Swappro uses your location only while you are using the app to place a listing on the map. For example, when you tap Use my location while creating a listing, we center the map on your current area so others know where the item is available.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Swappro needs photo library access so you can choose a profile photo.</string>
+	<string>Swappro uses photos you choose from your library to display on your profile and on items you list or edit. For example, you can select a photo of a bicycle from your camera roll so other users can see the item and its condition.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

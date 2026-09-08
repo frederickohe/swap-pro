@@ -42,6 +42,23 @@ class ApiService {
     }
   }
 
+  /// Permanently delete the signed-in account. Backend: `DELETE /api/v1/user/me`.
+  Future<void> deleteAccount() async {
+    final response = await httpClient.delete(Uri.parse('$baseUrl/user/me'));
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 401) {
+      await _throwOnUnauthorized();
+    }
+    if (response.statusCode == 403) {
+      final detail = _httpDetailMessage(response.body)?.toLowerCase() ?? '';
+      if (detail.contains('deleted')) return;
+    }
+    throw Exception(
+      _httpDetailMessage(response.body) ??
+          'Failed to delete account (${response.statusCode})',
+    );
+  }
+
   /// Get all rides/buses
   Future<List<dynamic>> getRides() async {
     try {

@@ -355,30 +355,41 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildHeader() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: _buildLocationSearch()),
-        const SizedBox(width: 30),
-        FutureBuilder<int>(
-          future: _unreadCountFuture,
-          builder: (context, snap) {
-            final unread = snap.data ?? 0;
-            return GestureDetector(
-              onTap: () async {
-                await _openAccountFeature(() async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsInboxPage(),
-                    ),
-                  );
-                  await _refreshNotifications();
-                });
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'What do you want?',
+                style: _textStyle(size: 22, weight: FontWeight.w700),
+              ),
+            ),
+            FutureBuilder<int>(
+              future: _unreadCountFuture,
+              builder: (context, snap) {
+                final unread = snap.data ?? 0;
+                return GestureDetector(
+                  onTap: () async {
+                    await _openAccountFeature(() async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsInboxPage(),
+                        ),
+                      );
+                      await _refreshNotifications();
+                    });
+                  },
+                  child: _NotificationButton(showBadge: unread > 0),
+                );
               },
-              child: _NotificationButton(showBadge: unread > 0),
-            );
-          },
+            ),
+          ],
         ),
+        const SizedBox(height: 14),
+        _buildLocationSearch(),
       ],
     );
   }
@@ -821,7 +832,7 @@ class _LocationSearchBar extends StatelessWidget {
                 onSearch();
               },
               decoration: InputDecoration(
-                hintText: 'Search ...',
+                hintText: 'search here',
                 hintStyle: textStyle(
                   size: _textSize,
                   weight: FontWeight.w300,

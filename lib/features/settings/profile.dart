@@ -1,4 +1,5 @@
 import 'package:swappro/barrel.dart';
+import 'package:swappro/common_design/widgets/success_reveal_route.dart';
 import 'package:swappro/features/home/listing_location.dart';
 
 /// User account hub — matches Figma "User Account" frame (node 162:829).
@@ -25,6 +26,7 @@ class _ProfileState extends State<Profile> {
   String? _profilePictureUrl;
   bool _isVerified = false;
   bool _loading = true;
+  bool _deletingAccount = false;
 
   List<_ListingItem> _previewListings = [];
 
@@ -113,6 +115,106 @@ class _ProfileState extends State<Profile> {
     if (mounted) _loadProfile();
   }
 
+  Future<void> _handleDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Delete account?',
+                  style: AppTypography.style(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This permanently deletes your SwapPro account, profile, listings, and personal data. You will not be able to sign in again. This cannot be undone.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.style(
+                    fontSize: 13.5,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingAccount = true);
+    try {
+      await context.read<ApiService>().deleteAccount();
+      if (!mounted) return;
+
+      context.read<SuccessBloc>().add(
+            const ShowSuccessEvent(
+              message: 'Your account has been deleted.',
+              nextScreen: 'home',
+            ),
+          );
+      context.read<AuthBloc>().add(
+            const LogoutEvent(
+              message: 'Your account has been deleted.',
+              source: 'delete_account',
+              skipServer: true,
+            ),
+          );
+      Navigator.of(context).pushAndRemoveUntil(
+        SuccessRevealRoute(
+          child: const Success(delayEntrance: true),
+        ),
+        (_) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deletingAccount = false);
+      if (ApiErrorHandler.isSessionExpired(e)) {
+        context.read<AuthBloc>().add(const SessionExpiredEvent());
+        return;
+      }
+      await ApiErrorHandler.handle(context, e);
+    }
+  }
+
   void _handleLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -189,6 +291,7 @@ class _ProfileState extends State<Profile> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Unauthenticated) {
+          if (state.source == 'delete_account') return;
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const HomeEntry()),
             (route) => false,
@@ -202,30 +305,39 @@ class _ProfileState extends State<Profile> {
         body: SafeArea(
           child: _loading
               ? const Center(child: SwapproLoadingIndicator())
-              : Column(
+              : Stack(
                   children: [
-                    _buildTopBar(wScale, hScale),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _loadProfile,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.only(bottom: 24 * hScale),
-                          child: Column(
-                            children: [
-                              SizedBox(height: 50 * hScale),
-                              _buildAvatar(wScale),
-                              SizedBox(height: 25 * hScale),
-                              _buildProfileInfo(wScale, hScale),
-                              SizedBox(height: 32 * hScale),
-                              _buildAccountOptions(wScale, hScale),
-                              SizedBox(height: 22 * hScale),
-                              _buildListingsSection(wScale, hScale),
-                            ],
+                    Column(
+                      children: [
+                        _buildTopBar(wScale, hScale),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _loadProfile,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.only(bottom: 24 * hScale),
+                              child: Column(
+                                children: [
+                                  SizedBox(height: 50 * hScale),
+                                  _buildAvatar(wScale),
+                                  SizedBox(height: 25 * hScale),
+                                  _buildProfileInfo(wScale, hScale),
+                                  SizedBox(height: 32 * hScale),
+                                  _buildAccountOptions(wScale, hScale),
+                                  SizedBox(height: 22 * hScale),
+                                  _buildListingsSection(wScale, hScale),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
+                    if (_deletingAccount)
+                      const ColoredBox(
+                        color: Color(0x66000000),
+                        child: Center(child: SwapproLoadingIndicator()),
+                      ),
                   ],
                 ),
         ),
@@ -383,7 +495,8 @@ class _ProfileState extends State<Profile> {
       _AccountMenuItem(
         label: 'Delete Account',
         icon: Icons.delete_outline,
-        onTap: () => context.showAppSnackBar('Delete account coming soon'),
+        destructive: true,
+        onTap: _handleDeleteAccount,
       ),
       _AccountMenuItem(
         label: 'Log Out',
@@ -507,11 +620,13 @@ class _AccountMenuItem {
     required this.label,
     required this.icon,
     required this.onTap,
+    this.destructive = false,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback onTap;
+  final bool destructive;
 }
 
 class _AccountOptionTile extends StatelessWidget {
@@ -531,7 +646,11 @@ class _AccountOptionTile extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 0, vertical: 14 * wScale),
         child: Row(
           children: [
-            Icon(item.icon, size: 20 * wScale, color: _gold),
+            Icon(
+              item.icon,
+              size: 20 * wScale,
+              color: item.destructive ? Colors.red : _gold,
+            ),
             SizedBox(width: 12 * wScale),
             Expanded(
               child: Text(
@@ -539,7 +658,7 @@ class _AccountOptionTile extends StatelessWidget {
                 style: AppTypography.style(
                   fontSize: 16 * wScale,
                   fontWeight: FontWeight.w400,
-                  color: _menuText,
+                  color: item.destructive ? Colors.red : _menuText,
                 ),
               ),
             ),

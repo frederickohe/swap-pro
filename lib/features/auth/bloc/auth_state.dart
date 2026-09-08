@@ -35,7 +35,7 @@ class Unauthenticated extends AuthState {
   const Unauthenticated({this.message, this.source});
 
   @override
-  List<Object> get props => [message ?? ''];
+  List<Object> get props => [message ?? '', source ?? ''];
 }
 
 class AuthError extends AuthState {

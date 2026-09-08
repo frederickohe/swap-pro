@@ -25,6 +25,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   static const Color _divider = Color(0xFFF6F6F6);
 
   late final TextEditingController _searchController;
+  late final TextEditingController _wishlistController;
   late String _activeQuery;
   late String? _activeCategory;
 
@@ -32,7 +33,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   List<_SearchProduct> _products = [];
   bool _loading = true;
   /// `false` = horizontal row cards; `true` = stacked masonry grid.
-  bool _isGridView = true;
+  bool _isGridView = false;
 
   @override
   void initState() {
@@ -43,13 +44,33 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
       _activeCategory = null;
     }
     _searchController = TextEditingController(text: _activeQuery);
+    _wishlistController = TextEditingController();
+    _wishlistController.addListener(_onWishlistChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchResults());
   }
 
   @override
   void dispose() {
+    _wishlistController.removeListener(_onWishlistChanged);
     _searchController.dispose();
+    _wishlistController.dispose();
     super.dispose();
+  }
+
+  void _onWishlistChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<_SearchProduct> get _visibleProducts {
+    final wish = _wishlistController.text.trim().toLowerCase();
+    if (wish.isEmpty) return _products;
+    return _products
+        .where(
+          (product) => product.wishlistItems.any(
+            (item) => item.toLowerCase().contains(wish),
+          ),
+        )
+        .toList();
   }
 
   Future<void> _fetchResults() async {
@@ -145,22 +166,6 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
     }
   }
 
-  List<_SearchProduct> get _leftColumn {
-    final left = <_SearchProduct>[];
-    for (var i = 0; i < _products.length; i += 2) {
-      left.add(_products[i]);
-    }
-    return left;
-  }
-
-  List<_SearchProduct> get _rightColumn {
-    final right = <_SearchProduct>[];
-    for (var i = 1; i < _products.length; i += 2) {
-      right.add(_products[i]);
-    }
-    return right;
-  }
-
   TextStyle _textStyle({
     double size = 14,
     FontWeight weight = FontWeight.w400,
@@ -200,6 +205,10 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSearchHeader(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: _buildWishlistField(),
                 ),
                 Expanded(
                   child: _loading
@@ -257,7 +266,7 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Search ...',
+                hintText: 'search here',
                 hintStyle: _textStyle(
                   size: 14,
                   color: _ink.withValues(alpha: 0.5),
@@ -269,6 +278,45 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
             onTap: _applySearch,
             behavior: HitTestBehavior.opaque,
             child: const Icon(Icons.search, size: 18, color: _ink),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWishlistField() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: _searchBorder),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _wishlistController,
+              style: _textStyle(size: 14, weight: FontWeight.w400),
+              textInputAction: TextInputAction.search,
+              onTapOutside: (_) => dismissAppKeyboard(),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Type wishlist',
+                hintStyle: _textStyle(
+                  size: 14,
+                  color: _ink.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ),
+          Icon(
+            Icons.favorite_border,
+            size: 18,
+            color: _ink.withValues(alpha: 0.55),
           ),
         ],
       ),
@@ -315,7 +363,8 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
   }
 
   Widget _buildResultsList() {
-    if (_products.isEmpty) {
+    final visible = _visibleProducts;
+    if (visible.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 32, 20, 120),
@@ -327,25 +376,52 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 32, 20, 120),
-        child: _buildMasonryGrid(_leftColumn, _rightColumn),
+        child: _buildMasonryGrid(
+          _columnFrom(visible, even: true),
+          _columnFrom(visible, even: false),
+        ),
       );
     }
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 120),
-      itemCount: _products.length,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+      itemCount: visible.length,
       separatorBuilder: (_, _) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 27),
+        padding: EdgeInsets.symmetric(vertical: 14),
         child: Divider(color: _divider, height: 1, thickness: 1),
       ),
       itemBuilder: (context, index) {
-        return _SearchListTile(data: _products[index]);
+        return _SearchListTile(data: visible[index]);
       },
     );
   }
 
+  List<_SearchProduct> _columnFrom(
+    List<_SearchProduct> products, {
+    required bool even,
+  }) {
+    final column = <_SearchProduct>[];
+    for (var i = even ? 0 : 1; i < products.length; i += 2) {
+      column.add(products[i]);
+    }
+    return column;
+  }
+
   Widget _buildEmptyState() {
+    final wishlist = _wishlistController.text.trim();
+    if (wishlist.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 48),
+        child: Center(
+          child: Text(
+            'No listings with wishlist "$wishlist"',
+            textAlign: TextAlign.center,
+            style: _textStyle(size: 16, color: _ink.withValues(alpha: 0.6)),
+          ),
+        ),
+      );
+    }
     final queryLabel = _activeQuery.isNotEmpty
         ? '"$_activeQuery"'
         : (_activeCategory ?? 'listings');
@@ -405,6 +481,7 @@ class _SearchProduct {
   final String price;
   final String imageUrl;
   final double imageHeight;
+  final List<String> wishlistItems;
   final Map<String, dynamic>? listingJson;
 
   const _SearchProduct({
@@ -414,6 +491,7 @@ class _SearchProduct {
     required this.price,
     required this.imageUrl,
     required this.imageHeight,
+    required this.wishlistItems,
     this.listingJson,
   });
 
@@ -439,9 +517,28 @@ class _SearchProduct {
       price: price,
       imageUrl: displayUrl ?? _kListingImageFallback,
       imageHeight: imageHeight,
+      wishlistItems: _wishlistLabelsFromListing(json),
       listingJson: json,
     );
   }
+}
+
+List<String> _wishlistLabelsFromListing(Map<String, dynamic> json) {
+  final wishlistRaw = json['wishlist'];
+  final items = <String>[];
+  if (wishlistRaw is! List) return items;
+  for (final item in wishlistRaw) {
+    if (item is Map) {
+      final label = (item['description'] ?? item['category'] ?? '')
+          .toString()
+          .trim();
+      if (label.isNotEmpty) items.add(label);
+    } else {
+      final label = item.toString().trim();
+      if (label.isNotEmpty) items.add(label);
+    }
+  }
+  return items;
 }
 
 class _SearchListTile extends StatelessWidget {
@@ -452,8 +549,8 @@ class _SearchListTile extends StatelessWidget {
   static const Color _inkTitle = Color(0xFF121111);
   static const Color _inkSoft = Color(0xFF787676);
   static const Color _priceInk = Color(0xFF292526);
-  static const double _thumbW = 255;
-  static const double _thumbH = 217;
+  static const double _thumbW = 88;
+  static const double _thumbH = 88;
 
   @override
   Widget build(BuildContext context) {
@@ -461,10 +558,10 @@ class _SearchListTile extends StatelessWidget {
       onTap: () => _SearchProductCard.openDetail(context, data),
       behavior: HitTestBehavior.opaque,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(8),
             child: SizedBox(
               width: _thumbW,
               height: _thumbH,
@@ -478,45 +575,96 @@ class _SearchListTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
           Expanded(
-            child: SizedBox(
-              height: _thumbH,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.style(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _inkTitle,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.style(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _inkTitle,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    data.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.style(fontSize: 12, color: _inkSoft),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data.location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.style(fontSize: 10, color: _inkSoft),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data.price,
+                  style: AppTypography.style(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _priceInk,
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    data.price,
-                    style: AppTypography.style(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _priceInk,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                _WishlistPreview(items: data.wishlistItems),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WishlistPreview extends StatelessWidget {
+  const _WishlistPreview({required this.items});
+
+  final List<String> items;
+
+  static const Color _ink = Color(0xFF111111);
+  static const Color _inkSoft = Color(0xFF787676);
+  static const Color _chipBg = Color(0xFFF5F4F8);
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Text(
+        'No wishlist',
+        style: AppTypography.style(fontSize: 10, color: _inkSoft),
+      );
+    }
+
+    const maxChips = 3;
+    final visible = items.take(maxChips).toList();
+    final extra = items.length - visible.length;
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (final label in visible) _compactChip(label),
+        if (extra > 0) _compactChip('+$extra'),
+      ],
+    );
+  }
+
+  Widget _compactChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _chipBg,
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.style(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: _ink,
+        ),
       ),
     );
   }

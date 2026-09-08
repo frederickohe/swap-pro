@@ -60,7 +60,20 @@ class ResendSignupOtpEvent extends AuthEvent {
 
 class CheckAuthEvent extends AuthEvent {}
 
-class LogoutEvent extends AuthEvent {}
+class LogoutEvent extends AuthEvent {
+  final String? message;
+  final String source;
+  final bool skipServer;
+
+  const LogoutEvent({
+    this.message,
+    this.source = 'logout',
+    this.skipServer = false,
+  });
+
+  @override
+  List<Object> get props => [message ?? '', source, skipServer];
+}
 
 class RequestPasswordResetEvent extends AuthEvent {
   final String email;
