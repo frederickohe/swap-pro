@@ -36,7 +36,7 @@ class AppScreenTopBar extends StatelessWidget {
     final btnSize = SettingsScreenStyle.chromeButtonSize * s;
     final resolvedTrailing = trailing ??
         (showAvatar
-            ? UserAvatar(size: btnSize, onLightBackground: lightScreen)
+            ? HeaderUserButton(size: btnSize)
             : SizedBox(width: btnSize, height: btnSize));
 
     final resolvedTitleStyle = titleStyle ??

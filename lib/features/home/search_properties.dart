@@ -243,20 +243,20 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
 
   Widget _buildSearchField() {
     return Container(
-      height: 76,
+      height: 50,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(38),
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: _searchBorder),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _searchController,
-              style: _textStyle(size: 16, weight: FontWeight.w400),
+              style: _textStyle(size: 14, weight: FontWeight.w400),
               textInputAction: TextInputAction.search,
               onTapOutside: (_) => dismissAppKeyboard(),
               onSubmitted: (_) {

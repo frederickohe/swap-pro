@@ -386,7 +386,16 @@ class _HomeState extends State<Home> {
                       );
                     });
                   },
-                  child: const _HeaderCircleButton(icon: Ri.user_3_line),
+                  child: HeaderUserButton(
+                    onTap: () {
+                      _openAccountFeature(() async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Profile()),
+                        );
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(width: 8),
                 FutureBuilder<int>(
@@ -825,10 +834,10 @@ class _LocationSearchBar extends StatelessWidget {
   final TextStyle Function({double size, FontWeight weight, Color color})
   textStyle;
 
-  static const double _height = 76;
-  static const double _searchIconSize = 22;
-  static const double _textSize = 16;
-  static const double _hintSize = 13;
+  static const double _height = 50;
+  static const double _searchIconSize = 20;
+  static const double _textSize = 14;
+  static const double _hintSize = 12;
   static const double _clusterGap = 23;
 
   @override
@@ -837,10 +846,10 @@ class _LocationSearchBar extends StatelessWidget {
       height: _height,
       decoration: BoxDecoration(
         color: _kBg,
-        borderRadius: BorderRadius.circular(38),
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: _kSearchBorder, width: 1),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -870,7 +879,7 @@ class _LocationSearchBar extends StatelessWidget {
                 border: InputBorder.none,
                 isDense: true,
                 isCollapsed: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 22),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
           ),

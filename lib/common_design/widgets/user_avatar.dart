@@ -117,3 +117,46 @@ class UserAvatar extends StatelessWidget {
     );
   }
 }
+
+/// Dashboard-style user control — white circle, light border, Remix user-3 icon.
+class HeaderUserButton extends StatelessWidget {
+  const HeaderUserButton({
+    this.size = SettingsScreenStyle.chromeButtonSize,
+    this.onTap,
+    super.key,
+  });
+
+  final double size;
+  final VoidCallback? onTap;
+
+  static const Color _border = Color(0xFFDFDFDF);
+  static const Color _ink = Color(0xFF111111);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap ??
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const Profile()),
+            );
+          },
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          border: Border.all(color: _border, width: 1.2),
+        ),
+        alignment: Alignment.center,
+        child: Iconify(
+          Ri.user_3_line,
+          size: size * 0.4,
+          color: _ink,
+        ),
+      ),
+    );
+  }
+}
