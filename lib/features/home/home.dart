@@ -363,12 +363,14 @@ class _HomeState extends State<Home> {
             Expanded(
               child: Text(
                 'What do you want?',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTypography.style(
-                  fontSize: 28,
+                  fontSize: 20,
                   fontWeight: FontWeight.w300,
                   color: _kInk,
-                  height: 1.15,
-                  letterSpacing: -0.6,
+                  height: 1.2,
+                  letterSpacing: -0.4,
                 ),
               ),
             ),
@@ -823,8 +825,8 @@ class _LocationSearchBar extends StatelessWidget {
   final TextStyle Function({double size, FontWeight weight, Color color})
   textStyle;
 
-  static const double _height = 62;
-  static const double _searchIconSize = 20;
+  static const double _height = 76;
+  static const double _searchIconSize = 22;
   static const double _textSize = 16;
   static const double _hintSize = 13;
   static const double _clusterGap = 23;
@@ -835,7 +837,7 @@ class _LocationSearchBar extends StatelessWidget {
       height: _height,
       decoration: BoxDecoration(
         color: _kBg,
-        borderRadius: BorderRadius.circular(31),
+        borderRadius: BorderRadius.circular(38),
         border: Border.all(color: _kSearchBorder, width: 1),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -868,7 +870,7 @@ class _LocationSearchBar extends StatelessWidget {
                 border: InputBorder.none,
                 isDense: true,
                 isCollapsed: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(vertical: 22),
               ),
             ),
           ),

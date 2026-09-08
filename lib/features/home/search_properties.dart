@@ -243,10 +243,10 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
 
   Widget _buildSearchField() {
     return Container(
-      height: 62,
+      height: 76,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(31),
+        borderRadius: BorderRadius.circular(38),
         border: Border.all(color: _searchBorder),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
