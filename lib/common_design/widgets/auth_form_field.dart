@@ -22,6 +22,7 @@ class AuthFormField extends StatefulWidget {
     this.readOnly = false,
     this.onChanged,
     this.onSubmitted,
+    this.onTapOutside,
   }) : assert(icon != null || iconSvg != null);
 
   final TextEditingController controller;
@@ -39,6 +40,7 @@ class AuthFormField extends StatefulWidget {
   final bool readOnly;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final TapRegionCallback? onTapOutside;
 
   static const Color dark = Color(0xFF111111);
   static const Color gold = Color(0xFFC3B649);
@@ -124,6 +126,7 @@ class _AuthFormFieldState extends State<AuthFormField> {
               inputFormatters: widget.inputFormatters,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
+              onTapOutside: widget.onTapOutside,
               style: AppTypography.style(
                 fontSize: AuthFormField.inputFontSize,
                 fontWeight: FontWeight.w400,
@@ -199,11 +202,7 @@ class _AuthFieldIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (iconSvg != null) {
-      return Iconify(
-        iconSvg!,
-        size: 20,
-        color: AuthFormField.gold,
-      );
+      return Iconify(iconSvg!, size: 20, color: AuthFormField.gold);
     }
     return Icon(icon, size: 20, color: AuthFormField.gold);
   }

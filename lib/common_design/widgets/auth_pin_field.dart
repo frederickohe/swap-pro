@@ -4,6 +4,9 @@ import 'package:swappro/common_design/app_typography.dart';
 import 'package:swappro/common_design/widgets/auth_form_field.dart';
 
 /// Four-box PIN input; stretches to parent width like [AuthFormField].
+///
+/// Uses one backing [TextField] so iOS backspace can delete every digit.
+/// Separate per-box fields only receive a single empty-field delete event.
 class AuthPinField extends StatefulWidget {
   const AuthPinField({
     super.key,
@@ -14,6 +17,7 @@ class AuthPinField extends StatefulWidget {
     required this.hScale,
     this.obscureText = true,
     this.onChanged,
+    this.onTapOutside,
   });
 
   final List<TextEditingController> controllers;
@@ -23,11 +27,13 @@ class AuthPinField extends StatefulWidget {
   final double hScale;
   final bool obscureText;
   final VoidCallback? onChanged;
+  final TapRegionCallback? onTapOutside;
 
   static const double figmaGap = 10;
   static const double figmaPinH = 70;
   static const double figmaRadius = 10;
   static const double figmaBorderW = 0.8;
+  static const int length = 4;
 
   static double gap(double wScale) => figmaGap * wScale;
   static double height(double hScale) => figmaPinH * hScale;
@@ -36,68 +42,49 @@ class AuthPinField extends StatefulWidget {
   static String join(List<TextEditingController> controllers) =>
       controllers.map((c) => c.text).join();
 
+  static String digitsOf(String value) {
+    final digits = StringBuffer();
+    for (final unit in value.codeUnits) {
+      if (unit >= 48 && unit <= 57) {
+        digits.writeCharCode(unit);
+        if (digits.length == length) break;
+      }
+    }
+    return digits.toString();
+  }
+
   @override
   State<AuthPinField> createState() => _AuthPinFieldState();
 }
 
-class _PinBackspaceFormatter extends TextInputFormatter {
-  _PinBackspaceFormatter({
-    required this.index,
-    required this.controllers,
-    required this.focusNodes,
-  });
-
-  final int index;
-  final List<TextEditingController> controllers;
-  final List<FocusNode> focusNodes;
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty &&
-        oldValue.text.isEmpty &&
-        index > 0 &&
-        controllers[index].text.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controllers[index].text.isNotEmpty) return;
-        focusNodes[index - 1].requestFocus();
-        controllers[index - 1].clear();
-      });
-    }
-    return newValue;
-  }
-}
-
 class _AuthPinFieldState extends State<AuthPinField> {
+  late final TextEditingController _inputController;
+  late final FocusNode _inputFocusNode;
+  bool _syncingFromInput = false;
+
   @override
   void initState() {
     super.initState();
+    _inputController = TextEditingController(
+      text: AuthPinField.digitsOf(AuthPinField.join(widget.controllers)),
+    );
+    _inputFocusNode = FocusNode();
+    _inputController.addListener(_onInputChanged);
+    _inputFocusNode.addListener(_rebuild);
     for (final node in widget.focusNodes) {
-      node.addListener(_rebuild);
-    }
-    for (final c in widget.controllers) {
-      c.addListener(_rebuild);
+      node.addListener(_onExternalFocus);
     }
   }
 
   @override
   void didUpdateWidget(AuthPinField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controllers != widget.controllers ||
-        oldWidget.focusNodes != widget.focusNodes) {
+    if (oldWidget.focusNodes != widget.focusNodes) {
       for (final node in oldWidget.focusNodes) {
-        node.removeListener(_rebuild);
-      }
-      for (final c in oldWidget.controllers) {
-        c.removeListener(_rebuild);
+        node.removeListener(_onExternalFocus);
       }
       for (final node in widget.focusNodes) {
-        node.addListener(_rebuild);
-      }
-      for (final c in widget.controllers) {
-        c.addListener(_rebuild);
+        node.addListener(_onExternalFocus);
       }
     }
   }
@@ -105,11 +92,12 @@ class _AuthPinFieldState extends State<AuthPinField> {
   @override
   void dispose() {
     for (final node in widget.focusNodes) {
-      node.removeListener(_rebuild);
+      node.removeListener(_onExternalFocus);
     }
-    for (final c in widget.controllers) {
-      c.removeListener(_rebuild);
-    }
+    _inputController.removeListener(_onInputChanged);
+    _inputFocusNode.removeListener(_rebuild);
+    _inputController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -117,29 +105,59 @@ class _AuthPinFieldState extends State<AuthPinField> {
     if (mounted) setState(() {});
   }
 
-  void _focusPreviousAndClear(int index) {
-    if (index <= 0) return;
-    widget.focusNodes[index - 1].requestFocus();
-    widget.controllers[index - 1].clear();
-    widget.onChanged?.call();
-  }
-
-  void _focusPinCell(int index) {
+  void _onExternalFocus() {
     if (!widget.enabled) return;
-    final controller = widget.controllers[index];
-    final focusNode = widget.focusNodes[index];
-    focusNode.requestFocus();
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
+    if (widget.focusNodes.any((node) => node.hasFocus) &&
+        !_inputFocusNode.hasFocus) {
+      _inputFocusNode.requestFocus();
+    }
   }
 
-  KeyEventResult _handleBackspaceKey(int index, TextEditingController controller) {
-    if (controller.text.isEmpty && index > 0) {
-      _focusPreviousAndClear(index);
-      return KeyEventResult.handled;
+  void _syncBoxControllers(String pin) {
+    for (var i = 0; i < AuthPinField.length; i++) {
+      final digit = i < pin.length ? pin[i] : '';
+      if (widget.controllers[i].text == digit) continue;
+      widget.controllers[i].value = TextEditingValue(
+        text: digit,
+        selection: TextSelection.collapsed(offset: digit.length),
+      );
     }
-    return KeyEventResult.ignored;
+  }
+
+  void _onInputChanged() {
+    if (_syncingFromInput) return;
+
+    final pin = AuthPinField.digitsOf(_inputController.text);
+    if (pin != _inputController.text) {
+      _syncingFromInput = true;
+      _inputController.value = TextEditingValue(
+        text: pin,
+        selection: TextSelection.collapsed(offset: pin.length),
+      );
+      _syncingFromInput = false;
+    }
+
+    _syncBoxControllers(pin);
+    widget.onChanged?.call();
+
+    if (pin.length == AuthPinField.length && _inputFocusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_inputController.text.length == AuthPinField.length) {
+          _inputFocusNode.unfocus();
+        }
+      });
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  void _focusInput() {
+    if (!widget.enabled) return;
+    _inputFocusNode.requestFocus();
+    _inputController.selection = TextSelection.collapsed(
+      offset: _inputController.text.length,
+    );
   }
 
   @override
@@ -147,14 +165,18 @@ class _AuthPinFieldState extends State<AuthPinField> {
     final gap = AuthPinField.gap(widget.wScale);
     final height = AuthPinField.height(widget.hScale);
     final radius = AuthPinField.radius(widget.wScale);
+    final pin = _inputController.text;
+    final activeIndex = pin.length >= AuthPinField.length
+        ? AuthPinField.length - 1
+        : pin.length;
 
     final children = <Widget>[];
-    for (var index = 0; index < 4; index++) {
+    for (var index = 0; index < AuthPinField.length; index++) {
       if (index > 0) children.add(SizedBox(width: gap));
-      final controller = widget.controllers[index];
-      final focusNode = widget.focusNodes[index];
+      final digit = index < pin.length ? pin[index] : '';
       final showBorder =
-          focusNode.hasFocus || controller.text.isNotEmpty;
+          digit.isNotEmpty ||
+          (_inputFocusNode.hasFocus && index == activeIndex);
 
       children.add(
         Expanded(
@@ -171,69 +193,14 @@ class _AuthPinFieldState extends State<AuthPinField> {
                       )
                     : null,
               ),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _focusPinCell(index),
-                child: SizedBox.expand(
-                  child: Center(
-                    child: Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) {
-                          return KeyEventResult.ignored;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.backspace) {
-                          return _handleBackspaceKey(index, controller);
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: TextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        enabled: widget.enabled,
-                        textAlign: TextAlign.center,
-                        textAlignVertical: TextAlignVertical.center,
-                        keyboardType: TextInputType.number,
-                        obscureText: widget.obscureText,
-                        style: AppTypography.style(
-                          fontSize: AuthFormField.inputFontSize,
-                          fontWeight: FontWeight.w500,
-                          color: AuthFormField.dark,
-                          height: 1,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(1),
-                          _PinBackspaceFormatter(
-                            index: index,
-                            controllers: widget.controllers,
-                            focusNodes: widget.focusNodes,
-                          ),
-                        ],
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          counterText: '',
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
-                          isCollapsed: true,
-                        ),
-                        onChanged: (value) {
-                          if (value.isNotEmpty) {
-                            if (index < 3) {
-                              widget.focusNodes[index + 1].requestFocus();
-                            } else {
-                              focusNode.unfocus();
-                            }
-                          }
-                          widget.onChanged?.call();
-                        },
-                        onTap: () => _focusPinCell(index),
-                        onSubmitted: (_) {
-                          if (index < 3) {
-                            widget.focusNodes[index + 1].requestFocus();
-                          }
-                        },
-                      ),
-                    ),
+              child: Center(
+                child: Text(
+                  digit.isEmpty ? '' : (widget.obscureText ? '•' : digit),
+                  style: AppTypography.style(
+                    fontSize: AuthFormField.inputFontSize,
+                    fontWeight: FontWeight.w500,
+                    color: AuthFormField.dark,
+                    height: 1,
                   ),
                 ),
               ),
@@ -246,7 +213,43 @@ class _AuthPinFieldState extends State<AuthPinField> {
     return SizedBox(
       width: double.infinity,
       height: height,
-      child: Row(children: children),
+      child: Stack(
+        children: [
+          IgnorePointer(child: Row(children: children)),
+          Positioned.fill(
+            child: TextField(
+              controller: _inputController,
+              focusNode: _inputFocusNode,
+              enabled: widget.enabled,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              autocorrect: false,
+              enableSuggestions: false,
+              obscureText: false,
+              showCursor: false,
+              enableInteractiveSelection: false,
+              style: const TextStyle(
+                color: Colors.transparent,
+                fontSize: 1,
+                height: 1,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(AuthPinField.length),
+              ],
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+                isCollapsed: true,
+              ),
+              onTap: _focusInput,
+              onTapOutside: widget.onTapOutside,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
