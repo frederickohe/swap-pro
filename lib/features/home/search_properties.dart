@@ -243,20 +243,20 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
 
   Widget _buildSearchField() {
     return Container(
-      height: 50,
+      height: 62,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(31),
         border: Border.all(color: _searchBorder),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       alignment: Alignment.center,
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _searchController,
-              style: _textStyle(size: 14, weight: FontWeight.w400),
+              style: _textStyle(size: 16, weight: FontWeight.w400),
               textInputAction: TextInputAction.search,
               onTapOutside: (_) => dismissAppKeyboard(),
               onSubmitted: (_) {
@@ -266,9 +266,9 @@ class _SearchPropertiesPageState extends State<SearchPropertiesPage> {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'search here',
+                hintText: 'find swap item',
                 hintStyle: _textStyle(
-                  size: 14,
+                  size: 13,
                   color: _ink.withValues(alpha: 0.5),
                 ),
               ),
